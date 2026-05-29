@@ -1,0 +1,126 @@
+digraph ProjectBenjamin {
+    // General Graph Settings
+    graph [label="🏰 Project Benjamin - IMAG ICS Multi-Agent Architecture (v1.13)\n", labelloc="t", labeljust="c", fontsize=16, fontname="Arial", rankdir=TB, bgcolor="#fafafa", splines=true];
+    node [fontname="Arial", fontsize=11, shape=box, style="filled,rounded", height=0.5, width=1.6];
+    edge [fontname="Arial", fontsize=9, color="#555555", arrowhead=vee];
+
+    // External Targets/Backends (Aligned in BASSO)
+    { rank=same;
+        Github [label="🐙 GitHub & ServiceNow", fillcolor="#f5f5f5", color="#616161"];
+        Infra [label="☁️ Target Cloud Infrastructure (GCP)", fillcolor="#e0f2f1", color="#00838f", style="filled,dashed,rounded", penwidth=2];
+        Backend [label="💾 Generic Storage Backend", fillcolor="#f5f5f5", color="#616161", style="filled,dashed,rounded", penwidth=1.5];
+    }
+
+    // Top Level Trigger & Incident Commander (IC)
+    subgraph cluster_ic {
+        label = "🏎️ Incident Commander";
+        color = "#fbc02d";
+        style = "dashed,rounded";
+        bgcolor = "#fffde7";
+        penwidth = 1.5;
+        
+        Triggers [label="🔔 Triggers & Inputs", fillcolor="#e1f5fe", color="#0288d1", penwidth=2];
+        Benjamin [label="🏎️ Benjamin (IC)", fillcolor="#fff9c4", color="#fbc02d", penwidth=2];
+    }
+
+    // 1. OPERATIONS LEAD
+    subgraph cluster_operations {
+        label = "🔧 Operations Lead";
+        style = "dashed,rounded";
+        color = "#1565c0";
+        bgcolor = "#e3f2fd";
+        penwidth = 1.5;
+        
+        OpsAgent [label="🔧 Ops Agent (Ops Lead)", fillcolor="#bbdefb", color="#1976d2", penwidth=2];
+        SubAgents [label="🤖 Diagnostic Subagents", fillcolor="#e3f2fd", color="#42a5f5", style="filled,dashed,rounded"];
+        LogsAgent [label="📄 Logs Agent", fillcolor="#e1f5fe", color="#0288d1", penwidth=1.5];
+        MetricsAgent [label="📈 Metrics Agent", fillcolor="#e0f2f1", color="#009688", penwidth=1.5];
+        MutationAgent [label="💥 Mutation Agent (Unsafe)", fillcolor="#ffcdd2", color="#d32f2f", penwidth=2];
+    }
+
+    // 2. PLANNING LEAD
+    subgraph cluster_planning {
+        label = "📋 Planning Lead";
+        style = "dashed,rounded";
+        color = "#e65100";
+        bgcolor = "#fff3e0";
+        penwidth = 1.5;
+        
+        PlanningAgent [label="📋 Planning Agent (Planning Lead)", fillcolor="#ffe0b2", color="#f57c00", penwidth=2];
+        Memini [label="🧠 Memini (Memory)", fillcolor="#e1bee7", color="#8e24aa", penwidth=2];
+        DiscoveryAgent [label="🔍 Discovery Agent", fillcolor="#e0f2f1", color="#00796b", penwidth=2];
+        ScribeAgent [label="✍️ Scribe Agent (Scrivano)", fillcolor="#fff9c4", color="#fbc02d", penwidth=2];
+    }
+
+    // 3. LOGISTICS LEAD
+    subgraph cluster_logistics {
+        label = "⚙️ Logistics Lead";
+        style = "dashed,rounded";
+        color = "#37474f";
+        bgcolor = "#eceff1";
+        penwidth = 1.5;
+        
+        LogisticsAgent [label="⚙️ Logistics Agent (Logistics Lead)", fillcolor="#cfd8dc", color="#546e7a", penwidth=2];
+        RiskAssessor [label="⚖️ Risk Assessor (Evaluator)", fillcolor="#ffe0b2", color="#f57c00", penwidth=2];
+        ResourceManager [label="🔑 Resource Manager", fillcolor="#d7ccc8", color="#5d4037", penwidth=1.5];
+    }
+
+    // 4. COMMUNICATIONS LEAD
+    subgraph cluster_communications {
+        label = "📢 Communications Lead";
+        style = "dashed,rounded";
+        color = "#2e7d32";
+        bgcolor = "#e8f5e9";
+        penwidth = 1.5;
+        
+        Madhavi [label="📢 Madhavi (Comm Lead)", fillcolor="#c8e6c9", color="#43a047", penwidth=2];
+        User [label="👤 User / Telegram", fillcolor="#e0f2f1", color="#009688", penwidth=2];
+    }
+
+    // Edge Connections: Command & Delegation Flow
+    Triggers -> Benjamin [label=" Trigger / Alert", penwidth=1.5];
+    
+    Benjamin -> Madhavi [label=" Delegate Comm", color="#43a047", penwidth=1.5];
+    Benjamin -> OpsAgent [label=" Delegate Ops", color="#1976d2", penwidth=1.5];
+    Benjamin -> PlanningAgent [label=" Delegate Planning", color="#f57c00", penwidth=1.5];
+    Benjamin -> LogisticsAgent [label=" Delegate Logistics", color="#546e7a", penwidth=1.5];
+
+    // Operations flow
+    OpsAgent -> SubAgents [label=" Delegate Diag", style="dashed", color="#1976d2"];
+    OpsAgent -> LogsAgent [label=" Query Logs", color="#1976d2"];
+    OpsAgent -> MetricsAgent [label=" Query Metrics", color="#1976d2"];
+    
+    SubAgents -> Infra [label=" Safe Path (ReadOnly)", color="#1976d2", style="dashed"];
+    LogsAgent -> Infra [label=" Stream Logs (ReadOnly)", color="#0288d1", style="dashed"];
+    MetricsAgent -> Infra [label=" Fetch Metrics (ReadOnly)", color="#009688", style="dashed"];
+    
+    OpsAgent -> MutationAgent [label=" Trigger Unsafe Mutation\n(Approved & High-Vis Logged)", color="#d32f2f", penwidth=1.5];
+    MutationAgent -> Infra [label=" Mutate / Remediate", color="#d32f2f", penwidth=1.5];
+    Infra -> OpsAgent [label=" Output / Results", color="#1976d2"];
+
+    // Planning flow (Wiki, Memory & Scribe)
+    OpsAgent -> PlanningAgent [label=" Query Context", color="#f57c00"];
+    PlanningAgent -> Memini [label=" Runbook Search /\nSave Postmortem", color="#8e24aa", dir="both", penwidth=1.5];
+    Memini -> Backend [label=" CRUD Data", color="#8e24aa", penwidth=1.5];
+    PlanningAgent -> DiscoveryAgent [label=" Trigger Discovery", color="#00796b"];
+    DiscoveryAgent -> Infra [label=" Crawl & Audit", color="#00796b", penwidth=1.5];
+    DiscoveryAgent -> Backend [label=" Write Wiki Notes", color="#00796b", penwidth=1.5];
+    
+    PlanningAgent -> ScribeAgent [label=" Delegate Chronology", color="#f57c00", penwidth=1.5];
+    OpsAgent -> ScribeAgent [label=" Async Event Feed", color="#1976d2", style="dashed", penwidth=1.2];
+    ScribeAgent -> Backend [label=" Commit Investigation\nFolder (Git)", color="#fbc02d", penwidth=1.5];
+
+    // Logistics flow (Access & Safety)
+    OpsAgent -> LogisticsAgent [label=" Request Mutation Approval", color="#546e7a"];
+    LogisticsAgent -> RiskAssessor [label=" Evaluate & Decompose", color="#f57c00", penwidth=1.5];
+    LogisticsAgent -> ResourceManager [label=" Provision Keys & deps", color="#5d4037", penwidth=1.5];
+    ResourceManager -> Infra [label=" Validate tokens", color="#5d4037"];
+    
+    // Risk Decisions
+    RiskAssessor -> Madhavi [label=" HIGH/MEDIUM Risk\n[Escalate / Reject]", color="#d32f2f", fontcolor="#d32f2f", penwidth=1.5];
+    RiskAssessor -> OpsAgent [label=" LOW Risk [Approved (YES)]\n(Semaforo Verde)", color="#388e3c", fontcolor="#388e3c", penwidth=1.5];
+
+    // Communications flow
+    Madhavi -> User [label=" Broadcast updates", color="#43a047", dir="both"];
+    Madhavi -> Github [label=" Update ticket / Open Bug", color="#43a047"];
+}
