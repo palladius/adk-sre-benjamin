@@ -9,7 +9,7 @@
 
 ## Phase 2: E2E Incident Simulation
 
-- [ ] Task: Implement full E2E simulation harness
+- [~] Task: Implement full E2E simulation harness
     - [ ] Write unit tests validating full E2E flow timeline and artifact states
     - [ ] Create run_simulation.py integrating all 14-agent structural coordinates
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: E2E Incident Simulation' (Protocol in workflow.md)
