@@ -19,7 +19,7 @@
 - [x] Task: Implement top-down delegation flows [88c04fd]
     - [x] Write unit tests for alert routing and delegation signal handling [88c04fd]
     - [x] Implement Benjamin's delegation router that activates the 4 leads on alert trigger [88c04fd]
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Core ICS Agents and Delegation' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Core ICS Agents and Delegation' (Protocol in workflow.md)
 
 ## Phase 3: Logging and Communication Integration
 
