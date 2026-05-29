@@ -6,3 +6,8 @@ __pycache__/
 .coverage
 htmlcov/
 .env
+
+# Incident Investigation generated logs and artifacts
+investigations/**/artifacts/
+investigations/**/artifacts_registry.json
+investigations/**/*.jsonl
