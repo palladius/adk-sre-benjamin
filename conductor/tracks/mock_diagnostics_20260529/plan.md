@@ -1,4 +1,4 @@
-# Implementation Plan: mock_diagnostics_20260529
+# Implementation Plan: mock_diagnostics_20260529 [checkpoint: 43499aa]
 
 ## Phase 1: Mock SRE Diagnostics
 
@@ -7,7 +7,7 @@
     - [x] Implement src/diagnostics.py and load SRE_MODE environment variables [c224d9c]
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Mock SRE Diagnostics' (Protocol in workflow.md) [76b920e]
 
-## Phase 2: E2E Incident Simulation
+## Phase 2: E2E Incident Simulation [checkpoint: 43499aa]
 
 - [x] Task: Implement full E2E simulation harness [b7043c2]
     - [x] Write unit tests validating full E2E flow timeline and artifact states [b7043c2]
