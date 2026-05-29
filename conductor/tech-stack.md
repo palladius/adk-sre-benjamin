@@ -61,3 +61,10 @@ Based on the interactive alignment interview (`/grill-me`), the following struct
 5. **Operations Interface:**
    - **Model:** Domain-Specific ADK Function Tools (e.g., `query_logs`, `get_cpu_metrics`). The Ops Agent interacts through strictly structured, whitelisted function parameters rather than raw shell tools.
 
+6. **Large Asset Standardization & Provenance (Registry):**
+   - **Model:** An `artifacts_registry.json` index is maintained by Scribe inside `investigations/INC-XYZ/artifacts/`.
+   - **Lineage (Provenance):** Every downloaded or generated large file (e.g., a huge 55MB log, CSV report, or database dump) is cataloged with its size, checksum, and exact source command (e.g., `gcloud logging ...` or `MCP://google-workspace/drive.downloadFile(fileId=...)`).
+   - **Caching:** If the same command or MCP function is re-requested within the incident context, the system serves the cached local copy to avoid network overhead and API quota consumption.
+   - **Referential Separation:** To prevent LLM context bloating, large files are kept in the `/artifacts/` folder. Only a summarized diagnostic digest is fed to the agents, while the primary Scribe timeline references the relative file path.
+
+
