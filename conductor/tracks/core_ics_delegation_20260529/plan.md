@@ -21,7 +21,7 @@
     - [x] Implement Benjamin's delegation router that activates the 4 leads on alert trigger [88c04fd]
 - [x] Task: Conductor - User Manual Verification 'Phase 2: Core ICS Agents and Delegation' (Protocol in workflow.md)
 
-## Phase 3: Logging and Communication Integration
+## Phase 3: Logging and Communication Integration [checkpoint: 34f4a9c]
 
 - [x] Task: Integrate Scribe folder and Madhavi notifications [d7a1e09]
     - [x] Write unit tests for initial investigation folder state writing and Madhavi's channel dispatching [d7a1e09]
