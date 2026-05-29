@@ -16,9 +16,9 @@
 - [x] Task: Implement SRE Mock Incident Harness and piped Agent CLI runner [1144a08]
     - [x] Write unit tests for mock incident loading and piped agent stdin parsing [1144a08]
     - [x] Create CLI runner in src/cli.py and mock incident fixtures [1144a08]
-- [~] Task: Implement top-down delegation flows
-    - [~] Write unit tests for alert routing and delegation signal handling
-    - [ ] Implement Benjamin's delegation router that activates the 4 leads on alert trigger
+- [x] Task: Implement top-down delegation flows [88c04fd]
+    - [x] Write unit tests for alert routing and delegation signal handling [88c04fd]
+    - [x] Implement Benjamin's delegation router that activates the 4 leads on alert trigger [88c04fd]
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Core ICS Agents and Delegation' (Protocol in workflow.md)
 
 ## Phase 3: Logging and Communication Integration
