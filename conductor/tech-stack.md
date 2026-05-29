@@ -36,3 +36,28 @@ This document details the software, languages, databases, and third-party integr
   * *Rationale:* Instant mobile push alerts with interactive callback buttons for human-in-the-loop approvals.
 * **Formal Ticketing & Bug Filing:** **GitHub Issues API & ServiceNow**
   * *Rationale:* Standard logging for post-incident reviews, compliance audits, and team tracking.
+
+---
+
+# Aligned Architectural Decisions (v1.13)
+
+Based on the interactive alignment interview (`/grill-me`), the following structural and design boundaries are established:
+
+1. **Agent Topology & Orchestration:**
+   - **Model:** Explicit Scripted Workflow. Instead of a single-tier ADK hierarchical tree, each specialized Lead is instantiated as a standalone framework module.
+   - **Orchestration:** A dedicated master controller programmatically drives sequential and parallel tasks, cleanly handling high-granularity subagent interactions (e.g. Ops Agent delegating to Logs/Metrics/Mutation).
+
+2. **Incident State & Recovery:**
+   - **Model:** Shared `IncidentContext` object.
+   - **Durability:** The context is dynamically hydrated and serialized to local files (`state.md` and `raw_audit.jsonl`) by the Scribe Agent, ensuring zero loss of operational history in the event of an orchestrator restart.
+
+3. **Discovery Wiki Layout:**
+   - **Model:** Directory-to-Index Compiler ("Karpathy autoupdate").
+   - **Structure:** Permanent GCP asset audits are compiled into discrete, clean Markdown files per `project_id` matching the layout `wiki/gcp/<PROJECT_ID>/README.md`. VPC networks, databases, and GCE instances are cross-linked to form a semantic, self-indexing topology.
+
+4. **Human-In-The-Loop (HITL) Gate:**
+   - **Model:** Terminal Keyboard Prompts (`input()`) for out-of-the-box local SRE operations, with an extensible path to integrate interactive Telegram callbacks and microphone voice transcriptions.
+
+5. **Operations Interface:**
+   - **Model:** Domain-Specific ADK Function Tools (e.g., `query_logs`, `get_cpu_metrics`). The Ops Agent interacts through strictly structured, whitelisted function parameters rather than raw shell tools.
+
