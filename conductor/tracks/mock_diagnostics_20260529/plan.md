@@ -2,8 +2,8 @@
 
 ## Phase 1: Mock SRE Diagnostics
 
-- [ ] Task: Implement fast mock diagnostic metric and log providers
-    - [ ] Write unit tests for log and metric retrieval under MOCK and LIVE switches
+- [~] Task: Implement fast mock diagnostic metric and log providers
+    - [~] Write unit tests for log and metric retrieval under MOCK and LIVE switches
     - [ ] Implement src/diagnostics.py and load SRE_MODE environment variables
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Mock SRE Diagnostics' (Protocol in workflow.md)
 
