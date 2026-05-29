@@ -2,8 +2,8 @@
 
 ## Phase 1: Scaffolding and Trigger Ingestion
 
-- [ ] Task: Define the SRE incident directory structures and trigger models
-    - [ ] Write unit tests for trigger parsing and directory scaffolding
+- [~] Task: Define the SRE incident directory structures and trigger models
+    - [~] Write unit tests for trigger parsing and directory scaffolding
     - [ ] Implement the trigger parser and folder generation logic
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Scaffolding and Trigger Ingestion' (Protocol in workflow.md)
 
