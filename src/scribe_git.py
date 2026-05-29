@@ -33,3 +33,9 @@ def commit_scribe_changes(incident_folder: str, message: str) -> str:
     # Query resulting commit hash
     hash_res = subprocess.run(["git", "log", "-1", "--format=%H"], cwd=repo_dir, capture_output=True, text=True)
     return hash_res.stdout.strip()
+
+def add_git_note(incident_folder: str, commit_hash: str, note_content: str) -> None:
+    """Attaches an SRE verification audit report or checklist to a Scribe checkpoint commit via Git Notes."""
+    repo_dir = find_repo_root(incident_folder)
+    subprocess.run(["git", "notes", "add", "-f", "-m", note_content, commit_hash], cwd=repo_dir, capture_output=True)
+
