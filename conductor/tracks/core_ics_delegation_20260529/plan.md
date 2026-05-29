@@ -1,6 +1,6 @@
 # Implementation Plan: core_ics_delegation_20260529
 
-## Phase 1: Scaffolding and Trigger Ingestion
+## Phase 1: Scaffolding and Trigger Ingestion [checkpoint: 5861e0c]
 
 - [x] Task: Define the SRE incident directory structures and trigger models [f379115]
     - [x] Write unit tests for trigger parsing and directory scaffolding [f379115]
