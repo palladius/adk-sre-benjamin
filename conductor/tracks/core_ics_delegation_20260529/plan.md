@@ -23,7 +23,7 @@
 
 ## Phase 3: Logging and Communication Integration
 
-- [ ] Task: Integrate Scribe folder and Madhavi notifications
-    - [ ] Write unit tests for initial investigation folder state writing and Madhavi's channel dispatching
+- [~] Task: Integrate Scribe folder and Madhavi notifications
+    - [~] Write unit tests for initial investigation folder state writing and Madhavi's channel dispatching
     - [ ] Implement Scribe's initial state file creation and Madhavi's mockup notification dispatchers
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Logging and Communication Integration' (Protocol in workflow.md)
