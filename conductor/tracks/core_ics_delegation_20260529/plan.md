@@ -10,8 +10,8 @@
 ## Phase 2: Core ICS Agents and Delegation
 
 - [~] Task: Set up Jinja2 prompt template loaders and core ADK agents
-    - [~] Write unit tests verifying Jinja2 template loading, variable hydration, and ADK configuration
-    - [ ] Implement the prompt loader utility and write templated system prompts for all 5 agents
+    - [x] Write unit tests verifying Jinja2 template loading, variable hydration, and ADK configuration [bf748e4]
+    - [x] Implement the prompt loader utility and write templated system prompts for all 5 agents [bf748e4]
     - [ ] Implement the Google ADK Agents using LlmAgent and structure the hub-and-spoke tree
 - [ ] Task: Implement top-down delegation flows
     - [ ] Write unit tests for alert routing and delegation signal handling
