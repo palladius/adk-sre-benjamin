@@ -13,6 +13,9 @@
     - [x] Write unit tests verifying Jinja2 template loading, variable hydration, and ADK configuration [bf748e4]
     - [x] Implement the prompt loader utility and write templated system prompts for all 5 agents [bf748e4]
     - [ ] Implement the Google ADK Agents using LlmAgent and structure the hub-and-spoke tree
+- [ ] Task: Implement SRE Mock Incident Harness and piped Agent CLI runner
+    - [ ] Write unit tests for mock incident loading and piped agent stdin parsing
+    - [ ] Create CLI runner in src/cli.py and mock incident fixtures
 - [ ] Task: Implement top-down delegation flows
     - [ ] Write unit tests for alert routing and delegation signal handling
     - [ ] Implement Benjamin's delegation router that activates the 4 leads on alert trigger
