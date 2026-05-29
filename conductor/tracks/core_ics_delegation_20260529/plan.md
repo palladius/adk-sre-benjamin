@@ -7,7 +7,7 @@
     - [x] Implement the trigger parser and folder generation logic [f379115]
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Scaffolding and Trigger Ingestion' (Protocol in workflow.md)
 
-## Phase 2: Core ICS Agents and Delegation
+## Phase 2: Core ICS Agents and Delegation [checkpoint: e0fa5b9]
 
 - [x] Task: Set up Jinja2 prompt template loaders and core ADK agents [50a1858]
     - [x] Write unit tests verifying Jinja2 template loading, variable hydration, and ADK configuration [bf748e4]
