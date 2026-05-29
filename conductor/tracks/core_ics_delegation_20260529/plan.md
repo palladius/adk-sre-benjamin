@@ -9,10 +9,10 @@
 
 ## Phase 2: Core ICS Agents and Delegation
 
-- [~] Task: Set up Jinja2 prompt template loaders and core ADK agents
+- [x] Task: Set up Jinja2 prompt template loaders and core ADK agents [50a1858]
     - [x] Write unit tests verifying Jinja2 template loading, variable hydration, and ADK configuration [bf748e4]
     - [x] Implement the prompt loader utility and write templated system prompts for all 5 agents [bf748e4]
-    - [ ] Implement the Google ADK Agents using LlmAgent and structure the hub-and-spoke tree
+    - [x] Implement the Google ADK Agents using LlmAgent and structure the hub-and-spoke tree [50a1858]
 - [x] Task: Implement SRE Mock Incident Harness and piped Agent CLI runner [1144a08]
     - [x] Write unit tests for mock incident loading and piped agent stdin parsing [1144a08]
     - [x] Create CLI runner in src/cli.py and mock incident fixtures [1144a08]
