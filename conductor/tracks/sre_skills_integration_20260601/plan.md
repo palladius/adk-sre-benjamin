@@ -9,7 +9,7 @@
 
 ## Phase 2: Agent Hydration & Simulation integration
 
-- [ ] Task: Integrate loaded skills into SRE functional agents
-    - [ ] Write unit tests for agents executing with dynamically loaded skill instructions and tools
-    - [ ] Modify `src/agents/ops_lead.py` and `src/agents/planning_lead.py` to support skill hydration
+- [x] Task: Integrate loaded skills into SRE functional agents [0be6f1e]
+    - [x] Write unit tests for agents executing with dynamically loaded skill instructions and tools [0be6f1e]
+    - [x] Modify `src/agents/ops_lead.py` and `src/agents/planning_lead.py` to support skill hydration [0be6f1e]
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Agent Hydration & Simulation integration' (Protocol in workflow.md)
