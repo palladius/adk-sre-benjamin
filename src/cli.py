@@ -7,6 +7,20 @@ def run_cli(args_list=None) -> int:
     """A piped SRE Agent CLI wrapper that accepts instruction text via stdin, 
     hydrates agent prompts with active incident state, and simulates LLM input environments.
     """
+    args = args_list if args_list is not None else sys.argv[1:]
+    if len(args) > 0 and args[0] == "discover":
+        parser = argparse.ArgumentParser(description="GCP Resource Discovery and Asset Audit")
+        parser.add_argument("--project-id", required=True, help="GCP Project ID to discover resources from")
+        parsed_args = parser.parse_args(args[1:])
+        from src.discovery import discover_project_resources
+        try:
+            results_path = discover_project_resources(parsed_args.project_id)
+            print(f"Discovery complete. Results saved to: {results_path}")
+            return 0
+        except Exception as e:
+            sys.stderr.write(f"Discovery failed: {e}\n")
+            return 1
+
     parser = argparse.ArgumentParser(description="Piped Agent CLI evaluation harness.")
     parser.add_argument("--agent", required=True, help="Name of the SRE Agent persona (e.g. ops_agent).")
     parser.add_argument("--incident-dir", help="Path to the active incident folder.")

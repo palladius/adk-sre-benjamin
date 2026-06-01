@@ -29,8 +29,22 @@
             
             <!-- SRE Config Overrides -->
             <div class="sidebar-config">
-                <label for="project-id-input">GCP PROJECT ID</label>
-                <input type="text" id="project-id-input" placeholder="Loading default..." class="glass-input">
+                <label for="project-id-input">GCP PROJECT ID <span class="project-info-hint">(Click 🔍 to discover)</span></label>
+                <div class="project-click-container">
+                    <input type="text" id="project-id-input" placeholder="Loading default..." class="glass-input">
+                    <button id="btn-discover-project" class="btn-discover" title="Discover GCP Resources">🔍</button>
+                </div>
+            </div>
+            
+            <!-- Discovered Resources List -->
+            <div id="discovered-resources-section" class="discovered-resources-section" style="display: none;">
+                <div class="discovery-header">
+                    <h3>GCP RESOURCES</h3>
+                    <span id="discovery-vulnerability-badge" class="vulnerability-warning-badge" style="display: none;">🚨 WARNING</span>
+                </div>
+                <ul id="discovered-resources-list" class="discovered-resources-list">
+                    <li class="loading-placeholder">Discovering resources...</li>
+                </ul>
             </div>
             
             <button id="btn-trigger" class="btn-primary animate-pulse">

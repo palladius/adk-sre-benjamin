@@ -35,6 +35,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const hitlActionsContainer = document.getElementById("hitl-actions-container");
     const projectIdInput = document.getElementById("project-id-input");
     
+    // Discovery Elements
+    const btnDiscoverProject = document.getElementById("btn-discover-project");
+    const discoveredResourcesSection = document.getElementById("discovered-resources-section");
+    const discoveredResourcesList = document.getElementById("discovered-resources-list");
+    const discoveryVulnerabilityBadge = document.getElementById("discovery-vulnerability-badge");
+    
     // Chat DOM Elements
     const chatMessagesContainer = document.getElementById("chat-messages-container");
     const chatUserInput = document.getElementById("chat-user-input");
@@ -51,6 +57,22 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnApprove) btnApprove.addEventListener("click", approveMutation);
     if (btnReject) btnReject.addEventListener("click", rejectMutation);
     if (btnChatSend) btnChatSend.addEventListener("click", sendChatMessage);
+    if (btnDiscoverProject) btnDiscoverProject.addEventListener("click", handleProjectDiscovery);
+    
+    const projectLabel = document.querySelector('label[for="project-id-input"]');
+    if (projectLabel) {
+        projectLabel.style.cursor = "pointer";
+        projectLabel.addEventListener("click", handleProjectDiscovery);
+    }
+    
+    if (projectIdInput) {
+        projectIdInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                handleProjectDiscovery();
+            }
+        });
+    }
+    
     if (chatUserInput) {
         chatUserInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
@@ -67,6 +89,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data && data.project_id && projectIdInput) {
                 projectIdInput.value = data.project_id;
                 projectIdInput.placeholder = data.project_id;
+                
+                // Automatically trigger resource discovery on load
+                handleProjectDiscovery();
             }
         } catch (err) {
             console.error("Failed to load server configurations:", err);
@@ -685,5 +710,105 @@ document.addEventListener("DOMContentLoaded", () => {
             
             step++;
         }, 500); // 500ms delay per agent execution block
+    }
+
+    async function handleProjectDiscovery() {
+        const projectId = projectIdInput ? projectIdInput.value.trim() : "";
+        if (!projectId) {
+            alert("Please provide a valid GCP Project ID.");
+            return;
+        }
+        
+        if (discoveredResourcesSection) {
+            discoveredResourcesSection.style.display = "block";
+        }
+        if (discoveredResourcesList) {
+            discoveredResourcesList.innerHTML = `<li class="loading-placeholder">Discovering resources on project '${projectId}'...</li>`;
+        }
+        if (discoveryVulnerabilityBadge) {
+            discoveryVulnerabilityBadge.style.display = "none";
+        }
+        
+        try {
+            const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/discover`);
+            const data = await res.json();
+            
+            if (data.error) {
+                if (discoveredResourcesList) {
+                    discoveredResourcesList.innerHTML = `<li class="loading-placeholder text-danger">Error: ${data.error}</li>`;
+                }
+                return;
+            }
+            
+            renderDiscoveredResources(data.resources);
+        } catch (err) {
+            console.error("Discovery request failed:", err);
+            if (discoveredResourcesList) {
+                discoveredResourcesList.innerHTML = `<li class="loading-placeholder text-danger">Failed to connect to discovery server.</li>`;
+            }
+        }
+    }
+    
+    function renderDiscoveredResources(resources) {
+        if (!discoveredResourcesList) return;
+        discoveredResourcesList.innerHTML = "";
+        
+        if (!resources || resources.length === 0) {
+            discoveredResourcesList.innerHTML = `<li class="loading-placeholder">No active GCP resources discovered.</li>`;
+            if (discoveryVulnerabilityBadge) discoveryVulnerabilityBadge.style.display = "none";
+            return;
+        }
+        
+        let hasVulnerability = false;
+        
+        const typeIcons = {
+            "gce_vm": "🖥️",
+            "cloud_run": "🏃",
+            "gke_cluster": "☸️",
+            "cloud_sql": "💾"
+        };
+        
+        const typeNames = {
+            "gce_vm": "GCE VM",
+            "cloud_run": "Cloud Run",
+            "gke_cluster": "GKE Cluster",
+            "cloud_sql": "Cloud SQL"
+        };
+        
+        resources.forEach(r => {
+            const isVulnerable = !!r.vulnerable;
+            if (isVulnerable) hasVulnerability = true;
+            
+            const item = document.createElement("li");
+            item.className = `discovered-resource-item ${isVulnerable ? "vulnerable" : "safe"}`;
+            
+            const icon = typeIcons[r.type] || "☁️";
+            const typeName = typeNames[r.type] || r.type;
+            
+            item.innerHTML = `
+                <div class="resource-info">
+                    <div class="resource-icon">${icon}</div>
+                    <div class="resource-details">
+                        <span class="resource-name">${escapeHTML(r.name)}</span>
+                        <span class="resource-type-loc">${typeName} | ${escapeHTML(r.location)}</span>
+                    </div>
+                </div>
+                <div class="resource-status-container">
+                    ${isVulnerable ? `<span class="resource-warning-icon" title="${escapeHTML(r.warning)}">⚠️</span>` : ""}
+                    <span class="status-badge ${r.status === 'RUNNING' || r.status === 'READY' ? 'status-active' : 'status-unknown'}">${escapeHTML(r.status)}</span>
+                </div>
+            `;
+            
+            discoveredResourcesList.appendChild(item);
+        });
+        
+        if (discoveryVulnerabilityBadge) {
+            discoveryVulnerabilityBadge.style.display = hasVulnerability ? "inline-block" : "none";
+        }
+    }
+    
+    function escapeHTML(str) {
+        if (!str) return "";
+        return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 });

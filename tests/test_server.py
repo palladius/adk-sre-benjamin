@@ -145,6 +145,27 @@ def test_server_integration():
                 assert len(data_chat_post) >= 3
                 assert data_chat_post[-2]["sender"] == "Operator (You)"
                 assert data_chat_post[-2]["message"] == "Hello Benjamin"
+                
+        # Test GET /api/projects/test-project-server/discover
+        import shutil
+        server_wiki_path = os.path.join("wiki", "gcp", "test-project-server")
+        if os.path.exists(server_wiki_path):
+            shutil.rmtree(server_wiki_path)
+            
+        try:
+            with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
+                url_discover = f"http://localhost:{port}/api/projects/test-project-server/discover"
+                req_discover = urllib.request.Request(url_discover)
+                with urllib.request.urlopen(req_discover) as resp_discover:
+                    assert resp_discover.status == 200
+                    data_discover = json.loads(resp_discover.read().decode('utf-8'))
+                    assert data_discover["project_id"] == "test-project-server"
+                    assert len(data_discover["resources"]) > 0
+                    assert os.path.exists(data_discover["cache_path"])
+                    assert os.path.exists(data_discover["wiki_path"])
+        finally:
+            if os.path.exists(server_wiki_path):
+                shutil.rmtree(server_wiki_path)
             
     finally:
         server.shutdown()

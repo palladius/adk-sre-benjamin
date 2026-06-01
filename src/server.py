@@ -126,6 +126,42 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"project_id": project_id}).encode("utf-8"))
             return
             
+        # API: Discover GCP Resources for a Project
+        elif path.startswith("/api/projects/") and path.endswith("/discover"):
+            try:
+                project_id = path.split("/")[3]
+                wiki_dir = os.path.join("wiki", "gcp", project_id)
+                json_path = os.path.join(wiki_dir, "discovery.json")
+                
+                # Check cache: if it exists, read it
+                if os.path.exists(json_path):
+                    with open(json_path, "r") as f:
+                        resources = json.load(f)
+                else:
+                    # Run the crawler
+                    from src.discovery import discover_project_resources
+                    discover_project_resources(project_id)
+                    with open(json_path, "r") as f:
+                        resources = json.load(f)
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                
+                response_data = {
+                    "project_id": project_id,
+                    "resources": resources,
+                    "cache_path": json_path,
+                    "wiki_path": os.path.join(wiki_dir, "README.md")
+                }
+                self.wfile.write(json.dumps(response_data).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+            
         # 1. API: List Incidents
         elif path == "/api/incidents":
             self.send_response(200)

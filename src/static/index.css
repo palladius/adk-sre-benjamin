@@ -984,3 +984,170 @@ body {
     0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.3)); }
     50% { filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.6)); }
 }
+
+/* GCP Resource Discovery Styles */
+.project-click-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+}
+
+.project-info-hint {
+    font-size: 9px;
+    font-weight: 400;
+    color: var(--text-secondary);
+    text-transform: none;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+}
+
+.btn-discover {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-discover:hover {
+    background: rgba(0, 255, 255, 0.1);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+    transform: scale(1.05);
+}
+
+.discovered-resources-section {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+    animation: fadeInUp 0.4s ease-out;
+}
+
+.discovery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    padding-bottom: 8px;
+}
+
+.discovery-header h3 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+}
+
+.vulnerability-warning-badge {
+    background: rgba(255, 49, 49, 0.15);
+    border: 1px solid var(--neon-red);
+    color: var(--neon-red);
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    letter-spacing: 0.5px;
+    animation: pulse-red 2s infinite ease-in-out;
+}
+
+@keyframes pulse-red {
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 49, 49, 0.2); }
+    50% { box-shadow: 0 0 10px rgba(255, 49, 49, 0.5); }
+}
+
+.discovered-resources-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.discovered-resources-list::-webkit-scrollbar {
+    width: 4px;
+}
+.discovered-resources-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.discovered-resources-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+}
+
+.discovered-resource-item {
+    background: rgba(255, 255, 255, 0.01);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: var(--transition-smooth);
+}
+
+.discovered-resource-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+    border-color: rgba(255, 255, 255, 0.1);
+    transform: translateX(2px);
+}
+
+.discovered-resource-item.vulnerable {
+    border-left: 3px solid var(--neon-red);
+}
+
+.discovered-resource-item.safe {
+    border-left: 3px solid var(--neon-green);
+}
+
+.resource-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.resource-icon {
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+}
+
+.resource-details {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.resource-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+}
+
+.resource-type-loc {
+    font-size: 10px;
+    color: var(--text-secondary);
+}
+
+.resource-status-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.resource-warning-icon {
+    font-size: 14px;
+    cursor: help;
+}
+
