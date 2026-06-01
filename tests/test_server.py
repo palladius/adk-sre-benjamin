@@ -148,9 +148,9 @@ def test_server_integration():
                 
         # Test GET /api/projects/test-project-server/discover
         import shutil
-        server_wiki_path = os.path.join("wiki", "gcp", "test-project-server")
-        if os.path.exists(server_wiki_path):
-            shutil.rmtree(server_wiki_path)
+        server_cache_path = os.path.join("cloud", "gcp", "projects", "test-project-server")
+        if os.path.exists(server_cache_path):
+            shutil.rmtree(server_cache_path)
             
         try:
             with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
@@ -164,8 +164,8 @@ def test_server_integration():
                     assert os.path.exists(data_discover["cache_path"])
                     assert os.path.exists(data_discover["wiki_path"])
         finally:
-            if os.path.exists(server_wiki_path):
-                shutil.rmtree(server_wiki_path)
+            if os.path.exists(server_cache_path):
+                shutil.rmtree(server_cache_path)
             
     finally:
         server.shutdown()

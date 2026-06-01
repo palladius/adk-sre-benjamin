@@ -8,11 +8,11 @@ from src.cli import run_cli
 
 def test_discover_mock_resources():
     project_id = "test-project-123"
-    wiki_path = os.path.join("wiki", "gcp", project_id)
+    cache_path = os.path.join("cloud", "gcp", "projects", project_id)
     
     # Ensure clean state
-    if os.path.exists(wiki_path):
-        shutil.rmtree(wiki_path)
+    if os.path.exists(cache_path):
+        shutil.rmtree(cache_path)
         
     try:
         # Enable Mock mode
@@ -20,7 +20,7 @@ def test_discover_mock_resources():
             json_path = discover_project_resources(project_id)
             
             assert os.path.exists(json_path)
-            assert os.path.exists(os.path.join(wiki_path, "README.md"))
+            assert os.path.exists(os.path.join(cache_path, "README.md"))
             
             with open(json_path, "r") as f:
                 resources = json.load(f)
@@ -52,23 +52,23 @@ def test_discover_mock_resources():
             assert sql_safe["vulnerable"] is False
             
             # Verify README.md contents
-            with open(os.path.join(wiki_path, "README.md"), "r") as f:
+            with open(os.path.join(cache_path, "README.md"), "r") as f:
                 md_content = f.read()
                 
             assert f"# GCP Resource Catalog: {project_id}" in md_content
             assert "⚠️ EXPOSED" in md_content
             assert "✅ SAFE" in md_content
     finally:
-        if os.path.exists(wiki_path):
-            shutil.rmtree(wiki_path)
+        if os.path.exists(cache_path):
+            shutil.rmtree(cache_path)
 
 def test_discover_live_resources_mocked_subprocess():
     project_id = "live-project-abc"
-    wiki_path = os.path.join("wiki", "gcp", project_id)
+    cache_path = os.path.join("cloud", "gcp", "projects", project_id)
     
     # Ensure clean state
-    if os.path.exists(wiki_path):
-        shutil.rmtree(wiki_path)
+    if os.path.exists(cache_path):
+        shutil.rmtree(cache_path)
         
     try:
         # Mock subprocess outputs to replicate exact live response parsing
@@ -132,23 +132,23 @@ def test_discover_live_resources_mocked_subprocess():
             for r in resources:
                 assert r["vulnerable"] is True  # All mocked resources were set up vulnerable
     finally:
-        if os.path.exists(wiki_path):
-            shutil.rmtree(wiki_path)
+        if os.path.exists(cache_path):
+            shutil.rmtree(cache_path)
 
 def test_cli_discover_subcommand():
     project_id = "cli-test-project"
-    wiki_path = os.path.join("wiki", "gcp", project_id)
+    cache_path = os.path.join("cloud", "gcp", "projects", project_id)
     
     # Ensure clean state
-    if os.path.exists(wiki_path):
-        shutil.rmtree(wiki_path)
+    if os.path.exists(cache_path):
+        shutil.rmtree(cache_path)
         
     try:
         with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
             exit_code = run_cli(["discover", "--project-id", project_id])
             assert exit_code == 0
-            assert os.path.exists(os.path.join(wiki_path, "discovery.json"))
-            assert os.path.exists(os.path.join(wiki_path, "README.md"))
+            assert os.path.exists(os.path.join(cache_path, "discovery.json"))
+            assert os.path.exists(os.path.join(cache_path, "README.md"))
     finally:
-        if os.path.exists(wiki_path):
-            shutil.rmtree(wiki_path)
+        if os.path.exists(cache_path):
+            shutil.rmtree(cache_path)

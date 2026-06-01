@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 
 def discover_project_resources(project_id: str) -> str:
     """Discovers GCP resources, audits them for vulnerabilities, 
-    persists results to wiki/gcp/<project_id>/discovery.json, 
-    and compiles a Markdown index at wiki/gcp/<project_id>/README.md.
+    persists results to cloud/gcp/projects/<project_id>/discovery.json, 
+    and compiles a Markdown index at cloud/gcp/projects/<project_id>/README.md.
     """
     mock_tooling = os.getenv("MOCK_TOOLING", "true").lower() == "true"
     resources = []
@@ -274,15 +274,15 @@ def discover_project_resources(project_id: str) -> str:
         except Exception as e:
             print(f"Failed to crawl Cloud SQL Instances: {e}")
 
-    # Build the directory paths and save JSON cache and Markdown Wiki
-    wiki_dir = os.path.join("wiki", "gcp", project_id)
-    os.makedirs(wiki_dir, exist_ok=True)
+    # Build the deterministic directory paths and save JSON cache and Markdown Wiki
+    cache_dir = os.path.join("cloud", "gcp", "projects", project_id)
+    os.makedirs(cache_dir, exist_ok=True)
     
-    json_path = os.path.join(wiki_dir, "discovery.json")
+    json_path = os.path.join(cache_dir, "discovery.json")
     with open(json_path, "w") as f:
         json.dump(resources, f, indent=2)
         
-    md_path = os.path.join(wiki_dir, "README.md")
+    md_path = os.path.join(cache_dir, "README.md")
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     
     # Generate beautiful index page with bold red warning flags
