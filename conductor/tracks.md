@@ -9,3 +9,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Implement Mock Diagnostics and Fast E2E Incident Simulation**
   *Link: [./tracks/mock_diagnostics_20260529/](./tracks/mock_diagnostics_20260529/)*
+
+- [ ] **Track: Create SRE ICS Dashboard and Live Web Harness**
+  *Link: [./tracks/sre_dashboard_20260601/](./tracks/sre_dashboard_20260601/)*
