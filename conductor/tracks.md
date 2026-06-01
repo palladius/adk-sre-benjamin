@@ -21,3 +21,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: Connect SRE Agents to Live GCP Diagnostics and VMSSH Mutations**
   *Link: [./tracks/live_gcp_connectors_20260601/](./tracks/live_gcp_connectors_20260601/)*
+
+---
+
+- [ ] **Track: GCP Resource Discovery and Asset Audit**
+*Link: [./tracks/gcp_resource_discovery_20260601/](./tracks/gcp_resource_discovery_20260601/)*
+
