@@ -124,7 +124,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderSafetyGate(inc.timeline);
         
         // Render Comms Feeds
-        renderComms(inc.timeline);
+        renderComms(inc.artifacts);
     }
     
     // Highlight which SRE leads participated in the incident timeline
@@ -319,42 +319,97 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
-    // Render Madhavi's broadcast cards
-    function renderComms(timeline) {
-        const commsEvents = timeline.filter(e => e.agent.toLowerCase().includes("comms") || e.agent.toLowerCase().includes("madhavi"));
-        if (commsEvents.length === 0) {
+    // Render Madhavi's broadcast cards & GitHub Issue tickets
+    function renderComms(artifacts) {
+        const telegramArt = artifacts.find(a => a.file_path.endsWith("telegram_feed.json"));
+        const githubArt = artifacts.find(a => a.file_path.endsWith("github_issue.json"));
+        
+        if (!telegramArt && !githubArt) {
             commsFeedContainer.innerHTML = `
                 <div class="comms-card telegram">
                     <div class="comms-card-header">
-                        <span class="channel-badge">Telegram Hub</span>
+                        <span class="channel-badge">Communications Offline</span>
                         <span class="comms-time">Offline</span>
                     </div>
-                    <p class="comms-message">No active broadcast signals dispatched.</p>
+                    <p class="comms-message">No active integration dispatches captured.</p>
                 </div>
             `;
             return;
         }
         
         commsFeedContainer.innerHTML = "";
-        commsEvents.forEach(e => {
-            const card = document.createElement("div");
-            card.className = "comms-card telegram";
-            
-            const isSlack = e.message.toLowerCase().includes("slack");
-            const channelName = isSlack ? "Slack Notification" : "Telegram Alert Channel";
-            
-            const tDate = new Date(e.timestamp);
-            const timeStr = isNaN(tDate.getTime()) ? e.timestamp : tDate.toLocaleTimeString();
-            
-            card.innerHTML = `
-                <div class="comms-card-header">
-                    <span class="channel-badge">${channelName}</span>
-                    <span class="comms-time">${timeStr}</span>
-                </div>
-                <p class="comms-message">${e.message}</p>
-            `;
-            commsFeedContainer.appendChild(card);
-        });
+        
+        // 1. Render GitHub Issue Card if available
+        if (githubArt && githubArt.content) {
+            try {
+                const issue = JSON.parse(githubArt.content);
+                const issueCard = document.createElement("div");
+                issueCard.className = "comms-card github-issue-card";
+                issueCard.style.borderLeft = "4px solid #58a6ff";
+                issueCard.style.background = "rgba(88, 166, 255, 0.03)";
+                issueCard.style.marginTop = "10px";
+                
+                const statusBadgeClass = issue.status === "open" ? "badge-low" : "badge-high";
+                const statusText = issue.status.toUpperCase();
+                
+                let commentsHtml = "";
+                if (issue.comments && issue.comments.length > 0) {
+                    commentsHtml = `
+                        <div class="github-comments-section" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06);">
+                            <span style="font-size: 10px; font-weight: 800; color: #8b949e;">COMMENTS (${issue.comments.length})</span>
+                            <div class="github-comments-list" style="max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 6px;">
+                                ${issue.comments.map(c => `
+                                    <div class="github-comment" style="font-size: 11px; background: rgba(0,0,0,0.15); padding: 6px 8px; border-radius: 6px;">
+                                        <strong>${c.author}:</strong> ${c.body}
+                                    </div>
+                                `).join("")}
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                issueCard.innerHTML = `
+                    <div class="comms-card-header">
+                        <span class="channel-badge" style="color: #58a6ff;">🐙 GitHub Issue Ticket</span>
+                        <span class="risk-badge ${statusBadgeClass}">${statusText}</span>
+                    </div>
+                    <h4 style="font-size: 13px; font-weight: 800; margin: 6px 0; color: #58a6ff;">${issue.title}</h4>
+                    <p class="comms-message" style="font-size: 11.5px; color: #8b949e;">${issue.body}</p>
+                    ${commentsHtml}
+                `;
+                commsFeedContainer.appendChild(issueCard);
+            } catch (e) {
+                console.error("Failed to parse github issue JSON:", e);
+            }
+        }
+        
+        // 2. Render Telegram dispatches if available
+        if (telegramArt && telegramArt.content) {
+            try {
+                const feed = JSON.parse(telegramArt.content);
+                feed.forEach((alert, idx) => {
+                    const card = document.createElement("div");
+                    card.className = "comms-card telegram";
+                    card.style.borderLeft = "4px solid #00ffff";
+                    card.style.background = "rgba(0, 255, 255, 0.02)";
+                    card.style.marginTop = "10px";
+                    
+                    const tDate = new Date(alert.timestamp);
+                    const timeStr = isNaN(tDate.getTime()) ? alert.timestamp : tDate.toLocaleTimeString();
+                    
+                    card.innerHTML = `
+                        <div class="comms-card-header">
+                            <span class="channel-badge" style="color: #00ffff;">📢 Telegram Broadcast</span>
+                            <span class="comms-time">${timeStr}</span>
+                        </div>
+                        <p class="comms-message" style="font-size: 12px;">${alert.message}</p>
+                    `;
+                    commsFeedContainer.appendChild(card);
+                });
+            } catch (e) {
+                console.error("Failed to parse telegram feed JSON:", e);
+            }
+        }
     }
     
     // 4. Trigger Live SRE Incident Simulation
@@ -406,7 +461,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 renderMetrics(inc.artifacts);
                 renderLogs(inc.artifacts);
                 renderSafetyGate(inc.timeline);
-                renderComms(inc.timeline);
+                renderComms(inc.artifacts);
                 
                 const status = inc.status.toUpperCase();
                 activeStatusBadge.textContent = status;
