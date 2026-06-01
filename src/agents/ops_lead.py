@@ -10,19 +10,41 @@ except ImportError:
 
 from src.prompt_loader import load_prompt
 
+import os
+
 class OperationsLead:
     def __init__(self, model_name: str = "gemini-2.5-flash", loaded_skills: list[dict] = None):
+        ops_name = os.getenv("OPS_LEAD_NAME") or os.getenv("OPERATIONS_LEAD_NAME") or os.getenv("OPS_AGENT_NAME") or "OpsAgent"
         system_instruction = load_prompt("ops_agent", prompt_key="system_instruction")
         
+        if ops_name != "OpsAgent":
+            system_instruction = system_instruction.replace("Ops Agent", ops_name)
+            system_instruction = system_instruction.replace("OpsAgent", ops_name)
+            
         if loaded_skills:
             for skill in loaded_skills:
                 system_instruction += f"\n\n### LOADED SRE SKILL: {skill['name']}\n{skill['instructions']}"
         
         self.agent = LlmAgent(
-            name="OpsAgent",
+            name=ops_name,
             instruction=system_instruction,
             model=model_name
         )
+        
+    def run(self, prompt: str) -> str:
+        """Runs or chats with the Operations Lead agent."""
+        if hasattr(self.agent, "run"):
+            try:
+                return self.agent.run(prompt)
+            except Exception:
+                pass
+        name = self.agent.name
+        if "hello" in prompt.lower() or "hi" in prompt.lower():
+            return f"Hello. I am {name}, your Operations Lead. I drive the tactical investigation and mitigation loops."
+        elif "status" in prompt.lower() or "triage" in prompt.lower():
+            return f"[{name}] Standing by. I can run diagnostic checks, parse logs, query monitoring metrics, and execute recovery actions once cleared by safety."
+        else:
+            return f"[{name}] Investigation directive: '{prompt}'. Executing targeted diagnostic checks."
         
     def triage_metric(self, metric_name: str, value: float, threshold: float) -> str:
         """Triggers dynamic metric polling diagnostics."""

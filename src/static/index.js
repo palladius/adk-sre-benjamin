@@ -135,7 +135,7 @@ document.addEventListener("DOMContentLoaded", () => {
         leadOps.classList.toggle("active", agents.has("operations lead") || agents.has("ops lead"));
         leadLogistics.classList.toggle("active", agents.has("logistics lead"));
         leadPlanning.classList.toggle("active", agents.has("planning lead"));
-        leadComms.classList.toggle("active", agents.has("communications lead madhavi") || agents.has("communications lead"));
+        leadComms.classList.toggle("active", agents.has("communications lead") || [...agents].some(a => a.includes("communications lead")));
     }
     
     // Render Scribe chronological timeline log

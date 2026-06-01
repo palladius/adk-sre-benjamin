@@ -47,7 +47,7 @@ def run_incident_flow(payload: dict, base_dir: str = "investigations") -> tuple[
         project_id=trigger.project_id,
         summary_text=f"SLO Alert {trigger.event_type} is currently active."
     )
-    log_to_timeline(f"Incident Broadcasted - Madhavi dispatched channel alerts: {broadcast.strip()}")
+    log_to_timeline(f"Incident Broadcasted - {comms.agent.name} dispatched channel alerts: {broadcast.strip()}")
     
     # 5. Step 3: Logistics Verifies Quotas and Credentials
     quota_check = logistics.quota_check(

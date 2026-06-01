@@ -1,123 +1,76 @@
-# 🏰 Project Benjamin - SRE Agentic IMAG Framework
+# 🏰 Project Benjamin SRE Agentic Framework (v1.13)
 
-> **A secure, agentic SRE multi-agent framework fully aligned with Google's IMAG (Incident Management At Google) ICS structure.**
+Project Benjamin is a production-grade, highly secure automation harness for Site Reliability Engineering (SRE), built using Google's **Antigravity Development Kit (ADK) for Python** and strictly aligned with the **IMAG (Incident Management At Google) Incident Command System (ICS)** command chain.
 
----
-
-## 🖥️ Live Incident Command Dashboard
-
-Here is the latest screenshot of the **Project Benjamin Web Dashboard**, featuring real-time incident state monitoring, timeline tracking, and live incident simulation capabilities.
-
-![Project Benjamin Web Dashboard](doc/web_screenshot.png)
+This framework acts as the agentic brain wrapping your **SRE Extension** repository:
+👉 [https://github.com/gemini-cli-extensions/sre](https://github.com/gemini-cli-extensions/sre)
 
 ---
 
-## 🛠️ Architecture Stack
+## 🚀 Key SRE Core Capabilities
 
-Project Benjamin is designed as a production-grade, highly secure SRE automation harness built upon the following pillars:
+### 1. 🔌 Modular SRE Skills Adapter
+The framework leverages the modular ADK Skills architecture to dynamically import, parse, and execute playbooks directly from the SRE extension repository:
+- **Automatic Discovery:** The `SkillAdapter` scans configured locations to resolve skill folders (e.g. `anomaly-detection`, `cloud-logging`, `safe-sre-investigator`).
+- **YAML Frontmatter Parsing:** Loads the `SKILL.md` from the target folder, parsing metadata (name, description, version) and cleanly separating it from the execution instructions.
+- **Dynamic ADK Hydration:** Appends pre-authored playbook instructions directly to the `LlmAgent` instructions at runtime, instantly extending the agent's cognitive capabilities.
+- **Configurability:** Point to your cloned local repo of `https://github.com/gemini-cli-extensions/sre` via environment variables:
+  ```bash
+  export GEMINI_CLI_SRE_DIR="/home/riccardo/git/sre"
+  # or
+  export SRE_EXTENSION_DIR="/home/riccardo/git/sre"
+  ```
 
-1. **Strict IMAG ICS Command Hierarchy**: Organizational and operational decisions rest with the Incident Commander and flow top-down to four specialized Leads to avoid chaotic, conversational agent swarms.
-2. **ADK + Python-Powered Skills**: Built using the **Antigravity Development Kit (ADK)** for Python, leveraging its modular "Skills" architecture to execute SRE playbooks and diagnostic pipelines.
-3. **SRE Extension Integration**: Serves as the agentic brain wrapping the [SRE Extension](https://github.com/gemini-cli-extensions/sre), using its CLI utilities and helper scripts to inspect and remediate system infrastructures safely.
+### 2. 📢 Dynamic Communications Lead Renaming
+By default, the Communications Lead spokesperson is named **Madhavi**. To match organizational alignments or change names, the spokesperson's name is dynamically loaded from environment variables:
+- **Configuration variables:** `COMMS_LEAD_NAME` or `COMMUNICATIONS_LEAD_NAME` (fallback `MADHAVI_NAME`).
+- **Prompt Synchronization:** When renamed (e.g., to `Lucia`), the agent's internal system instruction prompt automatically synchronizes, replacing all `"Madhavi"` references with `"Lucia"`.
+  ```bash
+  export COMMS_LEAD_NAME="Lucia"
+  ```
 
----
-
-## 🛰️ IMAG Incident Command System (ICS) Structure
-
-The framework is structured as a hub-and-spoke hierarchical tree reporting directly to the Incident Commander:
-
-```
-                              +-----------------------------------+
-                              |   ServiceNow / GCP Alerts / SLOs  |
-                              +-----------------+-----------------+
-                                                | (Operational Triggers)
-                                                v
-                              +-----------------+-----------------+
-                              |      [Agent 1: Benjamin]          |
-                              |   Incident Commander / Lead (IC)  |
-                              +--------+--------+--------+--------+
-                                       |        |        |
-         +-----------------------------+        |        +-----------------------------+
-         |                                      |                                      |
-         v (Delegate Communication)             v (Delegate Operations)                v (Delegate Logistics)
-  +------+-------------------+           +------+-------------------+           +------+-------------------+
-  |  [Agent 2: Madhavi]      |           |  [Agent 3: Ops Agent]    |           |  [Agent 6: Logi Agent]   |
-  |  Communications Lead     |           |  Operations Lead         |           |  Logistics Lead          |
-  +------+-------------------+           +------+-------------------+           +------+-------------------+
-         |                                      |                                      |
-         | (Updates & Bug Filing)               | (Diagnostics & Remediation)          | (Credentials, Quotas & Risk)
-         v                                      v                                      v
-  +------+-------------------+           +------+-------------------+           +------+-------------------+
-  | • Telegram Chat          |           | • Diagnostic Subagents   |           | • Risk Assessor          |
-  | • GitHub / ServiceNow    |           | • Logs Agent             |           | • Resource Manager       |
-  +--------------------------+           | • Metrics Agent          |           +--------------------------+
-                                         | • Mutation Agent         |
-                                         +--------------------------+
-                                                        ^
-                                                        | (Delegate Documenting & Runbooks)
-                                                        v
-                                                 +------+-------------------+
-                                                 |  [Agent 4: Planning Agt] |
-                                                 |  Planning Lead           |
-                                                 +------+-------------------+
-                                                        |
-                                                        | (Filing Chronology, Docs & Assets)
-                                                        v
-                                                 +------+-------------------+
-                                                 | • Memini (Memory)        |
-                                                 | • Discovery Agent        |
-                                                 | • Scribe Agent (Scrivano)|
-                                                 +--------------------------+
-```
-
-### 🏎️ Incident Commander: Benjamin (IC)
-* **Identity**: Represents a bald man wearing a Ferrari cap in a medieval castle (*Schloss*), driving a train (*Treno*).
-* **Role**: Assumes overall responsibility for the incident's lifecycle and resolution. Ingests operational alerts and coordinates the functional Leads.
-
-### 🔧 Operations Lead (Ops Agent)
-* **Role**: Executes diagnostics and recovery workflows.
-* **Security Model**: Strictly **Read-Only** by default. Any state-altering changes require clearance from Logistics and delegation to the Mutation Agent.
-
-### 📋 Planning Lead (Planning Agent)
-* **Role**: Tracks incident timeline, updates the living documentation (`state.md` and `timeline.md`), and automates postmortem indexing.
-* **Delegates**:
-  * **Memini**: Custodian of historical runbooks and past incidents.
-  * **Discovery Agent**: Crawls GCP assets and highlights potential security vulnerabilities.
-  * **Scribe Agent**: Manages the version-controlled Git history of the `investigations/` folders.
-
-### ⚙️ Logistics Lead (Logistics Agent)
-* **Role**: Acts as the gatekeeper of safety, environment configurations, and quotas.
-* **Delegates**:
-  * **Risk Assessment Agent**: Decomposes proposed terminal commands and computes safety coefficients.
-  * **Resource Manager**: Securely provides credentials and verifies API/billing quotas.
-
-### 📢 Communications Lead: Madhavi
-* **Role**: The single source of truth for external status updates (Slack, Telegram feeds, and GitHub/ServiceNow issue trackers).
+### 3. 💬 Interactive ADK Agent Chat / Query
+You can interact, prompt, and query specific ADK agents directly via the terminal evaluation harness or programmatically:
+- **Terminal CLI Chat Harness (`src/cli.py`):** Use `--agent` and `--message` (or pipe stdin) to talk to any specific agent persona:
+  ```bash
+  # Talk to the Communications Lead (Lucia/Madhavi)
+  uv run python3 src/cli.py --agent comms --message "Hello, who are you and what is your status?"
+  
+  # Query the Operations Lead
+  uv run python3 src/cli.py --agent ops --message "How do you triage metric latency?"
+  
+  # Talk to the Incident Commander (Benjamin)
+  uv run python3 src/cli.py --agent commander --message "status"
+  ```
+- **Programmatic `.run()` Method:** Every lead exposes a `.run(prompt)` method that executes the underlying `google.adk.agents.LlmAgent` (or safe fallback handler), enabling seamless inter-agent communications and manual engineering prompts.
 
 ---
 
-## 🚀 Getting Started
+## 🧪 TDD Validation (Behavior-Driven Development)
 
-Ensure you have [uv](https://github.com/astral-sh/uv) installed, then execute the following tasks:
+All features are implemented following a strict **Test-Driven Development (TDD)** and **Behavior-Driven Development (BDD)** workflow. Full specifications can be reviewed in [doc/bdd.md](file:///home/riccardo/git/adk-sre-benjamin/doc/bdd.md).
 
-### 1. Install Dependencies
+The automated test deck consists of **43 high-fidelity unit and integration tests** verifying 100% of the dynamic loading, renaming, prompt loading, telemetry servers, and safety risk gate behaviors.
+
+### Run tests with `uv`:
 ```bash
-just install
+uv run pytest
 ```
 
-### 2. Launch the Web Dashboard
+### Run tests with coverage:
 ```bash
-uv run python3 src/server.py
-```
-Open your browser and navigate to: [http://localhost:8080/](http://localhost:8080/)
-
-### 3. Run E2E Incident Simulation
-Click the **Trigger Live Simulation** button in the dashboard, or run it directly via the terminal:
-```bash
-just simulate
-```
-
-### 4. Execute Test Suite
-```bash
+# Using justfile
 just test
+# or
+just coverage
 ```
+
+---
+
+## 🏰 IMAG ICS Delegation Workflow
+
+1. **Incident Declaration:** Incident Commander **Benjamin** detects alert SLO thresholds and activates the incident state.
+2. **Channel Broadcast:** **Comms Lead (Lucia/Madhavi)** alerts engineering Telegram channels and creates GitHub issue tickets.
+3. **Logistics Audit:** **Logistics Lead** scans environment variables, billing quotas, and evaluates proposed command risks.
+4. **Operations Triage:** **Operations Lead** executes diagnostic metrics scripts, aggregates logs, and executes whitelisted system mutations once approved by Logistics.
+5. **Memory Chronicle:** **Planning Lead** archives incident timelines, fetches historical runbooks via **Memento**, and commits scribe audit files using safe Git Annotations (`git notes`).

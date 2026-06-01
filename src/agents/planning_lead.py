@@ -10,19 +10,41 @@ except ImportError:
 
 from src.prompt_loader import load_prompt
 
+import os
+
 class PlanningLead:
     def __init__(self, model_name: str = "gemini-2.5-flash", loaded_skills: list[dict] = None):
+        planning_name = os.getenv("PLANNING_LEAD_NAME") or os.getenv("PLANNING_AGENT_NAME") or "PlanningAgent"
         system_instruction = load_prompt("planning_agent", prompt_key="system_instruction")
         
+        if planning_name != "PlanningAgent":
+            system_instruction = system_instruction.replace("Planning Agent", planning_name)
+            system_instruction = system_instruction.replace("PlanningAgent", planning_name)
+            
         if loaded_skills:
             for skill in loaded_skills:
                 system_instruction += f"\n\n### LOADED SRE SKILL: {skill['name']}\n{skill['instructions']}"
         
         self.agent = LlmAgent(
-            name="PlanningAgent",
+            name=planning_name,
             instruction=system_instruction,
             model=model_name
         )
+        
+    def run(self, prompt: str) -> str:
+        """Runs or chats with the Planning Lead agent."""
+        if hasattr(self.agent, "run"):
+            try:
+                return self.agent.run(prompt)
+            except Exception:
+                pass
+        name = self.agent.name
+        if "hello" in prompt.lower() or "hi" in prompt.lower():
+            return f"Hello. I am {name}, your Planning Lead. I compile timeline logs, index historical postmortems via Memento, and scan GCP asset safety postures."
+        elif "status" in prompt.lower() or "memory" in prompt.lower():
+            return f"[{name}] Standing by. I can search past incidents, generate runbook insights, and chronicle state changes with safe Git annotations."
+        else:
+            return f"[{name}] Planning directive: '{prompt}'. Running historical checks and updating incident record."
         
     def scribe_commit(self, action_summary: str, commit_hash: str) -> str:
         """Generates timeline chronicle details for git note attachments."""

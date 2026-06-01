@@ -155,6 +155,24 @@ Under the IMAG ICS model, the framework is structured as a **hub-and-spoke hiera
 
 ---
 
+### Feature 4: Dynamic Communications Lead Rename & SRE Extension Skills Loader
+**As an** SRE Architect  
+**I want** to dynamically configure the Communications Lead agent's name via environment variables  
+**And** automatically discover and load skills from the cloned SRE Extension Git repository (`https://github.com/gemini-cli-extensions/sre`)  
+**So that the framework dynamically adapts to organizational roles and leverages external expert playbooks.**
+
+* **Scenario: Renaming the Communications Lead to Lucia and resolving Git skills**
+  * **Given** the environment variable `COMMS_LEAD_NAME` is configured as `Lucia`
+  * **And** the environment variable `GEMINI_CLI_SRE_DIR` points to `/home/riccardo/git/sre`
+  * **When** Project Benjamin initializes the SRE Command leads
+  * **And** the `SkillAdapter` resolves the `anomaly-detection` skill
+  * **Then** the Communications Lead's agent name is set to `Lucia`
+  * **And** her system instruction prompt replaces all `Madhavi` references with `Lucia`
+  * **And** the `SkillAdapter` successfully parses `anomaly-detection/SKILL.md` from the SRE extension repository
+  * **And** appends the instructions directly to the hydrated ADK agent instructions.
+
+---
+
 ## 🛠️ 5. Tech Stack & ADK (Antigravity Development Kit)
 
 | Technology | 🟢 Pros (Advantages) | 🔴 Cons (Disadvantages) |

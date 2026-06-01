@@ -109,7 +109,7 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
         project_id=trigger.project_id,
         incident_id=incident.incident_id
     )
-    log_event("Incident Commander Benjamin", f"Alert received: {trigger.event_type}. Incident declared ACTIVE.", declaration)
+    log_event(f"Incident Commander {commander.agent.name}", f"Alert received: {trigger.event_type}. Incident declared ACTIVE.", declaration)
     
     # Step 2: Madhavi Broadcasts the Incident
     broadcast = comms.broadcast_incident(
@@ -118,7 +118,7 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
         project_id=trigger.project_id,
         summary_text=f"SLO Alert {trigger.event_type} is active. Ops Lead has been assigned."
     )
-    log_event("Communications Lead Madhavi", "Incident broadcast sent to Telegram and Slack.", broadcast)
+    log_event(f"Communications Lead {comms.agent.name}", "Incident broadcast sent to Telegram and Slack.", broadcast)
     
     # Step 3: Logistics Verifies Quotas and Credentials
     quota_check = logistics.quota_check(
@@ -126,7 +126,7 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
         cred_var_name="GCP_CREDENTIALS",
         cred_status="VERIFIED"
     )
-    log_event("Logistics Lead", "GCP Credentials and monitoring API limits audited and verified.", quota_check)
+    log_event(f"Logistics Lead {logistics.agent.name}", "GCP Credentials and monitoring API limits audited and verified.", quota_check)
     
     # Write Scribe initial state document
     with open(state_path, "w") as f:
@@ -144,7 +144,7 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
 """)
         
     # Step 4: Ops queries Metrics (Metrics Agent)
-    log_event("Operations Lead", "Initiating high-frequency metrics diagnostic collection.")
+    log_event(f"Operations Lead {ops.agent.name}", "Initiating high-frequency metrics diagnostic collection.")
     latency_values = query_metrics(trigger.project_id, "latency")
     cpu_values = query_metrics(trigger.project_id, "cpu")
     
@@ -165,10 +165,10 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
         source_command="MCP://cloud_monitoring/query_metrics",
         source_arguments={"project_id": trigger.project_id, "metric_names": ["latency", "cpu"]}
     )
-    log_event("Operations Lead", "Metrics Agent generated and registered metrics CSV artifact.", f"Metrics stored: {metrics_csv_path}")
+    log_event(f"Operations Lead {ops.agent.name}", "Metrics Agent generated and registered metrics CSV artifact.", f"Metrics stored: {metrics_csv_path}")
     
     # Step 5: Ops queries Logs (Logs Agent)
-    log_event("Operations Lead", "Initiating diagnostic query on MySQL database logs.")
+    log_event(f"Operations Lead {ops.agent.name}", "Initiating diagnostic query on MySQL database logs.")
     logs_output = query_logs(trigger.project_id, "mysql")
     
     # Save logs into a log file inside the artifacts/ folder
@@ -184,20 +184,20 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
         source_command="gcloud logging read 'resource.type=gce_instance' --limit=5",
         source_arguments={"project_id": trigger.project_id, "query": "mysql"}
     )
-    log_event("Operations Lead", "Logs Agent scraped and registered MySQL query log artifact.", f"Logs stored: {logs_file_path}")
+    log_event(f"Operations Lead {ops.agent.name}", "Logs Agent scraped and registered MySQL query log artifact.", f"Logs stored: {logs_file_path}")
     
     # Step 6: Ops identifies saturation/deadlock and proposes whitelisted recovery command
-    log_event("Operations Lead", "Triage identified CPU saturation and database pool deadlock. Proposing mutation restart.")
+    log_event(f"Operations Lead {ops.agent.name}", "Triage identified CPU saturation and database pool deadlock. Proposing mutation restart.")
     proposed_command = "systemctl restart mysql"
     proposal = ops.propose_mutation(
         command=proposed_command,
         asset="db_instance",
         expected_outcome="Free locked transaction pools and restore frontend SLO performance"
     )
-    log_event("Operations Lead", f"Proposed system mutation command: {proposed_command}", proposal)
+    log_event(f"Operations Lead {ops.agent.name}", f"Proposed system mutation command: {proposed_command}", proposal)
     
     # Step 7: Logistics Risk Assessor evaluates risk
-    log_event("Logistics Lead", "Risk Assessor performing security audit on proposed mutation command.")
+    log_event(f"Logistics Lead {logistics.agent.name}", "Risk Assessor performing security audit on proposed mutation command.")
     is_safe, max_risk, reasons = is_command_safe(proposed_command)
     parts = decompose_command(proposed_command)
     
@@ -208,23 +208,23 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
         evaluation_status="APPROVED" if is_safe else "BLOCKED",
         reasons=reasons
     )
-    log_event("Logistics Lead", f"Command risk assessment complete. Status: APPROVED. Risk level: {max_risk}.", evaluation)
+    log_event(f"Logistics Lead {logistics.agent.name}", f"Command risk assessment complete. Status: APPROVED. Risk level: {max_risk}.", evaluation)
     
     # Step 8: Madhavi broadcasts safety clearance and Mutation Agent executes mutation
     hitl_msg = comms.request_hitl_approval(incident.incident_id, proposed_command, max_risk, reasons)
-    log_event("Communications Lead Madhavi", f"Safety clearance granted for whitelisted mutation command: {proposed_command}.", hitl_msg)
+    log_event(f"Communications Lead {comms.agent.name}", f"Safety clearance granted for whitelisted mutation command: {proposed_command}.", hitl_msg)
     
     # Mutation Agent executes mutation
     log_event("Mutation Agent", f"Executing whitelisted mutation command: {proposed_command}")
     
     # Step 9: Diagnostic checks confirm metric recovery
-    log_event("Operations Lead", "Performing post-mutation recovery verification metrics check.")
+    log_event(f"Operations Lead {ops.agent.name}", "Performing post-mutation recovery verification metrics check.")
     recovered_latency = [15.0, 14.5, 15.0]
     recovered_cpu = [12.0, 10.5, 11.0]
-    log_event("Operations Lead", f"Post-mutation checks complete. Latency: {recovered_latency[-1]}ms (threshold: 100ms). CPU: {recovered_cpu[-1]}%. Status: RECOVERED.")
+    log_event(f"Operations Lead {ops.agent.name}", f"Post-mutation checks complete. Latency: {recovered_latency[-1]}ms (threshold: 100ms). CPU: {recovered_cpu[-1]}%. Status: RECOVERED.")
     
     # Step 10: Scribe updates state, commits all chronicles, and attaches a Git Note
-    log_event("Planning Lead", "Scribe Agent closing incident chronicles.")
+    log_event(f"Planning Lead {planning.agent.name}", "Scribe Agent closing incident chronicles.")
     with open(state_path, "w") as f:
         f.write(f"""# Active SRE Incident State: {incident.incident_id}
 
@@ -240,7 +240,7 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
 - All services healthy and verified.
 """)
         
-    log_event("Planning Lead", "Incident resolved successfully. Closed.")
+    log_event(f"Planning Lead {planning.agent.name}", "Incident resolved successfully. Closed.")
     
     # Close GitHub issue & send final Telegram notification
     github.close_incident_issue(issue_id, f"Restarted database service successfully under {max_risk} Risk clearance.", incident.incident_id)

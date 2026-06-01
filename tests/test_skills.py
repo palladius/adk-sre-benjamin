@@ -66,3 +66,19 @@ def test_skill_loader_real():
         assert skill is not None
         assert "cloud-build-investigation" in skill["name"].lower()
         assert len(skill["instructions"]) > 0
+
+def test_skill_loader_sre_extension_dir(monkeypatch):
+    # Set the env variable to the real git repository path
+    monkeypatch.setenv("GEMINI_CLI_SRE_DIR", "/home/riccardo/git/sre")
+    
+    adapter = SkillAdapter()
+    assert "/home/riccardo/git/sre" in adapter.search_dirs
+    assert "/home/riccardo/git/sre/skills" in adapter.search_dirs
+    
+    # Load anomaly-detection or safe-sre-investigator skill if the real repo is there
+    if os.path.exists("/home/riccardo/git/sre/skills/anomaly-detection"):
+        skill = adapter.load_sre_skill("anomaly-detection")
+        assert skill is not None
+        assert skill["name"] == "anomaly-detection"
+        assert "anomal" in skill["description"].lower()
+        assert len(skill["instructions"]) > 0
