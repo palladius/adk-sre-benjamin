@@ -7,6 +7,14 @@ This framework acts as the agentic brain wrapping your **SRE Extension** reposit
 
 ---
 
+## 🖥️ Live Incident Command Dashboard
+
+Here is the latest screenshot of the **Project Benjamin Web Dashboard**, featuring real-time incident state monitoring, timeline tracking, and live incident simulation capabilities.
+
+![Project Benjamin Web Dashboard](doc/web_screenshot.png)
+
+---
+
 ## 🚀 Key SRE Core Capabilities
 
 ### 1. 🔌 Modular SRE Skills Adapter
@@ -63,6 +71,29 @@ uv run pytest
 just test
 # or
 just coverage
+```
+
+---
+
+## 🚀 Getting Started
+
+Ensure you have [uv](https://github.com/astral-sh/uv) installed, then execute the following tasks:
+
+### 1. Install Dependencies
+```bash
+just install
+```
+
+### 2. Launch the Web Dashboard
+```bash
+uv run python3 src/server.py
+```
+Open your browser and navigate to: [http://localhost:8080/](http://localhost:8080/)
+
+### 3. Run E2E Incident Simulation
+Click the **Trigger Live Simulation** button in the dashboard, or run it directly via the terminal:
+```bash
+just simulate
 ```
 
 ---
