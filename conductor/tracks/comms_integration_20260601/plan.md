@@ -1,0 +1,18 @@
+# Implementation Plan: comms_integration_20260601
+
+## Phase 1: Telegram & GitHub Communication Engines
+
+- [ ] Task: Create Telegram and GitHub messaging dispatchers
+    - [ ] Write unit tests verifying Telegram Markdown payloads and GitHub issue lifecycles (with mock and live toggles)
+    - [ ] Implement `src/comms_telegram.py` dispatching real and mock messages
+    - [ ] Implement `src/comms_github.py` managing real and mock tracking tickets
+- [ ] Task: Conductor - User Manual Verification 'Phase 1: Telegram & GitHub Communication Engines' (Protocol in workflow.md)
+
+## Phase 2: Orchestration & UI Synchronization
+
+- [ ] Task: Orchestrate dispatches in E2E simulation harness
+    - [ ] Write unit tests for simulation runs with active communication feeds
+    - [ ] Update `run_simulation.py` to trigger live/mock Telegram updates and create/comment/close GitHub issues
+- [ ] Task: Update Web Dashboard visuals to show communications artifacts
+    - [ ] Update `src/static/index.js` to render GitHub issue logs and Telegram dispatches beautifully
+- [ ] Task: Conductor - User Manual Verification 'Phase 2: Orchestration & UI Synchronization' (Protocol in workflow.md)

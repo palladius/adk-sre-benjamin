@@ -12,3 +12,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Create SRE ICS Dashboard and Live Web Harness**
   *Link: [./tracks/sre_dashboard_20260601/](./tracks/sre_dashboard_20260601/)*
+
+- [ ] **Track: Integrate Comms Lead Madhavi with Telegram & GitHub**
+  *Link: [./tracks/comms_integration_20260601/](./tracks/comms_integration_20260601/)*
