@@ -74,8 +74,112 @@
 
         <!-- Main Dashboard View -->
         <main class="main-content">
-            <!-- Top Castle Header -->
-            <header class="dashboard-header">
+            <!-- Deterministic Project Discovery View (Big Page on the Right) -->
+            <div id="project-discovery-view" class="project-discovery-view" style="display: none;">
+                <!-- Header -->
+                <header class="project-header">
+                    <div class="project-header-left">
+                        <div class="project-back-btn" id="btn-close-project-view" title="Back to Incident Dashboard">⬅️ Back to Incident View</div>
+                        <h2 id="project-view-title">GCP PROJECT ASSETS: Loading...</h2>
+                        <p id="project-view-meta">Deterministic Cache: <strong id="project-cache-path" class="code-font">cloud/gcp/projects/...</strong></p>
+                    </div>
+                    <div class="project-header-right">
+                        <span id="project-compliance-badge" class="compliance-badge badge-safe">COMPLIANT</span>
+                    </div>
+                </header>
+
+                <!-- Statistics Metrics Row -->
+                <div class="project-stats-grid">
+                    <div class="stat-box">
+                        <span class="stat-icon">☁️</span>
+                        <div class="stat-info">
+                            <h4 id="stat-total-resources">0</h4>
+                            <p>Analyzed Assets</p>
+                        </div>
+                    </div>
+                    <div class="stat-box warning-state">
+                        <span class="stat-icon">🚨</span>
+                        <div class="stat-info">
+                            <h4 id="stat-exposed-resources" class="text-danger">0</h4>
+                            <p>Exposed/Vulnerable</p>
+                        </div>
+                    </div>
+                    <div class="stat-box success-state">
+                        <span class="stat-icon">✅</span>
+                        <div class="stat-info">
+                            <h4 id="stat-safe-resources" class="text-success">0</h4>
+                            <p>Safe Boundaries</p>
+                        </div>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-icon">📜</span>
+                        <div class="stat-info">
+                            <h4 id="stat-last-audit">Never</h4>
+                            <p>Last SRE Crawl Audit</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detached Layout Grid showing GCE, Run, GKE, SQL in a nice big visual layout -->
+                <div class="project-assets-grid">
+                    <!-- GCE VMs Panel -->
+                    <section class="panel asset-panel">
+                        <div class="panel-header">
+                            <h3>🖥️ COMPUTE ENGINE VIRTUAL MACHINES</h3>
+                            <span class="panel-subtitle">Audited GCE VM Instances</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="assets-list" id="assets-list-vm">
+                                <p class="loading-placeholder">No instances discovered.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Cloud Run Panel -->
+                    <section class="panel asset-panel">
+                        <div class="panel-header">
+                            <h3>🏃 CLOUD RUN SERVERLESS SERVICES</h3>
+                            <span class="panel-subtitle">Unauthenticated Invoker Audits</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="assets-list" id="assets-list-run">
+                                <p class="loading-placeholder">No services discovered.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- GKE Panel -->
+                    <section class="panel asset-panel">
+                        <div class="panel-header">
+                            <h3>☸️ GOOGLE KUBERNETES ENGINE</h3>
+                            <span class="panel-subtitle">Control Plane Public Access Audits</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="assets-list" id="assets-list-gke">
+                                <p class="loading-placeholder">No GKE clusters discovered.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Cloud SQL Panel -->
+                    <section class="panel asset-panel">
+                        <div class="panel-header">
+                            <h3>💾 CLOUD SQL DATABASE INSTANCES</h3>
+                            <span class="panel-subtitle">Public IP & Authorized Networks Audits</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="assets-list" id="assets-list-sql">
+                                <p class="loading-placeholder">No database instances discovered.</p>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- Existing Incident SRE dashboard -->
+            <div id="incident-dashboard-view" class="incident-dashboard-view">
+                <!-- Top Castle Header -->
+                <header class="dashboard-header">
                 <div class="header-title">
                     <div class="status-indicator-container">
                         <span id="active-status-badge" class="status-badge status-active">ACTIVE</span>
@@ -222,6 +326,7 @@
                     </section>
                 </div>
             </div>
+            </div> <!-- Closing incident-dashboard-view wrapper -->
         </main>
     </div>
     

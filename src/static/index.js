@@ -43,6 +43,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const projectIdsList = document.getElementById("project-ids-list");
     let projectHistory = [];
     
+    // Project View Big Page Elements
+    const projectDiscoveryView = document.getElementById("project-discovery-view");
+    const incidentDashboardView = document.getElementById("incident-dashboard-view");
+    const btnCloseProjectView = document.getElementById("btn-close-project-view");
+    
+    const projectViewTitle = document.getElementById("project-view-title");
+    const projectCachePath = document.getElementById("project-cache-path");
+    const projectComplianceBadge = document.getElementById("project-compliance-badge");
+    
+    const statTotalResources = document.getElementById("stat-total-resources");
+    const statExposedResources = document.getElementById("stat-exposed-resources");
+    const statSafeResources = document.getElementById("stat-safe-resources");
+    const statLastAudit = document.getElementById("stat-last-audit");
+    
+    const assetsListVm = document.getElementById("assets-list-vm");
+    const assetsListRun = document.getElementById("assets-list-run");
+    const assetsListGke = document.getElementById("assets-list-gke");
+    const assetsListSql = document.getElementById("assets-list-sql");
+    
     // Chat DOM Elements
     const chatMessagesContainer = document.getElementById("chat-messages-container");
     const chatUserInput = document.getElementById("chat-user-input");
@@ -60,6 +79,15 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnReject) btnReject.addEventListener("click", rejectMutation);
     if (btnChatSend) btnChatSend.addEventListener("click", sendChatMessage);
     if (btnDiscoverProject) btnDiscoverProject.addEventListener("click", handleProjectDiscovery);
+    
+    if (btnCloseProjectView) {
+        btnCloseProjectView.addEventListener("click", () => {
+            if (incidentDashboardView && projectDiscoveryView) {
+                incidentDashboardView.style.display = "block";
+                projectDiscoveryView.style.display = "none";
+            }
+        });
+    }
     
     const projectLabel = document.querySelector('label[for="project-id-input"]');
     if (projectLabel) {
@@ -256,6 +284,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 li.addEventListener("click", () => {
                     document.querySelectorAll(".incident-item").forEach(item => item.classList.remove("active"));
                     li.classList.add("active");
+                    if (incidentDashboardView && projectDiscoveryView) {
+                        incidentDashboardView.style.display = "block";
+                        projectDiscoveryView.style.display = "none";
+                    }
                     fetchIncidentDetails(inc.incident_id);
                 });
                 
@@ -635,6 +667,10 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // 4. Trigger Live SRE Incident Simulation
     async function triggerLiveSimulation() {
+        if (incidentDashboardView && projectDiscoveryView) {
+            incidentDashboardView.style.display = "block";
+            projectDiscoveryView.style.display = "none";
+        }
         btnTrigger.disabled = true;
         btnTrigger.textContent = "Simulating Live Incident...";
         btnTrigger.classList.remove("animate-pulse");
@@ -761,6 +797,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             
             renderDiscoveredResources(data.resources);
+            renderBigProjectPage(projectId, data);
             saveToProjectHistory(projectId);
         } catch (err) {
             console.error("Discovery request failed:", err);
@@ -849,6 +886,119 @@ document.addEventListener("DOMContentLoaded", () => {
             const option = document.createElement("option");
             option.value = pid;
             projectIdsList.appendChild(option);
+        });
+    }
+
+    function renderBigProjectPage(projectId, data) {
+        if (incidentDashboardView && projectDiscoveryView) {
+            incidentDashboardView.style.display = "none";
+            projectDiscoveryView.style.display = "flex";
+        }
+        
+        if (projectViewTitle) projectViewTitle.textContent = `GCP PROJECT ASSETS: ${projectId}`;
+        if (projectCachePath) projectCachePath.textContent = data.cache_path || `cloud/gcp/projects/${projectId}/discovery.json`;
+        
+        const resources = data.resources || [];
+        const total = resources.length;
+        const exposed = resources.filter(r => r.vulnerable).length;
+        const safe = total - exposed;
+        
+        if (statTotalResources) statTotalResources.textContent = total;
+        if (statExposedResources) statExposedResources.textContent = exposed;
+        if (statSafeResources) statSafeResources.textContent = safe;
+        if (statLastAudit) {
+            statLastAudit.textContent = new Date().toLocaleTimeString();
+        }
+        
+        if (projectComplianceBadge) {
+            if (exposed > 0) {
+                projectComplianceBadge.textContent = "🚨 AUDIT WARNING";
+                projectComplianceBadge.className = "compliance-badge badge-warning";
+            } else {
+                projectComplianceBadge.textContent = "✅ COMPLIANT";
+                projectComplianceBadge.className = "compliance-badge badge-safe";
+            }
+        }
+        
+        // Clear all list containers
+        if (assetsListVm) assetsListVm.innerHTML = "";
+        if (assetsListRun) assetsListRun.innerHTML = "";
+        if (assetsListGke) assetsListGke.innerHTML = "";
+        if (assetsListSql) assetsListSql.innerHTML = "";
+        
+        // Group and render each asset type
+        const vmAssets = resources.filter(r => r.type === "gce_vm");
+        const runAssets = resources.filter(r => r.type === "cloud_run");
+        const gkeAssets = resources.filter(r => r.type === "gke_cluster");
+        const sqlAssets = resources.filter(r => r.type === "cloud_sql");
+        
+        renderAssetGroup(vmAssets, assetsListVm, "🖥️ GCE VM Instance", r => `
+            <div class="asset-meta-item"><span class="asset-meta-label">Zone:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Internal IP:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.internal_ip || 'N/A')}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">External IP:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.external_ip || 'None')}</span></div>
+        `);
+        
+        renderAssetGroup(runAssets, assetsListRun, "🏃 Cloud Run Service", r => `
+            <div class="asset-meta-item"><span class="asset-meta-label">Region:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Service URL:</span> <a href="${escapeHTML(r.metadata.url)}" target="_blank" class="asset-meta-value text-cyan" style="word-break: break-all;">${escapeHTML(r.metadata.url || 'N/A')}</a></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Public Access:</span> <span class="asset-meta-value">${r.metadata.all_users_invoker ? 'Enabled (unauthenticated)' : 'Disabled (secured)'}</span></div>
+        `);
+        
+        renderAssetGroup(gkeAssets, assetsListGke, "☸️ GKE Cluster", r => `
+            <div class="asset-meta-item"><span class="asset-meta-label">Location:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Control Endpoint:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.endpoint || 'N/A')}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Boundary Security:</span> <span class="asset-meta-value">${r.metadata.private_cluster ? 'Private Cluster Enabled' : 'Public Control Plane Exposure'}</span></div>
+        `);
+        
+        renderAssetGroup(sqlAssets, assetsListSql, "💾 Cloud SQL Instance", r => `
+            <div class="asset-meta-item"><span class="asset-meta-label">Region:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Public Access:</span> <span class="asset-meta-value">${r.metadata.public_ip_enabled ? 'Enabled' : 'Disabled (Private IP only)'}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Authorized Networks:</span> <span class="asset-meta-value">${r.metadata.authorized_networks && r.metadata.authorized_networks.length > 0 ? escapeHTML(r.metadata.authorized_networks.join(', ')) : 'None (open or private)'}</span></div>
+        `);
+    }
+    
+    function renderAssetGroup(assets, container, typeName, metaHtmlBuilder) {
+        if (!container) return;
+        if (assets.length === 0) {
+            container.innerHTML = `<p class="loading-placeholder">No active ${escapeHTML(typeName)} instances found.</p>`;
+            return;
+        }
+        
+        assets.forEach((r, idx) => {
+            const card = document.createElement("div");
+            card.className = `asset-card ${r.vulnerable ? 'vulnerable' : 'safe'}`;
+            
+            card.innerHTML = `
+                <div class="asset-card-header">
+                    <span class="asset-card-title">${escapeHTML(r.name)}</span>
+                    <span class="status-badge ${r.status === 'RUNNING' || r.status === 'READY' ? 'status-active' : 'status-unknown'}">${escapeHTML(r.status)}</span>
+                </div>
+                <div class="asset-card-body">
+                    ${metaHtmlBuilder(r)}
+                    
+                    ${r.vulnerable ? `
+                        <div class="asset-warning-block">
+                            <span>🚨 Warning: ${escapeHTML(r.warning)}</span>
+                        </div>
+                    ` : ''}
+                    
+                    <span class="asset-metadata-toggle" style="margin-top: 8px;">View raw metadata</span>
+                    <pre class="asset-metadata-content" style="display: none; margin-top: 6px;">${escapeHTML(JSON.stringify(r.metadata, null, 2))}</pre>
+                </div>
+            `;
+            
+            // Wire metadata toggle
+            const toggle = card.querySelector(".asset-metadata-toggle");
+            const metadataBlock = card.querySelector(".asset-metadata-content");
+            if (toggle && metadataBlock) {
+                toggle.addEventListener("click", () => {
+                    const isHidden = metadataBlock.style.display === "none";
+                    metadataBlock.style.display = isHidden ? "block" : "none";
+                    toggle.textContent = isHidden ? "Hide raw metadata" : "View raw metadata";
+                });
+            }
+            
+            container.appendChild(card);
         });
     }
 });
