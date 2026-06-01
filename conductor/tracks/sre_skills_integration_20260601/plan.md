@@ -7,9 +7,9 @@
     - [x] Implement `src/skills_adapter.py` providing the `SkillAdapter` utility [131f6a7]
 - [x] Task: Conductor - User Manual Verification 'Phase 1: Modular SRE Skill Adapter' (Protocol in workflow.md) [de63781]
 
-## Phase 2: Agent Hydration & Simulation integration
+## Phase 2: Agent Hydration & Simulation integration [checkpoint: 51d22cd]
 
 - [x] Task: Integrate loaded skills into SRE functional agents [0be6f1e]
     - [x] Write unit tests for agents executing with dynamically loaded skill instructions and tools [0be6f1e]
     - [x] Modify `src/agents/ops_lead.py` and `src/agents/planning_lead.py` to support skill hydration [0be6f1e]
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Agent Hydration & Simulation integration' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Agent Hydration & Simulation integration' (Protocol in workflow.md) [51d22cd]
