@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Benjamin - SRE Incident Command System Dashboard</title>
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+    <div class="glow glow-3"></div>
+
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon">🏰</div>
+                <div class="logo-text">
+                    <h1>BENJAMIN</h1>
+                    <span>SRE ICS Framework</span>
+                </div>
+            </div>
+            
+            <button id="btn-trigger" class="btn-primary animate-pulse">
+                <span class="btn-icon">🚨</span> Trigger Live Simulation
+            </button>
+            
+            <div class="incident-list-section">
+                <h2>INCIDENT REPOSITORY</h2>
+                <ul id="incident-list" class="incident-list">
+                    <li class="loading-placeholder">Loading repository...</li>
+                </ul>
+            </div>
+            
+            <div class="sidebar-footer">
+                <div class="profile">
+                    <div class="profile-avatar">👨‍🦲🏎️</div>
+                    <div class="profile-info">
+                        <h3>Ben Sloss (IC)</h3>
+                        <p>Commander at Schloss</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard View -->
+        <main class="main-content">
+            <!-- Top Castle Header -->
+            <header class="dashboard-header">
+                <div class="header-title">
+                    <div class="status-indicator-container">
+                        <span id="active-status-badge" class="status-badge status-active">ACTIVE</span>
+                        <div class="pulse-ring"></div>
+                    </div>
+                    <h2 id="active-incident-title">INC-20260601-244e</h2>
+                    <p id="active-incident-meta">Target: <strong>prod-db-999</strong> | Trigger: <strong>frontend_latency_slo_violated</strong></p>
+                </div>
+                <div class="active-leads-grid">
+                    <div class="lead-card" id="lead-commander">
+                        <span class="lead-emoji">👨‍🦲</span>
+                        <span class="lead-name">IC</span>
+                    </div>
+                    <div class="lead-card" id="lead-ops">
+                        <span class="lead-emoji">🔧</span>
+                        <span class="lead-name">Ops</span>
+                    </div>
+                    <div class="lead-card" id="lead-logistics">
+                        <span class="lead-emoji">🛡️</span>
+                        <span class="lead-name">Logistics</span>
+                    </div>
+                    <div class="lead-card" id="lead-planning">
+                        <span class="lead-emoji">📋</span>
+                        <span class="lead-name">Planning</span>
+                    </div>
+                    <div class="lead-card" id="lead-comms">
+                        <span class="lead-emoji">📢</span>
+                        <span class="lead-name">Comms</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard-grid">
+                <!-- Left Panel: Live Scribe Timeline -->
+                <section class="panel timeline-panel">
+                    <div class="panel-header">
+                        <h3>📜 SCRIBE SYSTEM TIMELINE</h3>
+                        <span class="panel-subtitle">Audited Live Timeline</span>
+                    </div>
+                    <div class="panel-body">
+                        <div id="timeline-container" class="timeline">
+                            <div class="timeline-empty">Select or trigger an SRE incident to visualize the chronological timeline logs.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Right Panels Column -->
+                <div class="right-column">
+                    <!-- Metrics Diagnostics Card -->
+                    <section class="panel metrics-panel">
+                        <div class="panel-header">
+                            <h3>📈 METRICS DIAGNOSTICS</h3>
+                            <span class="panel-subtitle">Ops Agent Telemetry</span>
+                        </div>
+                        <div class="panel-body">
+                            <div id="metrics-chart-container" class="metrics-chart-wrapper">
+                                <svg id="metrics-svg" class="metrics-svg" viewBox="0 0 500 200">
+                                    <!-- Dynamic SVG Lines will go here -->
+                                    <text x="250" y="100" text-anchor="middle" fill="#8b949e" font-size="12">No telemetry loaded</text>
+                                </svg>
+                            </div>
+                            <div class="metrics-legend">
+                                <span class="legend-item"><span class="legend-color latency-color"></span> Latency (ms)</span>
+                                <span class="legend-item"><span class="legend-color cpu-color"></span> CPU (%)</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- MySQL Live Query logs -->
+                    <section class="panel logs-panel">
+                        <div class="panel-header">
+                            <h3>📟 LOGS DIAGNOSTICS</h3>
+                            <span class="panel-subtitle">MySQL DB Log Streams</span>
+                        </div>
+                        <div class="panel-body">
+                            <pre id="logs-terminal" class="terminal-view"><code>[Terminal offline. Awaiting telemetry...]</code></pre>
+                        </div>
+                    </section>
+
+                    <!-- Logistics Safety Gate Card -->
+                    <section class="panel safety-panel" id="safety-gate-card">
+                        <div class="panel-header">
+                            <h3>🛡️ LOGISTICS RISK ASSESSOR GATE</h3>
+                            <span id="safety-risk-badge" class="risk-badge badge-low">LOW RISK</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="safety-gate-details">
+                                <div class="risk-metric">
+                                    <div class="metric-label">Proposed Action:</div>
+                                    <div class="metric-value code-font" id="proposed-command-text">systemctl restart mysql</div>
+                                </div>
+                                <div class="risk-metric">
+                                    <div class="metric-label">Safety Status:</div>
+                                    <div class="metric-value text-success" id="safety-status-text">APPROVED</div>
+                                </div>
+                                <div class="risk-reasons" id="safety-reasons-text">
+                                    Command parsed and approved by Logistics Lead. No security/policy violations.
+                                </div>
+                            </div>
+                            <div class="hitl-actions" id="hitl-actions-container" style="display: none;">
+                                <div class="hitl-alert">⚠️ Awaiting Human-In-The-Loop Safety Clearance!</div>
+                                <div class="hitl-btn-group">
+                                    <button class="btn-success" id="btn-approve-mutation">Approve Restart</button>
+                                    <button class="btn-danger" id="btn-reject-mutation">Reject & Halt</button>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Madhavi Communications Card -->
+                    <section class="panel comms-panel">
+                        <div class="panel-header">
+                            <h3>📢 MADHAVI COMMUNICATIONS HUB</h3>
+                            <span class="panel-subtitle">Live Broadcast Feeds</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="comms-feed" id="comms-feed-container">
+                                <div class="comms-card telegram">
+                                    <div class="comms-card-header">
+                                        <span class="channel-badge">Telegram Dispatch</span>
+                                        <span class="comms-time">Just now</span>
+                                    </div>
+                                    <p class="comms-message">Awaiting incident trigger to dispatch public notification updates.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="index.js"></script>
+</body>
+</html>
