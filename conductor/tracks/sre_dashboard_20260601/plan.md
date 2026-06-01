@@ -9,10 +9,10 @@
 
 ## Phase 2: Premium Glassmorphism Frontend Dashboard
 
-- [ ] Task: Design and implement static CSS and HTML assets
-    - [ ] Create base structure in `src/static/index.html` with grid panels (Sidebar, Main, Metrics, Logs, Safety)
-    - [ ] Design Glassmorphism styles in `src/static/index.css` using sleek variables, glowing borders, and Outfit typography
-- [ ] Task: Implement dashboard interactive script
-    - [ ] Write `src/static/index.js` parsing API payloads, managing selection, rendering live status transitions
-    - [ ] Implement SVG time-series metrics charts and MySQL query highlights
+- [x] Task: Design and implement static CSS and HTML assets [a3cf334]
+    - [x] Create base structure in `src/static/index.html` with grid panels (Sidebar, Main, Metrics, Logs, Safety) [a3cf334]
+    - [x] Design Glassmorphism styles in `src/static/index.css` using sleek variables, glowing borders, and Outfit typography [a3cf334]
+- [x] Task: Implement dashboard interactive script [a8d27cf]
+    - [x] Write `src/static/index.js` parsing API payloads, managing selection, rendering live status transitions [a8d27cf]
+    - [x] Implement SVG time-series metrics charts and MySQL query highlights [a8d27cf]
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Premium Glassmorphism Frontend Dashboard' (Protocol in workflow.md)
