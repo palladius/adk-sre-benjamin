@@ -11,8 +11,12 @@ except ImportError:
 from src.prompt_loader import load_prompt
 
 class PlanningLead:
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, model_name: str = "gemini-2.5-flash", loaded_skills: list[dict] = None):
         system_instruction = load_prompt("planning_agent", prompt_key="system_instruction")
+        
+        if loaded_skills:
+            for skill in loaded_skills:
+                system_instruction += f"\n\n### LOADED SRE SKILL: {skill['name']}\n{skill['instructions']}"
         
         self.agent = LlmAgent(
             name="PlanningAgent",
