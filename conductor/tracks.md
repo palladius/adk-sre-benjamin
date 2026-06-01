@@ -18,3 +18,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Integrate SRE Extension Skills into ADK Agents**
   *Link: [./tracks/sre_skills_integration_20260601/](./tracks/sre_skills_integration_20260601/)*
+
+- [ ] **Track: Connect SRE Agents to Live GCP Diagnostics and VMSSH Mutations**
+  *Link: [./tracks/live_gcp_connectors_20260601/](./tracks/live_gcp_connectors_20260601/)*
