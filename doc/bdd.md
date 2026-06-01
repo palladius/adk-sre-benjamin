@@ -102,8 +102,8 @@ Under the IMAG ICS model, the framework is structured as a **hub-and-spoke hiera
 
 ## 🏰 3. The Legend & Iconography of Benjamin
 * **The Tribute:** The project is named in honor of **Ben Treynor Sloss**, the legendary founder of the SRE discipline at Google.
-* **The Visual Pun:** "Sloss" sounds like *"Schloss"* (German for Castle).
-* **The Iconic Avatar:** The primary entry point agent is visually represented as a smiling bald man wearing a red **Ferrari cap** inside a medieval castle (*Benjamin Trainer Schloss*).
+* **The Visual Pun:** "Sloss" sounds like *"Schloss"* (German for Castle), and "Treynor" sounds like **Treno** (Italian for Train).
+* **The Iconic Avatar:** The primary entry point agent is visually represented as a smiling bald man wearing a red **Ferrari cap** inside a medieval castle driving a train (named **Ben Treno**).
 
 ---
 

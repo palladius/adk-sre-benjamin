@@ -16,7 +16,7 @@ The framework functions as the intelligent agentic brain wrapper for existing SR
 
 The system is composed of five specialized agent personas operating under a strict hierarchy:
 
-1. **Incident Commander (Benjamin):** The central leader of the incident lifecycle. Ingests alerts/triggers (e.g. from GCP Monitoring or ServiceNow), initializes the incident context, declares it active, and delegates tasks to the leads. Visually represented as a bald man with a red Ferrari cap inside a castle (a visual pun on Ben Treynor Sloss/Schloss).
+1. **Incident Commander (Benjamin):** The central leader of the incident lifecycle. Ingests alerts/triggers (e.g. from GCP Monitoring or ServiceNow), initializes the incident context, declares it active, and delegates tasks to the leads. Visually represented as a bald man with a red Ferrari cap inside a castle (visually named **Ben Treno** - a pun on the Italian word for train and Ben Treynor Sloss/Schloss).
 2. **Operations Lead (Ops Agent):** Tactical driver of diagnostics and remediation. Strictly read-only by default. Must delegate mutations to the Mutation Agent and request safety clearance from the Logistics Lead.
 3. **Planning Lead (Planning Agent):** Supports the incident context by retrieving historical runbooks (Memini), scanning active GCP project structures (Discovery Agent), and maintaining a highly detailed git-versioned timeline and status log (Scribe Agent).
 4. **Logistics Lead (Logistics Agent):** Gatekeeper of resources, credentials, API quotas, and system safety. Evaluates commands for their Risk Coefficient (via Risk Assessment Agent) and blocks high-risk operations without explicit approval.
