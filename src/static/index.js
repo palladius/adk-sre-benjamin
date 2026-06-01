@@ -40,6 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const discoveredResourcesSection = document.getElementById("discovered-resources-section");
     const discoveredResourcesList = document.getElementById("discovered-resources-list");
     const discoveryVulnerabilityBadge = document.getElementById("discovery-vulnerability-badge");
+    const projectIdsList = document.getElementById("project-ids-list");
+    let projectHistory = [];
     
     // Chat DOM Elements
     const chatMessagesContainer = document.getElementById("chat-messages-container");
@@ -89,6 +91,24 @@ document.addEventListener("DOMContentLoaded", () => {
             if (data && data.project_id && projectIdInput) {
                 projectIdInput.value = data.project_id;
                 projectIdInput.placeholder = data.project_id;
+                
+                // Load cached project history from local storage
+                const cachedHistory = localStorage.getItem("benjamin_project_history");
+                if (cachedHistory) {
+                    try {
+                        projectHistory = JSON.parse(cachedHistory);
+                    } catch (e) {
+                        projectHistory = [];
+                    }
+                }
+                
+                // Keep the .env default project ID always at the top of the history list
+                if (!projectHistory.includes(data.project_id)) {
+                    projectHistory.unshift(data.project_id);
+                    localStorage.setItem("benjamin_project_history", JSON.stringify(projectHistory));
+                }
+                
+                updateProjectHistoryList();
                 
                 // Automatically trigger resource discovery on load
                 handleProjectDiscovery();
@@ -741,6 +761,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             
             renderDiscoveredResources(data.resources);
+            saveToProjectHistory(projectId);
         } catch (err) {
             console.error("Discovery request failed:", err);
             if (discoveredResourcesList) {
@@ -810,5 +831,24 @@ document.addEventListener("DOMContentLoaded", () => {
     function escapeHTML(str) {
         if (!str) return "";
         return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function saveToProjectHistory(projectId) {
+        if (!projectId) return;
+        if (!projectHistory.includes(projectId)) {
+            projectHistory.push(projectId);
+            localStorage.setItem("benjamin_project_history", JSON.stringify(projectHistory));
+            updateProjectHistoryList();
+        }
+    }
+    
+    function updateProjectHistoryList() {
+        if (!projectIdsList) return;
+        projectIdsList.innerHTML = "";
+        projectHistory.forEach(pid => {
+            const option = document.createElement("option");
+            option.value = pid;
+            projectIdsList.appendChild(option);
+        });
     }
 });

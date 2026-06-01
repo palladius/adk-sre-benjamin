@@ -31,9 +31,12 @@
             <div class="sidebar-config">
                 <label for="project-id-input">GCP PROJECT ID <span class="project-info-hint">(Click 🔍 to discover)</span></label>
                 <div class="project-click-container">
-                    <input type="text" id="project-id-input" placeholder="Loading default..." class="glass-input">
+                    <input type="text" id="project-id-input" placeholder="Loading default..." class="glass-input" list="project-ids-list" autocomplete="off">
                     <button id="btn-discover-project" class="btn-discover" title="Discover GCP Resources">🔍</button>
                 </div>
+                <datalist id="project-ids-list">
+                    <!-- Populated dynamically from localStorage history -->
+                </datalist>
             </div>
             
             <!-- Discovered Resources List -->
