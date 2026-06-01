@@ -16,5 +16,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Integrate Comms Lead Madhavi with Telegram & GitHub**
   *Link: [./tracks/comms_integration_20260601/](./tracks/comms_integration_20260601/)*
 
-- [ ] **Track: Integrate SRE Extension Skills into ADK Agents**
+- [x] **Track: Integrate SRE Extension Skills into ADK Agents**
   *Link: [./tracks/sre_skills_integration_20260601/](./tracks/sre_skills_integration_20260601/)*
