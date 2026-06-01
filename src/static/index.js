@@ -35,6 +35,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const hitlActionsContainer = document.getElementById("hitl-actions-container");
     const projectIdInput = document.getElementById("project-id-input");
     
+    // Chat DOM Elements
+    const chatMessagesContainer = document.getElementById("chat-messages-container");
+    const chatUserInput = document.getElementById("chat-user-input");
+    const btnChatSend = document.getElementById("btn-chat-send");
+    
     let activeIncidentId = null;
     
     // Initialize
@@ -45,6 +50,14 @@ document.addEventListener("DOMContentLoaded", () => {
     btnTrigger.addEventListener("click", triggerLiveSimulation);
     if (btnApprove) btnApprove.addEventListener("click", approveMutation);
     if (btnReject) btnReject.addEventListener("click", rejectMutation);
+    if (btnChatSend) btnChatSend.addEventListener("click", sendChatMessage);
+    if (chatUserInput) {
+        chatUserInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                sendChatMessage();
+            }
+        });
+    }
     
     // 0. Fetch Server Configurations
     async function loadConfig() {
@@ -97,6 +110,72 @@ document.addEventListener("DOMContentLoaded", () => {
         } finally {
             if (btnApprove) btnApprove.disabled = false;
             if (btnReject) btnReject.disabled = false;
+        }
+    }
+
+    // Fetch and render contextual chat log
+    async function loadChatMessages(incidentId) {
+        if (!chatMessagesContainer) return;
+        try {
+            const res = await fetch(`/api/incidents/${incidentId}/chat`);
+            const chatData = await res.json();
+            
+            if (!chatData || chatData.length === 0) {
+                chatMessagesContainer.innerHTML = `<div class="chat-placeholder">Welcome! Write a message to initialize chat.</div>`;
+                return;
+            }
+            
+            chatMessagesContainer.innerHTML = "";
+            chatData.forEach(msg => {
+                const bubble = document.createElement("div");
+                const isUser = msg.sender.includes("Operator");
+                bubble.className = `chat-bubble ${isUser ? 'chat-bubble-user' : 'chat-bubble-agent'}`;
+                
+                const tDate = new Date(msg.timestamp);
+                const timeStr = isNaN(tDate.getTime()) ? "" : tDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                bubble.innerHTML = `
+                    <div class="chat-meta ${isUser ? 'chat-meta-user' : 'chat-meta-agent'}">
+                        <span>${msg.sender}</span>
+                        <span>${timeStr}</span>
+                    </div>
+                    <div class="chat-text">${msg.message}</div>
+                `;
+                chatMessagesContainer.appendChild(bubble);
+            });
+            
+            // Scroll to the bottom of message feeds
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        } catch (err) {
+            console.error("Failed to load chat history:", err);
+            chatMessagesContainer.innerHTML = `<div class="chat-placeholder text-danger">Error loading chat interface.</div>`;
+        }
+    }
+
+    // Send a message from the operator to SRE AI Incident Commander
+    async function sendChatMessage() {
+        if (!activeIncidentId || !chatUserInput) return;
+        const msgText = chatUserInput.value.trim();
+        if (!msgText) return;
+        
+        chatUserInput.value = "";
+        if (btnChatSend) btnChatSend.disabled = true;
+        
+        try {
+            const res = await fetch(`/api/incidents/${activeIncidentId}/chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message: msgText })
+            });
+            const chatData = await res.json();
+            
+            // Re-render bubbles
+            loadChatMessages(activeIncidentId);
+        } catch (err) {
+            console.error("Failed to post message:", err);
+            alert("Failed to communicate with UI SRE Agent.");
+        } finally {
+            if (btnChatSend) btnChatSend.disabled = false;
         }
     }
     
@@ -188,6 +267,9 @@ document.addEventListener("DOMContentLoaded", () => {
         
         // Render Comms Feeds
         renderComms(inc.artifacts);
+
+        // Load Contextual Chat
+        loadChatMessages(inc.incident_id);
 
         // Show/hide HITL buttons based on status
         if (hitlActionsContainer) {

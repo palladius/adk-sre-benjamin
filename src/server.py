@@ -142,6 +142,42 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(incidents).encode("utf-8"))
             return
             
+        # 2a. API: Get Contextual Incident Chat
+        elif path.startswith("/api/incidents/") and path.endswith("/chat"):
+            try:
+                incident_id = path.split("/")[3]
+                incident_path = os.path.join("investigations", incident_id)
+                if os.path.exists(incident_path):
+                    chat_path = os.path.join(incident_path, "chat.json")
+                    chat_data = []
+                    if os.path.exists(chat_path):
+                        with open(chat_path, "r") as f:
+                            chat_data = json.load(f)
+                    else:
+                        details = parse_incident_folder(incident_path)
+                        chat_data = [
+                            {
+                                "sender": "Benjamin Agent (IC)",
+                                "message": f"Welcome to the tactical Incident Chat for {incident_id}. I am Benjamin, the SRE Incident Commander. We are currently analyzing the incident alert '{details.get('trigger_event')}' targeting project '{details.get('project_id')}'. How can I assist you?",
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            }
+                        ]
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(chat_data).encode("utf-8"))
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
         # 2. API: Get Single Incident Details
         elif path.startswith("/api/incidents/"):
             incident_id = path.replace("/api/incidents/", "")
@@ -282,6 +318,101 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+        # 6. API: Contextual Chat Message Posting
+        elif path.startswith("/api/incidents/") and path.endswith("/chat"):
+            try:
+                incident_id = path.split("/")[3]
+                incident_path = os.path.join("investigations", incident_id)
+                if os.path.exists(incident_path):
+                    content_length = int(self.headers.get('Content-Length', 0))
+                    post_data = self.rfile.read(content_length)
+                    payload = json.loads(post_data.decode("utf-8"))
+                    user_msg = payload.get("message", "").strip()
+                    
+                    if not user_msg:
+                        self.send_response(400)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"error": "Empty message"}).encode("utf-8"))
+                        return
+                    
+                    chat_path = os.path.join(incident_path, "chat.json")
+                    chat_data = []
+                    if os.path.exists(chat_path):
+                        with open(chat_path, "r") as f:
+                            chat_data = json.load(f)
+                    else:
+                        details = parse_incident_folder(incident_path)
+                        chat_data = [
+                            {
+                                "sender": "Benjamin Agent (IC)",
+                                "message": f"Welcome to the tactical Incident Chat for {incident_id}. I am Benjamin, the SRE Incident Commander. We are currently analyzing the incident alert '{details.get('trigger_event')}' targeting project '{details.get('project_id')}'. How can I assist you?",
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            }
+                        ]
+                    
+                    # Append user message
+                    chat_data.append({
+                        "sender": "Operator (You)",
+                        "message": user_msg,
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    })
+                    
+                    # Generate contextual reply
+                    details = parse_incident_folder(incident_path)
+                    status = details.get("status", "UNKNOWN").upper()
+                    project_id = details.get("project_id", "sre-bnext-prod")
+                    trigger_event = details.get("trigger_event", "frontend_latency_slo_violated")
+                    
+                    reply_msg = ""
+                    lower_msg = user_msg.lower()
+                    
+                    if "status" in lower_msg or "incident" in lower_msg or "what is" in lower_msg:
+                        if status == "AWAITING_APPROVAL":
+                            reply_msg = f"The incident '{incident_id}' is currently AWAITING APPROVAL. Operations Lead has proposed restarting the MySQL service on project '{project_id}' to resolve a deadlock. You can clear this gate from the Risk Assessor panel."
+                        elif status == "CLOSED" or status == "RESOLVED":
+                            reply_msg = f"This incident has been CLOSED/RESOLVED. The service is healthy, and the timeline is archived under git notes."
+                        elif status == "ABORTED":
+                            reply_msg = f"The proposed change was rejected. Incident '{incident_id}' is closed as ABORTED/BLOCKED."
+                        else:
+                            reply_msg = f"The current incident status is {status}. Telemetry check is active on project '{project_id}'."
+                    elif "project" in lower_msg or "gcp" in lower_msg:
+                        reply_msg = f"We are operating in the GCP project context '{project_id}'. Least-privilege monitoring reads are powered by our service account wrapper."
+                    elif "restart" in lower_msg or "command" in lower_msg or "mysql" in lower_msg or "mutation" in lower_msg:
+                        if status == "AWAITING_APPROVAL":
+                            reply_msg = "The proposed restart command 'systemctl restart mysql' is safe (Risk: MEDIUM). To authorize it, please approve the mutation on the Logistics Safety Gate dashboard card."
+                        else:
+                            reply_msg = "The database operations have concluded. Service is verified and healthy."
+                    elif "help" in lower_msg or "what can you do" in lower_msg:
+                        reply_msg = "I am the UI SRE Agent. You can ask me about: 1. The incident status or target project. 2. The safety gate status of proposed mutations. 3. General incident diagnostic data."
+                    else:
+                        reply_msg = f"Copy that, operator. I have recorded your message regarding '{user_msg}' inside the incident logs. We are closely monitoring project '{project_id}' telemetry streams."
+                    
+                    chat_data.append({
+                        "sender": "Benjamin Agent (IC)",
+                        "message": reply_msg,
+                        "timestamp": datetime.now(timezone.utc).isoformat()
+                    })
+                    
+                    # Save updated chat log
+                    with open(chat_path, "w") as f:
+                        json.dump(chat_data, f, indent=2)
+                        
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(chat_data).encode("utf-8"))
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
         else:
             self.send_response(404)
             self.end_headers()

@@ -845,6 +845,129 @@ body {
     line-height: 1.5;
 }
 
+/* Contextual Chat Agent styles */
+.flex-column {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.chat-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: 380px;
+    height: 380px;
+}
+
+.chat-messages-container {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.03);
+    margin-bottom: 12px;
+}
+
+.chat-placeholder {
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-align: center;
+    margin: auto;
+    font-style: italic;
+}
+
+.chat-bubble {
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 85%;
+    font-size: 12px;
+    line-height: 1.4;
+    animation: fadeInUp 0.3s ease;
+}
+
+.chat-bubble-user {
+    align-self: flex-end;
+    background: rgba(0, 255, 255, 0.04);
+    border: 1px solid rgba(0, 255, 255, 0.15);
+    color: var(--text-primary);
+}
+
+.chat-bubble-agent {
+    align-self: flex-start;
+    background: rgba(189, 0, 255, 0.04);
+    border: 1px solid rgba(189, 0, 255, 0.15);
+    color: var(--text-primary);
+}
+
+.chat-meta {
+    font-size: 9px;
+    font-weight: 800;
+    margin-bottom: 4px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.chat-meta-user {
+    color: var(--neon-cyan);
+}
+
+.chat-meta-agent {
+    color: var(--neon-purple);
+}
+
+.chat-text {
+    font-family: var(--font-outfit);
+}
+
+.chat-input-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.glass-input-chat {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text-primary);
+    font-family: var(--font-outfit);
+    font-size: 12px;
+    outline: none;
+    transition: var(--transition-smooth);
+}
+
+.glass-input-chat:focus {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--neon-purple);
+    box-shadow: 0 0 10px rgba(189, 0, 255, 0.15);
+}
+
+.btn-chat-send {
+    background: var(--neon-purple);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family: var(--font-outfit);
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    box-shadow: 0 0 10px rgba(189, 0, 255, 0.2);
+}
+
+.btn-chat-send:hover {
+    filter: brightness(1.2);
+    box-shadow: 0 0 15px rgba(189, 0, 255, 0.4);
+    transform: translateY(-1px);
+}
+
 /* Global Animations */
 @keyframes fadeInUp {
     from {

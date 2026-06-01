@@ -115,6 +115,37 @@ def test_server_integration():
                 assert data_reject["status"] == "ABORTED"
                 mock_resume.assert_called_once_with("INC-MOCK-123", approved=False)
             
+        # Test GET /api/incidents/INC-MOCK-123/chat (mocked)
+        with patch("os.path.exists") as mock_exists, \
+             patch("src.server.parse_incident_folder") as mock_parse:
+            mock_exists.side_effect = lambda p: not p.endswith("chat.json")
+            mock_parse.return_value = {"trigger_event": "frontend_latency_slo_violated", "project_id": "sre-next"}
+            url_chat_get = f"http://localhost:{port}/api/incidents/INC-MOCK-123/chat"
+            req_chat_get = urllib.request.Request(url_chat_get)
+            with urllib.request.urlopen(req_chat_get) as resp_chat_get:
+                assert resp_chat_get.status == 200
+                data_chat_get = json.loads(resp_chat_get.read().decode('utf-8'))
+                assert isinstance(data_chat_get, list)
+                assert len(data_chat_get) > 0
+                assert "Benjamin" in data_chat_get[0]["sender"]
+
+        # Test POST /api/incidents/INC-MOCK-123/chat (mocked)
+        with patch("os.path.exists") as mock_exists, \
+             patch("src.server.parse_incident_folder") as mock_parse, \
+             patch("builtins.open", MagicMock()):
+            mock_exists.side_effect = lambda p: not p.endswith("chat.json")
+            mock_parse.return_value = {"status": "AWAITING_APPROVAL", "trigger_event": "frontend_latency_slo_violated", "project_id": "sre-next"}
+            url_chat_post = f"http://localhost:{port}/api/incidents/INC-MOCK-123/chat"
+            payload_chat = json.dumps({"message": "Hello Benjamin"}).encode("utf-8")
+            req_chat_post = urllib.request.Request(url_chat_post, data=payload_chat, method="POST")
+            with urllib.request.urlopen(req_chat_post) as resp_chat_post:
+                assert resp_chat_post.status == 200
+                data_chat_post = json.loads(resp_chat_post.read().decode('utf-8'))
+                assert isinstance(data_chat_post, list)
+                assert len(data_chat_post) >= 3
+                assert data_chat_post[-2]["sender"] == "Operator (You)"
+                assert data_chat_post[-2]["message"] == "Hello Benjamin"
+            
     finally:
         server.shutdown()
         server.server_close()

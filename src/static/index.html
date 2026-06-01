@@ -186,6 +186,23 @@
                             </div>
                         </div>
                     </section>
+
+                    <!-- Contextual Chat Agent Card -->
+                    <section class="panel chat-panel" id="incident-chat-card">
+                        <div class="panel-header">
+                            <h3>💬 INCIDENT COMMAND CHAT AGENT</h3>
+                            <span class="panel-subtitle" id="chat-agent-status">Online | Interactive SRE Co-Pilot</span>
+                        </div>
+                        <div class="panel-body flex-column">
+                            <div class="chat-messages-container" id="chat-messages-container">
+                                <div class="chat-placeholder">Select or trigger an incident to initialize a co-pilot chat session.</div>
+                            </div>
+                            <div class="chat-input-bar">
+                                <input type="text" id="chat-user-input" placeholder="Ask sth about this incident..." class="glass-input-chat">
+                                <button class="btn-chat-send" id="btn-chat-send">Send</button>
+                            </div>
+                        </div>
+                    </section>
                 </div>
             </div>
         </main>
