@@ -26,7 +26,7 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
     if payload is None:
         payload = {
             "event_type": "frontend_latency_slo_violated",
-            "project_id": "prod-db-999"
+            "project_id": ""
         }
         
     # 1. Parse Alert Trigger and Scaffold Incident Folders
