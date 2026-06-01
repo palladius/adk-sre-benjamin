@@ -1,0 +1,440 @@
+// Project Benjamin SRE Dashboard Interactive Controller
+
+document.addEventListener("DOMContentLoaded", () => {
+    // DOM Elements
+    const btnTrigger = document.getElementById("btn-trigger");
+    const incidentList = document.getElementById("incident-list");
+    const activeStatusBadge = document.getElementById("active-status-badge");
+    const activeIncidentTitle = document.getElementById("active-incident-title");
+    const activeIncidentMeta = document.getElementById("active-incident-meta");
+    
+    const timelineContainer = document.getElementById("timeline-container");
+    const metricsSvg = document.getElementById("metrics-svg");
+    const logsTerminal = document.getElementById("logs-terminal");
+    
+    // Safety Gate Elements
+    const safetyGateCard = document.getElementById("safety-gate-card");
+    const safetyRiskBadge = document.getElementById("safety-risk-badge");
+    const proposedCommandText = document.getElementById("proposed-command-text");
+    const safetyStatusText = document.getElementById("safety-status-text");
+    const safetyReasonsText = document.getElementById("safety-reasons-text");
+    
+    // Comms Elements
+    const commsFeedContainer = document.getElementById("comms-feed-container");
+    
+    // Active Leads Elements
+    const leadCommander = document.getElementById("lead-commander");
+    const leadOps = document.getElementById("lead-ops");
+    const leadLogistics = document.getElementById("lead-logistics");
+    const leadPlanning = document.getElementById("lead-planning");
+    const leadComms = document.getElementById("lead-comms");
+    
+    let activeIncidentId = null;
+    
+    // Initialize
+    loadIncidentRepository();
+    
+    // Event Listeners
+    btnTrigger.addEventListener("click", triggerLiveSimulation);
+    
+    // 1. Fetch SRE Incident List
+    async function loadIncidentRepository(selectedId = null) {
+        try {
+            const res = await fetch("/api/incidents");
+            const incidents = await res.json();
+            
+            if (incidents.length === 0) {
+                incidentList.innerHTML = `<li class="loading-placeholder">No incidents recorded yet.</li>`;
+                return;
+            }
+            
+            incidentList.innerHTML = "";
+            incidents.forEach((inc, index) => {
+                const li = document.createElement("li");
+                li.className = `incident-item ${selectedId === inc.incident_id || (!selectedId && index === 0) ? 'active' : ''}`;
+                li.dataset.id = inc.incident_id;
+                
+                const badgeClass = inc.status.toUpperCase() === "CLOSED" || inc.status.toUpperCase() === "RESOLVED" 
+                    ? "status-resolved" 
+                    : "status-active";
+                    
+                li.innerHTML = `
+                    <div class="incident-item-header">
+                        <span class="incident-item-id">${inc.incident_id}</span>
+                        <span class="incident-item-status status-badge ${badgeClass}">${inc.status}</span>
+                    </div>
+                    <div class="incident-item-desc">${inc.trigger_event || 'SRE incident trigger'}</div>
+                `;
+                
+                li.addEventListener("click", () => {
+                    document.querySelectorAll(".incident-item").forEach(item => item.classList.remove("active"));
+                    li.classList.add("active");
+                    fetchIncidentDetails(inc.incident_id);
+                });
+                
+                incidentList.appendChild(li);
+            });
+            
+            // Auto-load details for selected or first incident
+            if (selectedId) {
+                fetchIncidentDetails(selectedId);
+            } else if (incidents.length > 0) {
+                fetchIncidentDetails(incidents[0].incident_id);
+            }
+        } catch (err) {
+            console.error("Failed to load incident repository:", err);
+            incidentList.innerHTML = `<li class="loading-placeholder text-danger">Error loading repository.</li>`;
+        }
+    }
+    
+    // 2. Fetch Single Incident Details
+    async function fetchIncidentDetails(id) {
+        activeIncidentId = id;
+        try {
+            const res = await fetch(`/api/incidents/${id}`);
+            const data = await res.json();
+            renderIncident(data);
+        } catch (err) {
+            console.error("Failed to fetch incident details:", err);
+        }
+    }
+    
+    // 3. Render Incident Info on Dashboard
+    function renderIncident(inc) {
+        // Update Title & Metadata
+        activeIncidentTitle.textContent = inc.incident_id;
+        activeIncidentMeta.innerHTML = `Target Project: <strong>${inc.project_id}</strong> | Trigger Event: <strong>${inc.trigger_event}</strong>`;
+        
+        // Status Badge
+        const status = inc.status.toUpperCase();
+        activeStatusBadge.textContent = status;
+        activeStatusBadge.className = "status-badge " + (status === "RESOLVED" || status === "CLOSED" ? "status-resolved" : "status-active");
+        
+        // Handle Active Leads Badge highlights
+        updateLeadsHighlight(inc.timeline);
+        
+        // Render Scribe Timeline with animated sequential delay
+        renderTimeline(inc.timeline);
+        
+        // Render Diagnostics (Metrics + Logs)
+        renderMetrics(inc.artifacts);
+        renderLogs(inc.artifacts);
+        
+        // Render Safety Gate Evaluation
+        renderSafetyGate(inc.timeline);
+        
+        // Render Comms Feeds
+        renderComms(inc.timeline);
+    }
+    
+    // Highlight which SRE leads participated in the incident timeline
+    function updateLeadsHighlight(timeline) {
+        const agents = new Set(timeline.map(e => e.agent.toLowerCase()));
+        
+        leadCommander.classList.toggle("active", agents.has("incident commander benjamin") || agents.has("benjamin"));
+        leadOps.classList.toggle("active", agents.has("operations lead") || agents.has("ops lead"));
+        leadLogistics.classList.toggle("active", agents.has("logistics lead"));
+        leadPlanning.classList.toggle("active", agents.has("planning lead"));
+        leadComms.classList.toggle("active", agents.has("communications lead madhavi") || agents.has("communications lead"));
+    }
+    
+    // Render Scribe chronological timeline log
+    function renderTimeline(timeline) {
+        if (!timeline || timeline.length === 0) {
+            timelineContainer.innerHTML = `<div class="timeline-empty">No Scribe timeline events logged.</div>`;
+            return;
+        }
+        
+        timelineContainer.innerHTML = "";
+        timeline.forEach((event, idx) => {
+            const item = document.createElement("div");
+            item.className = "timeline-event";
+            item.style.animationDelay = `${idx * 0.1}s`;
+            
+            // Format timestamp nicely
+            const tDate = new Date(event.timestamp);
+            const timeStr = isNaN(tDate.getTime()) ? event.timestamp : tDate.toLocaleTimeString();
+            
+            item.innerHTML = `
+                <div class="timeline-dot active"></div>
+                <div class="timeline-event-header">
+                    <span class="timeline-time">${timeStr}</span>
+                    <span class="timeline-agent">${event.agent}</span>
+                </div>
+                <p class="timeline-message">${event.message}</p>
+            `;
+            timelineContainer.appendChild(item);
+        });
+    }
+    
+    // Parse metrics.csv and draw beautiful SVG lines
+    function renderMetrics(artifacts) {
+        const metricsArt = artifacts.find(a => a.file_path.endsWith("metrics.csv"));
+        if (!metricsArt || !metricsArt.content) {
+            metricsSvg.innerHTML = `<text x="250" y="100" text-anchor="middle" fill="#8b949e" font-size="12">No telemetry metrics available</text>`;
+            return;
+        }
+        
+        try {
+            const lines = metricsArt.content.trim().split("\n");
+            const headers = lines[0].split(",");
+            const latencyData = [];
+            const cpuData = [];
+            
+            // Parse CSV lines
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(",");
+                if (cols.length < 2) continue;
+                const name = cols[0].trim();
+                const value = parseFloat(cols[1]);
+                if (name === "frontend_latency") {
+                    latencyData.push(value);
+                } else if (name === "cpu_utilization") {
+                    cpuData.push(value);
+                }
+            }
+            
+            // Helper to generate SVG polyline points string scaled to fit
+            const getPointsStr = (data, minVal, maxVal, color) => {
+                const width = 450;
+                const height = 150;
+                const xOffset = 25;
+                const yOffset = 25;
+                
+                const points = [];
+                const step = width / (data.length - 1);
+                const valRange = maxVal - minVal || 1;
+                
+                data.forEach((val, i) => {
+                    const x = xOffset + (i * step);
+                    // Invert y because SVG y goes down
+                    const y = yOffset + height - ((val - minVal) / valRange * height);
+                    points.push(`${x},${y}`);
+                });
+                return points.join(" ");
+            };
+            
+            // Set scale min/max
+            const maxLatency = Math.max(...latencyData, 100);
+            const maxCpu = Math.max(...cpuData, 100);
+            
+            const latencyPoints = getPointsStr(latencyData, 0, maxLatency);
+            const cpuPoints = getPointsStr(cpuData, 0, maxCpu);
+            
+            metricsSvg.innerHTML = `
+                <!-- Grid Lines -->
+                <line x1="25" y1="25" x2="475" y2="25" stroke="#21262d" stroke-dasharray="3,3" />
+                <line x1="25" y1="100" x2="475" y2="100" stroke="#21262d" stroke-dasharray="3,3" />
+                <line x1="25" y1="175" x2="475" y2="175" stroke="#30363d" />
+                
+                <!-- SVG Y Axes Labels -->
+                <text x="5" y="30" fill="#ff3131" font-size="8" font-family="monospace">${Math.round(maxLatency)}ms</text>
+                <text x="5" y="175" fill="#8b949e" font-size="8" font-family="monospace">0ms</text>
+                
+                <text x="480" y="30" fill="#00ffff" font-size="8" font-family="monospace">${Math.round(maxCpu)}%</text>
+                
+                <!-- Telemetry Lines -->
+                <polyline fill="none" stroke="#ff3131" stroke-width="2.5" points="${latencyPoints}" />
+                <polyline fill="none" stroke="#00ffff" stroke-width="2.5" points="${cpuPoints}" />
+                
+                <!-- Telemetry Data Dots -->
+                ${latencyData.map((val, idx) => {
+                    const pt = latencyPoints.split(" ")[idx].split(",");
+                    return `<circle cx="${pt[0]}" cy="${pt[1]}" r="4" fill="#ff3131" stroke="#0d1117" stroke-width="1.5"/>`;
+                }).join("")}
+                
+                ${cpuData.map((val, idx) => {
+                    const pt = cpuPoints.split(" ")[idx].split(",");
+                    return `<circle cx="${pt[0]}" cy="${pt[1]}" r="4" fill="#00ffff" stroke="#0d1117" stroke-width="1.5"/>`;
+                }).join("")}
+            `;
+        } catch (e) {
+            console.error("Failed to render metrics CSV:", e);
+            metricsSvg.innerHTML = `<text x="250" y="100" text-anchor="middle" fill="#ff3131" font-size="12">Telemetry parsing error</text>`;
+        }
+    }
+    
+    // Highlight MySQL keywords inside logs terminal
+    function renderLogs(artifacts) {
+        const logArt = artifacts.find(a => a.file_path.endsWith(".log") || a.file_path.endsWith(".txt"));
+        if (!logArt || !logArt.content) {
+            logsTerminal.innerHTML = `<code>[No query log streams generated]</code>`;
+            return;
+        }
+        
+        let logText = logArt.content;
+        
+        // Dynamic Syntax Highlighting
+        logText = logText
+            .replace(/(SELECT|INSERT|UPDATE|DELETE|FROM|WHERE|JOIN|LIMIT)/gi, '<span style="color: #ff79c6; font-weight: bold;">$1</span>')
+            .replace(/(ERROR|FAIL|CRITICAL)/gi, '<span style="color: #ff5555; font-weight: bold;">$1</span>')
+            .replace(/(deadlock|lock contention|lock)/gi, '<span style="color: #ffb86c; font-weight: bold;">$1</span>')
+            .replace(/(SUCCESS|OK|VERIFIED)/gi, '<span style="color: #50fa7b; font-weight: bold;">$1</span>');
+            
+        logsTerminal.innerHTML = `<code>${logText}</code>`;
+        logsTerminal.scrollTop = logsTerminal.scrollHeight; // Auto-scroll to bottom
+    }
+    
+    // Render risk and safety commands evaluated by Logistics Lead
+    function renderSafetyGate(timeline) {
+        const logiEvents = timeline.filter(e => e.agent.toLowerCase() === "logistics lead");
+        if (logiEvents.length === 0) {
+            proposedCommandText.textContent = "N/A";
+            safetyStatusText.textContent = "AWAITING TRIAGE";
+            safetyStatusText.className = "metric-value text-secondary";
+            safetyReasonsText.textContent = "No mutation actions proposed by Operations Lead yet.";
+            safetyRiskBadge.textContent = "PENDING";
+            safetyRiskBadge.className = "risk-badge badge-low";
+            return;
+        }
+        
+        // Extract command details from timeline strings
+        const riskEvent = logiEvents.find(e => e.message.includes("risk level") || e.message.includes("Risk level"));
+        const commandEvent = timeline.find(e => e.agent.toLowerCase() === "operations lead" && e.message.includes("Proposed system mutation"));
+        
+        let cmd = "systemctl restart mysql";
+        if (commandEvent) {
+            const cmdMatch = commandEvent.message.match(/command:\s*(.*)/);
+            if (cmdMatch) cmd = cmdMatch.group(1).trim();
+        }
+        
+        proposedCommandText.textContent = cmd;
+        
+        if (riskEvent) {
+            const riskMatch = riskEvent.message.match(/level:\s*([A-Za-z]+)/i);
+            const riskLevel = riskMatch ? riskMatch[1].toUpperCase() : "MEDIUM";
+            
+            safetyStatusText.textContent = "APPROVED";
+            safetyStatusText.className = "metric-value text-success";
+            safetyReasonsText.textContent = riskEvent.message;
+            
+            safetyRiskBadge.textContent = riskLevel + " RISK";
+            if (riskLevel === "HIGH") {
+                safetyRiskBadge.className = "risk-badge badge-high";
+            } else if (riskLevel === "MEDIUM") {
+                safetyRiskBadge.className = "risk-badge badge-med";
+            } else {
+                safetyRiskBadge.className = "risk-badge badge-low";
+            }
+        }
+    }
+    
+    // Render Madhavi's broadcast cards
+    function renderComms(timeline) {
+        const commsEvents = timeline.filter(e => e.agent.toLowerCase().includes("comms") || e.agent.toLowerCase().includes("madhavi"));
+        if (commsEvents.length === 0) {
+            commsFeedContainer.innerHTML = `
+                <div class="comms-card telegram">
+                    <div class="comms-card-header">
+                        <span class="channel-badge">Telegram Hub</span>
+                        <span class="comms-time">Offline</span>
+                    </div>
+                    <p class="comms-message">No active broadcast signals dispatched.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        commsFeedContainer.innerHTML = "";
+        commsEvents.forEach(e => {
+            const card = document.createElement("div");
+            card.className = "comms-card telegram";
+            
+            const isSlack = e.message.toLowerCase().includes("slack");
+            const channelName = isSlack ? "Slack Notification" : "Telegram Alert Channel";
+            
+            const tDate = new Date(e.timestamp);
+            const timeStr = isNaN(tDate.getTime()) ? e.timestamp : tDate.toLocaleTimeString();
+            
+            card.innerHTML = `
+                <div class="comms-card-header">
+                    <span class="channel-badge">${channelName}</span>
+                    <span class="comms-time">${timeStr}</span>
+                </div>
+                <p class="comms-message">${e.message}</p>
+            `;
+            commsFeedContainer.appendChild(card);
+        });
+    }
+    
+    // 4. Trigger Live SRE Incident Simulation
+    async function triggerLiveSimulation() {
+        btnTrigger.disabled = true;
+        btnTrigger.textContent = "Simulating Live Incident...";
+        btnTrigger.classList.remove("animate-pulse");
+        
+        try {
+            const res = await fetch("/api/simulate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+            });
+            const data = await res.json();
+            
+            // Reload sidebar list and automatically select the new incident
+            await loadIncidentRepository(data.incident_id);
+            
+            // Animate details appearing step-by-step
+            animateIncidentArrival(data);
+        } catch (err) {
+            console.error("Failed to trigger simulation:", err);
+            alert("Error running simulation on SRE Agent backend.");
+        } finally {
+            btnTrigger.disabled = false;
+            btnTrigger.textContent = "Trigger Live Simulation";
+            btnTrigger.classList.add("animate-pulse");
+        }
+    }
+    
+    // Beautiful sequential visualization animation for fresh incidents
+    function animateIncidentArrival(inc) {
+        // Render base details first
+        activeIncidentTitle.textContent = inc.incident_id;
+        activeIncidentMeta.innerHTML = `Target Project: <strong>${inc.project_id}</strong> | Trigger Event: <strong>${inc.trigger_event}</strong>`;
+        
+        // Hide logs & metrics initially
+        metricsSvg.innerHTML = `<text x="250" y="100" text-anchor="middle" fill="#8b949e" font-size="12">Collecting telemetry diagnostics...</text>`;
+        logsTerminal.innerHTML = `<code>[Initial audit. Scraping MySQL logs...]</code>`;
+        
+        // Progressively add timeline entries one by one to simulate live execution
+        timelineContainer.innerHTML = "";
+        let step = 0;
+        
+        const interval = setInterval(() => {
+            if (step >= inc.timeline.length) {
+                clearInterval(interval);
+                // Finally populate metrics and logs
+                renderMetrics(inc.artifacts);
+                renderLogs(inc.artifacts);
+                renderSafetyGate(inc.timeline);
+                renderComms(inc.timeline);
+                
+                const status = inc.status.toUpperCase();
+                activeStatusBadge.textContent = status;
+                activeStatusBadge.className = "status-badge " + (status === "RESOLVED" || status === "CLOSED" ? "status-resolved" : "status-active");
+                return;
+            }
+            
+            const event = inc.timeline[step];
+            const item = document.createElement("div");
+            item.className = "timeline-event";
+            
+            const tDate = new Date(event.timestamp);
+            const timeStr = isNaN(tDate.getTime()) ? event.timestamp : tDate.toLocaleTimeString();
+            
+            item.innerHTML = `
+                <div class="timeline-dot active"></div>
+                <div class="timeline-event-header">
+                    <span class="timeline-time">${timeStr}</span>
+                    <span class="timeline-agent">${event.agent}</span>
+                </div>
+                <p class="timeline-message">${event.message}</p>
+            `;
+            timelineContainer.appendChild(item);
+            
+            // Incremental agent highlights
+            updateLeadsHighlight(inc.timeline.slice(0, step + 1));
+            
+            step++;
+        }, 500); // 500ms delay per agent execution block
+    }
+});
