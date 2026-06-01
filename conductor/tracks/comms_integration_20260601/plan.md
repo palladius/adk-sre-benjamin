@@ -2,10 +2,10 @@
 
 ## Phase 1: Telegram & GitHub Communication Engines
 
-- [ ] Task: Create Telegram and GitHub messaging dispatchers
-    - [ ] Write unit tests verifying Telegram Markdown payloads and GitHub issue lifecycles (with mock and live toggles)
-    - [ ] Implement `src/comms_telegram.py` dispatching real and mock messages
-    - [ ] Implement `src/comms_github.py` managing real and mock tracking tickets
+- [x] Task: Create Telegram and GitHub messaging dispatchers [e5cb427]
+    - [x] Write unit tests verifying Telegram Markdown payloads and GitHub issue lifecycles (with mock and live toggles) [e5cb427]
+    - [x] Implement `src/comms_telegram.py` dispatching real and mock messages [e5cb427]
+    - [x] Implement `src/comms_github.py` managing real and mock tracking tickets [e5cb427]
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Telegram & GitHub Communication Engines' (Protocol in workflow.md)
 
 ## Phase 2: Orchestration & UI Synchronization
