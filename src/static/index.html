@@ -38,15 +38,11 @@
                     <!-- Populated dynamically from localStorage history -->
                 </datalist>
             </div>
-            
-            <!-- Discovered Resources List -->
-            <div id="discovered-resources-section" class="discovered-resources-section" style="display: none;">
-                <div class="discovery-header">
-                    <h3>GCP RESOURCES</h3>
-                    <span id="discovery-vulnerability-badge" class="vulnerability-warning-badge" style="display: none;">🚨 WARNING</span>
-                </div>
-                <ul id="discovered-resources-list" class="discovered-resources-list">
-                    <li class="loading-placeholder">Discovering resources...</li>
+            <!-- GCP Projects History List on the Left -->
+            <div class="sidebar-projects-section">
+                <h2>GCP PROJECTS</h2>
+                <ul id="project-history-list" class="project-history-list">
+                    <li class="loading-placeholder">No projects recorded</li>
                 </ul>
             </div>
             
@@ -81,12 +77,15 @@
                     <div class="project-header-left">
                         <div class="project-back-btn" id="btn-close-project-view" title="Back to Incident Dashboard">⬅️ Back to Incident View</div>
                         <h2 id="project-view-title">GCP PROJECT ASSETS: Loading...</h2>
-                        <p id="project-view-meta">Deterministic Cache: <strong id="project-cache-path" class="code-font">cloud/gcp/projects/...</strong></p>
+                        <p id="project-view-meta">Deterministic Cache: <strong id="project-cache-path" class="code-font">discover/gcp-project/...</strong></p>
                     </div>
                     <div class="project-header-right">
                         <span id="project-compliance-badge" class="compliance-badge badge-safe">COMPLIANT</span>
                     </div>
                 </header>
+
+                <!-- Live vs Mock Telemetry Banner -->
+                <div id="project-status-banner" class="project-status-banner" style="display: none;"></div>
 
                 <!-- Statistics Metrics Row -->
                 <div class="project-stats-grid">
@@ -122,11 +121,14 @@
 
                 <!-- Detached Layout Grid showing GCE, Run, GKE, SQL in a nice big visual layout -->
                 <div class="project-assets-grid">
-                    <!-- GCE VMs Panel -->
-                    <section class="panel asset-panel">
-                        <div class="panel-header">
-                            <h3>🖥️ COMPUTE ENGINE VIRTUAL MACHINES</h3>
-                            <span class="panel-subtitle">Audited GCE VM Instances</span>
+                    <!-- GCE VMs Panel (Collapsed by default) -->
+                    <section class="panel asset-panel collapsed">
+                        <div class="panel-header clickable-header">
+                            <div>
+                                <h3>🖥️ COMPUTE ENGINE VIRTUAL MACHINES</h3>
+                                <span class="panel-subtitle">Audited GCE VM Instances</span>
+                            </div>
+                            <span class="panel-toggle-btn">▶</span>
                         </div>
                         <div class="panel-body">
                             <div class="assets-list" id="assets-list-vm">
@@ -135,11 +137,14 @@
                         </div>
                     </section>
 
-                    <!-- Cloud Run Panel -->
-                    <section class="panel asset-panel">
-                        <div class="panel-header">
-                            <h3>🏃 CLOUD RUN SERVERLESS SERVICES</h3>
-                            <span class="panel-subtitle">Unauthenticated Invoker Audits</span>
+                    <!-- Cloud Run Panel (Collapsed by default) -->
+                    <section class="panel asset-panel collapsed">
+                        <div class="panel-header clickable-header">
+                            <div>
+                                <h3>🏃 CLOUD RUN SERVERLESS SERVICES</h3>
+                                <span class="panel-subtitle">Unauthenticated Invoker Audits</span>
+                            </div>
+                            <span class="panel-toggle-btn">▶</span>
                         </div>
                         <div class="panel-body">
                             <div class="assets-list" id="assets-list-run">
@@ -148,11 +153,14 @@
                         </div>
                     </section>
 
-                    <!-- GKE Panel -->
+                    <!-- GKE Panel (Expanded by default) -->
                     <section class="panel asset-panel">
-                        <div class="panel-header">
-                            <h3>☸️ GOOGLE KUBERNETES ENGINE</h3>
-                            <span class="panel-subtitle">Control Plane Public Access Audits</span>
+                        <div class="panel-header clickable-header">
+                            <div>
+                                <h3>☸️ GOOGLE KUBERNETES ENGINE</h3>
+                                <span class="panel-subtitle">Control Plane Public Access Audits</span>
+                            </div>
+                            <span class="panel-toggle-btn">▼</span>
                         </div>
                         <div class="panel-body">
                             <div class="assets-list" id="assets-list-gke">
@@ -161,15 +169,50 @@
                         </div>
                     </section>
 
-                    <!-- Cloud SQL Panel -->
-                    <section class="panel asset-panel">
-                        <div class="panel-header">
-                            <h3>💾 CLOUD SQL DATABASE INSTANCES</h3>
-                            <span class="panel-subtitle">Public IP & Authorized Networks Audits</span>
+                    <!-- Cloud SQL Panel (Collapsed by default) -->
+                    <section class="panel asset-panel collapsed">
+                        <div class="panel-header clickable-header">
+                            <div>
+                                <h3>💾 CLOUD SQL DATABASE INSTANCES</h3>
+                                <span class="panel-subtitle">Public IP & Authorized Networks Audits</span>
+                            </div>
+                            <span class="panel-toggle-btn">▶</span>
                         </div>
                         <div class="panel-body">
                             <div class="assets-list" id="assets-list-sql">
                                 <p class="loading-placeholder">No database instances discovered.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- GCS Buckets Panel (Collapsed by default) -->
+                    <section class="panel asset-panel collapsed">
+                        <div class="panel-header clickable-header">
+                            <div>
+                                <h3>🪣 GOOGLE CLOUD STORAGE BUCKETS</h3>
+                                <span class="panel-subtitle">Bucket Public Access Prevention Audits</span>
+                            </div>
+                            <span class="panel-toggle-btn">▶</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="assets-list" id="assets-list-bucket">
+                                <p class="loading-placeholder">No storage buckets discovered.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- VPC Networks Panel (Collapsed by default) -->
+                    <section class="panel asset-panel collapsed">
+                        <div class="panel-header clickable-header">
+                            <div>
+                                <h3>🌐 VIRTUAL PRIVATE CLOUD NETWORKS</h3>
+                                <span class="panel-subtitle">Subnets & Auto-mode Routing Audits</span>
+                            </div>
+                            <span class="panel-toggle-btn">▶</span>
+                        </div>
+                        <div class="panel-body">
+                            <div class="assets-list" id="assets-list-network">
+                                <p class="loading-placeholder">No VPC networks discovered.</p>
                             </div>
                         </div>
                     </section>

@@ -5,15 +5,168 @@ from datetime import datetime, timezone
 
 def discover_project_resources(project_id: str) -> str:
     """Discovers GCP resources, audits them for vulnerabilities, 
-    persists results to cloud/gcp/projects/<project_id>/discovery.json, 
-    and compiles a Markdown index at cloud/gcp/projects/<project_id>/README.md.
+    persists results to discover/gcp-project/<project_id>.json, 
+    and compiles a Markdown index at discover/gcp-project/<project_id>.md.
     """
     mock_tooling = os.getenv("MOCK_TOOLING", "true").lower() == "true"
     resources = []
     
-    if mock_tooling:
-        # Generate high-quality mock resources matching the specifications
-        resources = [
+    # We will generate mock resources list so we have it handy for mock mode or live mode fallback
+    if project_id == "sre-next":
+        mock_resources = [
+            # Compute Engine VMs
+            {
+                "name": "frontend-vm",
+                "type": "gce_vm",
+                "location": "us-central1-a",
+                "status": "RUNNING",
+                "vulnerable": True,
+                "warning": "⚠️ EXPOSED: Bound to public IP 34.135.120.45",
+                "console_url": f"https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-a/instances/frontend-vm?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "internal_ip": "10.128.0.5",
+                    "external_ip": "34.135.120.45"
+                }
+            },
+            {
+                "name": "checkout-vm",
+                "type": "gce_vm",
+                "location": "us-central1-b",
+                "status": "RUNNING",
+                "vulnerable": False,
+                "warning": None,
+                "console_url": f"https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-b/instances/checkout-vm?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "internal_ip": "10.128.0.6",
+                    "external_ip": None
+                }
+            },
+            # Cloud Run Services
+            {
+                "name": "email-service",
+                "type": "cloud_run",
+                "location": "us-central1",
+                "status": "READY",
+                "vulnerable": True,
+                "warning": "⚠️ EXPOSED: Unauthenticated public access (allUsers invoker)",
+                "console_url": f"https://console.cloud.google.com/run/detail/us-central1/email-service/metrics?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "url": "https://email-service-xq-uc.a.run.app",
+                    "all_users_invoker": True
+                }
+            },
+            {
+                "name": "payment-service",
+                "type": "cloud_run",
+                "location": "us-central1",
+                "status": "READY",
+                "vulnerable": False,
+                "warning": None,
+                "console_url": f"https://console.cloud.google.com/run/detail/us-central1/payment-service/metrics?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "url": "https://payment-service-xq-uc.a.run.app",
+                    "all_users_invoker": False
+                }
+            },
+            # GKE Clusters
+            {
+                "name": "online-boutique",
+                "type": "gke_cluster",
+                "location": "us-central1",
+                "status": "RUNNING",
+                "vulnerable": True,
+                "warning": "⚠️ EXPOSED: Public GKE control plane endpoint access enabled",
+                "console_url": f"https://console.cloud.google.com/kubernetes/clusters/details/us-central1/online-boutique/overview?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "endpoint": "35.224.12.80",
+                    "private_cluster": False
+                }
+            },
+            # Cloud SQL Database Instances
+            {
+                "name": "boutique-db",
+                "type": "cloud_sql",
+                "location": "us-central1",
+                "status": "RUNNING",
+                "vulnerable": True,
+                "warning": "⚠️ EXPOSED: Public IP enabled with no authorized networks restrictions",
+                "console_url": f"https://console.cloud.google.com/sql/instances/boutique-db/overview?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "public_ip_enabled": True,
+                    "authorized_networks": []
+                }
+            },
+            # GCS Buckets
+            {
+                "name": "sre-next-assets-bucket",
+                "type": "gcs_bucket",
+                "location": "US-CENTRAL1",
+                "status": "ACTIVE",
+                "vulnerable": False,
+                "warning": None,
+                "console_url": f"https://console.cloud.google.com/storage/browser/sre-next-assets-bucket?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "public_access_prevention": "enforced",
+                    "storage_class": "STANDARD",
+                    "uniform_bucket_level_access": True
+                }
+            },
+            {
+                "name": "public-user-uploads-bucket",
+                "type": "gcs_bucket",
+                "location": "US-CENTRAL1",
+                "status": "ACTIVE",
+                "vulnerable": True,
+                "warning": "⚠️ EXPOSED: Uniform bucket public access prevention is not enforced",
+                "console_url": f"https://console.cloud.google.com/storage/browser/public-user-uploads-bucket?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "public_access_prevention": "inherited",
+                    "storage_class": "STANDARD",
+                    "uniform_bucket_level_access": False
+                }
+            },
+            # VPC Networks
+            {
+                "name": "online-boutique-vpc",
+                "type": "vpc_network",
+                "location": "global",
+                "status": "ACTIVE",
+                "vulnerable": False,
+                "warning": None,
+                "console_url": f"https://console.cloud.google.com/networking/networks/details/online-boutique-vpc?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "auto_create_subnetworks": False,
+                    "subnetworks": ["online-boutique-subnet"],
+                    "routing_mode": "REGIONAL"
+                }
+            },
+            {
+                "name": "default",
+                "type": "vpc_network",
+                "location": "global",
+                "status": "ACTIVE",
+                "vulnerable": True,
+                "warning": "⚠️ EXPOSED: Default network contains auto-subnets and standard wide ingress firewall rules",
+                "console_url": f"https://console.cloud.google.com/networking/networks/details/default?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "auto_create_subnetworks": True,
+                    "subnetworks": ["default-subnet-us-central1", "default-subnet-us-east1"],
+                    "routing_mode": "REGIONAL"
+                }
+            }
+        ]
+    else:
+        mock_resources = [
             # Compute Engine VMs
             {
                 "name": "web-frontend-vm",
@@ -22,6 +175,8 @@ def discover_project_resources(project_id: str) -> str:
                 "status": "RUNNING",
                 "vulnerable": True,
                 "warning": "⚠️ EXPOSED: Bound to public IP 34.122.90.10",
+                "console_url": f"https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-a/instances/web-frontend-vm?project={project_id}",
+                "is_mock": True,
                 "metadata": {
                     "internal_ip": "10.128.0.2",
                     "external_ip": "34.122.90.10"
@@ -34,6 +189,8 @@ def discover_project_resources(project_id: str) -> str:
                 "status": "RUNNING",
                 "vulnerable": False,
                 "warning": None,
+                "console_url": f"https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-a/instances/internal-db-vm?project={project_id}",
+                "is_mock": True,
                 "metadata": {
                     "internal_ip": "10.128.0.3",
                     "external_ip": None
@@ -47,6 +204,8 @@ def discover_project_resources(project_id: str) -> str:
                 "status": "READY",
                 "vulnerable": True,
                 "warning": "⚠️ EXPOSED: Unauthenticated public access (allUsers invoker)",
+                "console_url": f"https://console.cloud.google.com/run/detail/us-central1/public-api-service/metrics?project={project_id}",
+                "is_mock": True,
                 "metadata": {
                     "url": "https://public-api-service-xq-uc.a.run.app",
                     "all_users_invoker": True
@@ -59,6 +218,8 @@ def discover_project_resources(project_id: str) -> str:
                 "status": "READY",
                 "vulnerable": False,
                 "warning": None,
+                "console_url": f"https://console.cloud.google.com/run/detail/us-central1/secure-backend-service/metrics?project={project_id}",
+                "is_mock": True,
                 "metadata": {
                     "url": "https://secure-backend-service-xq-uc.a.run.app",
                     "all_users_invoker": False
@@ -72,6 +233,8 @@ def discover_project_resources(project_id: str) -> str:
                 "status": "RUNNING",
                 "vulnerable": True,
                 "warning": "⚠️ EXPOSED: Public GKE control plane endpoint access enabled",
+                "console_url": f"https://console.cloud.google.com/kubernetes/clusters/details/us-central1/gke-public-cluster/overview?project={project_id}",
+                "is_mock": True,
                 "metadata": {
                     "endpoint": "35.224.12.80",
                     "private_cluster": False
@@ -84,6 +247,8 @@ def discover_project_resources(project_id: str) -> str:
                 "status": "RUNNING",
                 "vulnerable": False,
                 "warning": None,
+                "console_url": f"https://console.cloud.google.com/kubernetes/clusters/details/us-central1/gke-private-cluster/overview?project={project_id}",
+                "is_mock": True,
                 "metadata": {
                     "endpoint": "10.128.16.2",
                     "private_cluster": True
@@ -97,6 +262,8 @@ def discover_project_resources(project_id: str) -> str:
                 "status": "RUNNING",
                 "vulnerable": True,
                 "warning": "⚠️ EXPOSED: Public IP enabled with no authorized networks restrictions",
+                "console_url": f"https://console.cloud.google.com/sql/instances/customer-db-sql/overview?project={project_id}",
+                "is_mock": True,
                 "metadata": {
                     "public_ip_enabled": True,
                     "authorized_networks": []
@@ -109,12 +276,66 @@ def discover_project_resources(project_id: str) -> str:
                 "status": "RUNNING",
                 "vulnerable": False,
                 "warning": None,
+                "console_url": f"https://console.cloud.google.com/sql/instances/secure-vault-sql/overview?project={project_id}",
+                "is_mock": True,
                 "metadata": {
                     "public_ip_enabled": False,
                     "authorized_networks": []
                 }
+            },
+            # GCS Buckets
+            {
+                "name": "generic-backup-bucket",
+                "type": "gcs_bucket",
+                "location": "US",
+                "status": "ACTIVE",
+                "vulnerable": False,
+                "warning": None,
+                "console_url": f"https://console.cloud.google.com/storage/browser/generic-backup-bucket?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "public_access_prevention": "enforced",
+                    "storage_class": "NEARLINE",
+                    "uniform_bucket_level_access": True
+                }
+            },
+            {
+                "name": "exposed-logs-bucket",
+                "type": "gcs_bucket",
+                "location": "US",
+                "status": "ACTIVE",
+                "vulnerable": True,
+                "warning": "⚠️ EXPOSED: Uniform bucket public access prevention is not enforced",
+                "console_url": f"https://console.cloud.google.com/storage/browser/exposed-logs-bucket?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "public_access_prevention": "inherited",
+                    "storage_class": "STANDARD",
+                    "uniform_bucket_level_access": False
+                }
+            },
+            # VPC Networks
+            {
+                "name": "corporate-vpc-network",
+                "type": "vpc_network",
+                "location": "global",
+                "status": "ACTIVE",
+                "vulnerable": False,
+                "warning": None,
+                "console_url": f"https://console.cloud.google.com/networking/networks/details/corporate-vpc-network?project={project_id}",
+                "is_mock": True,
+                "metadata": {
+                    "auto_create_subnetworks": False,
+                    "subnetworks": ["corp-subnet-1"],
+                    "routing_mode": "GLOBAL"
+                }
             }
         ]
+
+    use_live = (not mock_tooling) or (project_id == "sre-next")
+
+    if not use_live:
+        resources = mock_resources
     else:
         # Live gcloud subprocess commands inheriting active SA context securely
         # 1. Discover GCE VMs
@@ -147,6 +368,8 @@ def discover_project_resources(project_id: str) -> str:
                     "status": status,
                     "vulnerable": vulnerable,
                     "warning": warning,
+                    "console_url": f"https://console.cloud.google.com/compute/instancesDetail/zones/{zone}/instances/{name}?project={project_id}",
+                    "is_mock": False,
                     "metadata": {
                         "internal_ip": internal_ip,
                         "external_ip": external_ip
@@ -189,6 +412,8 @@ def discover_project_resources(project_id: str) -> str:
                     "status": status,
                     "vulnerable": vulnerable,
                     "warning": warning,
+                    "console_url": f"https://console.cloud.google.com/run/detail/{region}/{name}/metrics?project={project_id}",
+                    "is_mock": False,
                     "metadata": {
                         "url": url,
                         "all_users_invoker": all_users_invoker
@@ -226,6 +451,8 @@ def discover_project_resources(project_id: str) -> str:
                     "status": status,
                     "vulnerable": vulnerable,
                     "warning": warning,
+                    "console_url": f"https://console.cloud.google.com/kubernetes/clusters/details/{location}/{name}/overview?project={project_id}",
+                    "is_mock": False,
                     "metadata": {
                         "endpoint": endpoint,
                         "private_cluster": private_cluster
@@ -266,6 +493,8 @@ def discover_project_resources(project_id: str) -> str:
                     "status": status,
                     "vulnerable": vulnerable,
                     "warning": warning,
+                    "console_url": f"https://console.cloud.google.com/sql/instances/{name}/overview?project={project_id}",
+                    "is_mock": False,
                     "metadata": {
                         "public_ip_enabled": public_ip_enabled,
                         "authorized_networks": [net.get("value") for net in authorized_networks] if authorized_networks else []
@@ -273,16 +502,84 @@ def discover_project_resources(project_id: str) -> str:
                 })
         except Exception as e:
             print(f"Failed to crawl Cloud SQL Instances: {e}")
+            
+        # 5. Discover GCS Buckets
+        try:
+            cmd = ["gcloud", "storage", "buckets", "list", f"--project={project_id}", "--format=json"]
+            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            buckets_data = json.loads(res.stdout)
+            for bucket in buckets_data:
+                name = bucket.get("name")
+                loc = bucket.get("location", "us-central1")
+                pap = bucket.get("public_access_prevention", "inherited")
+                
+                vulnerable = pap != "enforced"
+                warning = "⚠️ EXPOSED: Uniform bucket public access prevention is not enforced" if vulnerable else None
+                
+                resources.append({
+                    "name": name,
+                    "type": "gcs_bucket",
+                    "location": loc,
+                    "status": "ACTIVE",
+                    "vulnerable": vulnerable,
+                    "warning": warning,
+                    "console_url": f"https://console.cloud.google.com/storage/browser/{name}?project={project_id}",
+                    "is_mock": False,
+                    "metadata": {
+                        "public_access_prevention": pap,
+                        "storage_class": bucket.get("default_storage_class", "STANDARD"),
+                        "uniform_bucket_level_access": bucket.get("uniform_bucket_level_access", True)
+                    }
+                })
+        except Exception as e:
+            print(f"Failed to crawl GCS Buckets: {e}")
+            
+        # 6. Discover VPC Networks
+        try:
+            cmd = ["gcloud", "compute", "networks", "list", f"--project={project_id}", "--format=json"]
+            res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            networks_data = json.loads(res.stdout)
+            for net in networks_data:
+                name = net.get("name")
+                auto_subnets = net.get("autoCreateSubnetworks", False)
+                
+                vulnerable = name == "default" or auto_subnets
+                warning = "⚠️ EXPOSED: Default network contains auto-subnets and standard wide ingress firewall rules" if vulnerable else None
+                
+                subnets = [s.split("/")[-1] for s in net.get("subnetworks", [])]
+                
+                resources.append({
+                    "name": name,
+                    "type": "vpc_network",
+                    "location": "global",
+                    "status": "ACTIVE",
+                    "vulnerable": vulnerable,
+                    "warning": warning,
+                    "console_url": f"https://console.cloud.google.com/networking/networks/details/{name}?project={project_id}",
+                    "is_mock": False,
+                    "metadata": {
+                        "auto_create_subnetworks": auto_subnets,
+                        "subnetworks": subnets,
+                        "routing_mode": net.get("routingConfig", {}).get("routingMode", "REGIONAL")
+                    }
+                })
+        except Exception as e:
+            print(f"Failed to crawl VPC Networks: {e}")
+
+        # Fallback to mock data if live discovery returned nothing (e.g. gcloud errors, no permission, no assets)
+        if not resources:
+            print(f"Live discovery returned 0 resources for project {project_id} (e.g. not logged in, no project, or no assets). Falling back to mock data.")
+            resources = mock_resources
 
     # Build the deterministic directory paths and save JSON cache and Markdown Wiki
-    cache_dir = os.path.join("cloud", "gcp", "projects", project_id)
+    cache_dir = os.path.join("discover", "gcp-project")
     os.makedirs(cache_dir, exist_ok=True)
     
-    json_path = os.path.join(cache_dir, "discovery.json")
+    json_path = os.path.join(cache_dir, f"{project_id}.json")
     with open(json_path, "w") as f:
         json.dump(resources, f, indent=2)
         
-    md_path = os.path.join(cache_dir, "README.md")
+    md_path = os.path.join(cache_dir, f"{project_id}.md")
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     
     # Generate beautiful index page with bold red warning flags
@@ -307,7 +604,9 @@ def discover_project_resources(project_id: str) -> str:
         "gce_vm": "🖥️ Compute VM",
         "cloud_run": "🏃 Cloud Run",
         "gke_cluster": "☸️ GKE Cluster",
-        "cloud_sql": "💾 Cloud SQL"
+        "cloud_sql": "💾 Cloud SQL",
+        "gcs_bucket": "🪣 GCS Bucket",
+        "vpc_network": "🌐 VPC Network"
     }
     
     for r in resources:

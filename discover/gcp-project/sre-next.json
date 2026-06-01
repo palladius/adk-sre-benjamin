@@ -1,0 +1,181 @@
+[
+  {
+    "name": "gke-online-boutique-standar-main-pool-3db4c871-sj94",
+    "type": "gce_vm",
+    "location": "us-central1-a",
+    "status": "RUNNING",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Bound to public IP 34.57.66.211",
+    "console_url": "https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-a/instances/gke-online-boutique-standar-main-pool-3db4c871-sj94?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "internal_ip": "10.0.0.26",
+      "external_ip": "34.57.66.211"
+    }
+  },
+  {
+    "name": "gke-online-boutique-standar-main-pool-8d1a34a4-hznq",
+    "type": "gce_vm",
+    "location": "us-central1-c",
+    "status": "RUNNING",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Bound to public IP 136.113.42.55",
+    "console_url": "https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-c/instances/gke-online-boutique-standar-main-pool-8d1a34a4-hznq?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "internal_ip": "10.0.0.27",
+      "external_ip": "136.113.42.55"
+    }
+  },
+  {
+    "name": "gke-online-boutique-standar-main-pool-5f5faafb-zx3d",
+    "type": "gce_vm",
+    "location": "us-central1-f",
+    "status": "RUNNING",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Bound to public IP 35.238.28.179",
+    "console_url": "https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-f/instances/gke-online-boutique-standar-main-pool-5f5faafb-zx3d?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "internal_ip": "10.0.0.25",
+      "external_ip": "35.238.28.179"
+    }
+  },
+  {
+    "name": "online-boutique",
+    "type": "gke_cluster",
+    "location": "us-central1",
+    "status": "RUNNING",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Public GKE control plane endpoint access enabled",
+    "console_url": "https://console.cloud.google.com/kubernetes/clusters/details/us-central1/online-boutique/overview?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "endpoint": "34.9.73.164",
+      "private_cluster": false
+    }
+  },
+  {
+    "name": "online-boutique-standard",
+    "type": "gke_cluster",
+    "location": "us-central1",
+    "status": "RUNNING",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Public GKE control plane endpoint access enabled",
+    "console_url": "https://console.cloud.google.com/kubernetes/clusters/details/us-central1/online-boutique-standard/overview?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "endpoint": "136.119.135.4",
+      "private_cluster": false
+    }
+  },
+  {
+    "name": "gcf-v2-sources-353539023891-us-central1",
+    "type": "gcs_bucket",
+    "location": "US-CENTRAL1",
+    "status": "ACTIVE",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Uniform bucket public access prevention is not enforced",
+    "console_url": "https://console.cloud.google.com/storage/browser/gcf-v2-sources-353539023891-us-central1?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "public_access_prevention": "inherited",
+      "storage_class": "STANDARD",
+      "uniform_bucket_level_access": true
+    }
+  },
+  {
+    "name": "gcf-v2-uploads-353539023891.us-central1.cloudfunctions.appspot.com",
+    "type": "gcs_bucket",
+    "location": "US-CENTRAL1",
+    "status": "ACTIVE",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Uniform bucket public access prevention is not enforced",
+    "console_url": "https://console.cloud.google.com/storage/browser/gcf-v2-uploads-353539023891.us-central1.cloudfunctions.appspot.com?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "public_access_prevention": "inherited",
+      "storage_class": "STANDARD",
+      "uniform_bucket_level_access": true
+    }
+  },
+  {
+    "name": "my-test-project-123-mediagen-files",
+    "type": "gcs_bucket",
+    "location": "US-CENTRAL1",
+    "status": "ACTIVE",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Uniform bucket public access prevention is not enforced",
+    "console_url": "https://console.cloud.google.com/storage/browser/my-test-project-123-mediagen-files?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "public_access_prevention": "inherited",
+      "storage_class": "STANDARD",
+      "uniform_bucket_level_access": true
+    }
+  },
+  {
+    "name": "sre-agent-staging-sre-next",
+    "type": "gcs_bucket",
+    "location": "US-CENTRAL1",
+    "status": "ACTIVE",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Uniform bucket public access prevention is not enforced",
+    "console_url": "https://console.cloud.google.com/storage/browser/sre-agent-staging-sre-next?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "public_access_prevention": "inherited",
+      "storage_class": "STANDARD",
+      "uniform_bucket_level_access": true
+    }
+  },
+  {
+    "name": "sre-next-mediagen-files",
+    "type": "gcs_bucket",
+    "location": "US-CENTRAL1",
+    "status": "ACTIVE",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Uniform bucket public access prevention is not enforced",
+    "console_url": "https://console.cloud.google.com/storage/browser/sre-next-mediagen-files?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "public_access_prevention": "inherited",
+      "storage_class": "STANDARD",
+      "uniform_bucket_level_access": true
+    }
+  },
+  {
+    "name": "online-boutique-standard-vpc",
+    "type": "vpc_network",
+    "location": "global",
+    "status": "ACTIVE",
+    "vulnerable": false,
+    "warning": null,
+    "console_url": "https://console.cloud.google.com/networking/networks/details/online-boutique-standard-vpc?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "auto_create_subnetworks": false,
+      "subnetworks": [
+        "online-boutique-standard-subnet"
+      ],
+      "routing_mode": "REGIONAL"
+    }
+  },
+  {
+    "name": "online-boutique-vpc",
+    "type": "vpc_network",
+    "location": "global",
+    "status": "ACTIVE",
+    "vulnerable": false,
+    "warning": null,
+    "console_url": "https://console.cloud.google.com/networking/networks/details/online-boutique-vpc?project=sre-next",
+    "is_mock": false,
+    "metadata": {
+      "auto_create_subnetworks": false,
+      "subnetworks": [
+        "online-boutique-subnet"
+      ],
+      "routing_mode": "REGIONAL"
+    }
+  }
+]

@@ -147,10 +147,13 @@ def test_server_integration():
                 assert data_chat_post[-2]["message"] == "Hello Benjamin"
                 
         # Test GET /api/projects/test-project-server/discover
-        import shutil
-        server_cache_path = os.path.join("cloud", "gcp", "projects", "test-project-server")
-        if os.path.exists(server_cache_path):
-            shutil.rmtree(server_cache_path)
+        server_cache_dir = os.path.join("discover", "gcp-project")
+        json_file = os.path.join(server_cache_dir, "test-project-server.json")
+        md_file = os.path.join(server_cache_dir, "test-project-server.md")
+        
+        for fpath in [json_file, md_file]:
+            if os.path.exists(fpath):
+                os.remove(fpath)
             
         try:
             with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
@@ -164,8 +167,9 @@ def test_server_integration():
                     assert os.path.exists(data_discover["cache_path"])
                     assert os.path.exists(data_discover["wiki_path"])
         finally:
-            if os.path.exists(server_cache_path):
-                shutil.rmtree(server_cache_path)
+            for fpath in [json_file, md_file]:
+                if os.path.exists(fpath):
+                    os.remove(fpath)
             
     finally:
         server.shutdown()

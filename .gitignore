@@ -13,3 +13,6 @@ investigations/**/artifacts_registry.json
 investigations/**/*.jsonl
 private/
 .git-privatize
+
+# Temporary work coordinates
+CONTINUE_TOMORROW.md

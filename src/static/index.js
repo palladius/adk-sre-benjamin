@@ -37,10 +37,8 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // Discovery Elements
     const btnDiscoverProject = document.getElementById("btn-discover-project");
-    const discoveredResourcesSection = document.getElementById("discovered-resources-section");
-    const discoveredResourcesList = document.getElementById("discovered-resources-list");
-    const discoveryVulnerabilityBadge = document.getElementById("discovery-vulnerability-badge");
     const projectIdsList = document.getElementById("project-ids-list");
+    const projectHistoryList = document.getElementById("project-history-list");
     let projectHistory = [];
     
     // Project View Big Page Elements
@@ -61,6 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const assetsListRun = document.getElementById("assets-list-run");
     const assetsListGke = document.getElementById("assets-list-gke");
     const assetsListSql = document.getElementById("assets-list-sql");
+    const assetsListBucket = document.getElementById("assets-list-bucket");
+    const assetsListNetwork = document.getElementById("assets-list-network");
     
     // Chat DOM Elements
     const chatMessagesContainer = document.getElementById("chat-messages-container");
@@ -94,6 +94,18 @@ document.addEventListener("DOMContentLoaded", () => {
         projectLabel.style.cursor = "pointer";
         projectLabel.addEventListener("click", handleProjectDiscovery);
     }
+
+    // Wire collapsible panel headers
+    document.querySelectorAll(".asset-panel .clickable-header").forEach(header => {
+        header.addEventListener("click", () => {
+            const panel = header.closest(".asset-panel");
+            const btn = header.querySelector(".panel-toggle-btn");
+            const isCollapsed = panel.classList.toggle("collapsed");
+            if (btn) {
+                btn.textContent = isCollapsed ? "▶" : "▼";
+            }
+        });
+    });
     
     if (projectIdInput) {
         projectIdInput.addEventListener("keydown", (e) => {
@@ -775,93 +787,52 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         
-        if (discoveredResourcesSection) {
-            discoveredResourcesSection.style.display = "block";
+        // Show right-hand side view
+        if (projectDiscoveryView && incidentDashboardView) {
+            incidentDashboardView.style.display = "none";
+            projectDiscoveryView.style.display = "flex";
         }
-        if (discoveredResourcesList) {
-            discoveredResourcesList.innerHTML = `<li class="loading-placeholder">Discovering resources on project '${projectId}'...</li>`;
-        }
-        if (discoveryVulnerabilityBadge) {
-            discoveryVulnerabilityBadge.style.display = "none";
-        }
+        
+        if (projectViewTitle) projectViewTitle.textContent = `GCP PROJECT ASSETS: ${projectId}`;
+        if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}.json`;
+        
+        // Show placeholders
+        if (assetsListVm) assetsListVm.innerHTML = `<p class="loading-placeholder">Discovering VM instances on '${projectId}'...</p>`;
+        if (assetsListRun) assetsListRun.innerHTML = `<p class="loading-placeholder">Discovering Cloud Run services on '${projectId}'...</p>`;
+        if (assetsListGke) assetsListGke.innerHTML = `<p class="loading-placeholder">Discovering GKE clusters on '${projectId}'...</p>`;
+        if (assetsListSql) assetsListSql.innerHTML = `<p class="loading-placeholder">Discovering Cloud SQL instances on '${projectId}'...</p>`;
         
         try {
             const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/discover`);
             const data = await res.json();
             
             if (data.error) {
-                if (discoveredResourcesList) {
-                    discoveredResourcesList.innerHTML = `<li class="loading-placeholder text-danger">Error: ${data.error}</li>`;
-                }
+                const errMsg = `<p class="loading-placeholder text-danger">Error: ${data.error}</p>`;
+                if (assetsListVm) assetsListVm.innerHTML = errMsg;
+                if (assetsListRun) assetsListRun.innerHTML = errMsg;
+                if (assetsListGke) assetsListGke.innerHTML = errMsg;
+                if (assetsListSql) assetsListSql.innerHTML = errMsg;
                 return;
             }
             
-            renderDiscoveredResources(data.resources);
             renderBigProjectPage(projectId, data);
             saveToProjectHistory(projectId);
+            
+            // Highlight selection in the left sidebar projects list
+            document.querySelectorAll(".project-history-item").forEach(item => {
+                if (item.dataset.id === projectId) {
+                    item.classList.add("active");
+                } else {
+                    item.classList.remove("active");
+                }
+            });
         } catch (err) {
             console.error("Discovery request failed:", err);
-            if (discoveredResourcesList) {
-                discoveredResourcesList.innerHTML = `<li class="loading-placeholder text-danger">Failed to connect to discovery server.</li>`;
-            }
-        }
-    }
-    
-    function renderDiscoveredResources(resources) {
-        if (!discoveredResourcesList) return;
-        discoveredResourcesList.innerHTML = "";
-        
-        if (!resources || resources.length === 0) {
-            discoveredResourcesList.innerHTML = `<li class="loading-placeholder">No active GCP resources discovered.</li>`;
-            if (discoveryVulnerabilityBadge) discoveryVulnerabilityBadge.style.display = "none";
-            return;
-        }
-        
-        let hasVulnerability = false;
-        
-        const typeIcons = {
-            "gce_vm": "🖥️",
-            "cloud_run": "🏃",
-            "gke_cluster": "☸️",
-            "cloud_sql": "💾"
-        };
-        
-        const typeNames = {
-            "gce_vm": "GCE VM",
-            "cloud_run": "Cloud Run",
-            "gke_cluster": "GKE Cluster",
-            "cloud_sql": "Cloud SQL"
-        };
-        
-        resources.forEach(r => {
-            const isVulnerable = !!r.vulnerable;
-            if (isVulnerable) hasVulnerability = true;
-            
-            const item = document.createElement("li");
-            item.className = `discovered-resource-item ${isVulnerable ? "vulnerable" : "safe"}`;
-            
-            const icon = typeIcons[r.type] || "☁️";
-            const typeName = typeNames[r.type] || r.type;
-            
-            item.innerHTML = `
-                <div class="resource-info">
-                    <div class="resource-icon">${icon}</div>
-                    <div class="resource-details">
-                        <span class="resource-name">${escapeHTML(r.name)}</span>
-                        <span class="resource-type-loc">${typeName} | ${escapeHTML(r.location)}</span>
-                    </div>
-                </div>
-                <div class="resource-status-container">
-                    ${isVulnerable ? `<span class="resource-warning-icon" title="${escapeHTML(r.warning)}">⚠️</span>` : ""}
-                    <span class="status-badge ${r.status === 'RUNNING' || r.status === 'READY' ? 'status-active' : 'status-unknown'}">${escapeHTML(r.status)}</span>
-                </div>
-            `;
-            
-            discoveredResourcesList.appendChild(item);
-        });
-        
-        if (discoveryVulnerabilityBadge) {
-            discoveryVulnerabilityBadge.style.display = hasVulnerability ? "inline-block" : "none";
+            const errMsg = `<p class="loading-placeholder text-danger">Failed to connect to discovery server.</p>`;
+            if (assetsListVm) assetsListVm.innerHTML = errMsg;
+            if (assetsListRun) assetsListRun.innerHTML = errMsg;
+            if (assetsListGke) assetsListGke.innerHTML = errMsg;
+            if (assetsListSql) assetsListSql.innerHTML = errMsg;
         }
     }
     
@@ -880,13 +851,46 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     function updateProjectHistoryList() {
-        if (!projectIdsList) return;
-        projectIdsList.innerHTML = "";
-        projectHistory.forEach(pid => {
-            const option = document.createElement("option");
-            option.value = pid;
-            projectIdsList.appendChild(option);
-        });
+        // Update autocomplete suggestions
+        if (projectIdsList) {
+            projectIdsList.innerHTML = "";
+            projectHistory.forEach(pid => {
+                const option = document.createElement("option");
+                option.value = pid;
+                projectIdsList.appendChild(option);
+            });
+        }
+        
+        // Update clickable projects list in left sidebar
+        if (projectHistoryList) {
+            projectHistoryList.innerHTML = "";
+            if (projectHistory.length === 0) {
+                projectHistoryList.innerHTML = `<li class="loading-placeholder">No projects recorded</li>`;
+                return;
+            }
+            
+            projectHistory.forEach(pid => {
+                const li = document.createElement("li");
+                li.className = "project-history-item";
+                li.dataset.id = pid;
+                
+                li.innerHTML = `
+                    <span class="project-history-icon">☁️</span>
+                    <span class="project-history-id">${escapeHTML(pid)}</span>
+                `;
+                
+                li.addEventListener("click", () => {
+                    document.querySelectorAll(".project-history-item").forEach(item => item.classList.remove("active"));
+                    li.classList.add("active");
+                    if (projectIdInput) {
+                        projectIdInput.value = pid;
+                    }
+                    handleProjectDiscovery();
+                });
+                
+                projectHistoryList.appendChild(li);
+            });
+        }
     }
 
     function renderBigProjectPage(projectId, data) {
@@ -896,7 +900,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         if (projectViewTitle) projectViewTitle.textContent = `GCP PROJECT ASSETS: ${projectId}`;
-        if (projectCachePath) projectCachePath.textContent = data.cache_path || `cloud/gcp/projects/${projectId}/discovery.json`;
+        if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}.json`;
         
         const resources = data.resources || [];
         const total = resources.length;
@@ -919,18 +923,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 projectComplianceBadge.className = "compliance-badge badge-safe";
             }
         }
+
+        // Live vs Mock Telemetry Indicator
+        const projectStatusBanner = document.getElementById("project-status-banner");
+        if (projectStatusBanner) {
+            const hasMock = resources.some(r => r.is_mock === true);
+            if (hasMock || resources.length === 0) {
+                projectStatusBanner.style.display = "flex";
+                projectStatusBanner.className = "project-status-banner mock-active";
+                projectStatusBanner.innerHTML = `<span>⚠️ DEMO / MOCK DATA ACTIVATED: The application is running in mock/demo mode because MOCK_TOOLING=true or live discovery failed/lacks permissions.</span>`;
+            } else {
+                projectStatusBanner.style.display = "flex";
+                projectStatusBanner.className = "project-status-banner live-active";
+                projectStatusBanner.innerHTML = `<span>🟢 LIVE PRODUCTION AUDIT: Successfully fetched live resources from Google Cloud API using active Service Account credentials.</span>`;
+            }
+        }
         
         // Clear all list containers
         if (assetsListVm) assetsListVm.innerHTML = "";
         if (assetsListRun) assetsListRun.innerHTML = "";
         if (assetsListGke) assetsListGke.innerHTML = "";
         if (assetsListSql) assetsListSql.innerHTML = "";
+        if (assetsListBucket) assetsListBucket.innerHTML = "";
+        if (assetsListNetwork) assetsListNetwork.innerHTML = "";
         
         // Group and render each asset type
         const vmAssets = resources.filter(r => r.type === "gce_vm");
         const runAssets = resources.filter(r => r.type === "cloud_run");
         const gkeAssets = resources.filter(r => r.type === "gke_cluster");
         const sqlAssets = resources.filter(r => r.type === "cloud_sql");
+        const bucketAssets = resources.filter(r => r.type === "gcs_bucket");
+        const networkAssets = resources.filter(r => r.type === "vpc_network");
         
         renderAssetGroup(vmAssets, assetsListVm, "🖥️ GCE VM Instance", r => `
             <div class="asset-meta-item"><span class="asset-meta-label">Zone:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
@@ -955,6 +978,18 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="asset-meta-item"><span class="asset-meta-label">Public Access:</span> <span class="asset-meta-value">${r.metadata.public_ip_enabled ? 'Enabled' : 'Disabled (Private IP only)'}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Authorized Networks:</span> <span class="asset-meta-value">${r.metadata.authorized_networks && r.metadata.authorized_networks.length > 0 ? escapeHTML(r.metadata.authorized_networks.join(', ')) : 'None (open or private)'}</span></div>
         `);
+
+        renderAssetGroup(bucketAssets, assetsListBucket, "🪣 GCS Storage Bucket", r => `
+            <div class="asset-meta-item"><span class="asset-meta-label">Location:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Storage Class:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.storage_class || 'STANDARD')}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Public Prevention:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.public_access_prevention || 'inherited')}</span></div>
+        `);
+        
+        renderAssetGroup(networkAssets, assetsListNetwork, "🌐 VPC Network", r => `
+            <div class="asset-meta-item"><span class="asset-meta-label">Subnets count:</span> <span class="asset-meta-value">${r.metadata.subnetworks ? r.metadata.subnetworks.length : 0}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Routing Mode:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.routing_mode || 'REGIONAL')}</span></div>
+            <div class="asset-meta-item"><span class="asset-meta-label">Auto-Subnets Mode:</span> <span class="asset-meta-value">${r.metadata.auto_create_subnetworks ? 'Enabled (Auto)' : 'Disabled (Custom subnets)'}</span></div>
+        `);
     }
     
     function renderAssetGroup(assets, container, typeName, metaHtmlBuilder) {
@@ -975,6 +1010,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <div class="asset-card-body">
                     ${metaHtmlBuilder(r)}
+                    
+                    ${r.console_url ? `
+                        <div class="asset-meta-item" style="margin-top: 10px; display: flex; align-items: center; border-top: 1px dashed rgba(255, 255, 255, 0.05); padding-top: 8px;">
+                            <a href="${escapeHTML(r.console_url)}" target="_blank" class="text-cyan" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: underline; font-size: 12px; font-weight: 600;">
+                                🔗 Open in GCP Console
+                            </a>
+                        </div>
+                    ` : ''}
                     
                     ${r.vulnerable ? `
                         <div class="asset-warning-block">

@@ -8,19 +8,24 @@ from src.cli import run_cli
 
 def test_discover_mock_resources():
     project_id = "test-project-123"
-    cache_path = os.path.join("cloud", "gcp", "projects", project_id)
+    cache_dir = os.path.join("discover", "gcp-project")
+    json_path = os.path.join(cache_dir, f"{project_id}.json")
+    md_path = os.path.join(cache_dir, f"{project_id}.md")
     
     # Ensure clean state
-    if os.path.exists(cache_path):
-        shutil.rmtree(cache_path)
+    if os.path.exists(json_path):
+        os.remove(json_path)
+    if os.path.exists(md_path):
+        os.remove(md_path)
         
     try:
         # Enable Mock mode
         with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
-            json_path = discover_project_resources(project_id)
+            ret_json_path = discover_project_resources(project_id)
             
+            assert ret_json_path == json_path
             assert os.path.exists(json_path)
-            assert os.path.exists(os.path.join(cache_path, "README.md"))
+            assert os.path.exists(md_path)
             
             with open(json_path, "r") as f:
                 resources = json.load(f)
@@ -51,24 +56,30 @@ def test_discover_mock_resources():
             assert sql_vulnerable["vulnerable"] is True
             assert sql_safe["vulnerable"] is False
             
-            # Verify README.md contents
-            with open(os.path.join(cache_path, "README.md"), "r") as f:
+            # Verify md_path contents
+            with open(md_path, "r") as f:
                 md_content = f.read()
                 
             assert f"# GCP Resource Catalog: {project_id}" in md_content
             assert "⚠️ EXPOSED" in md_content
             assert "✅ SAFE" in md_content
     finally:
-        if os.path.exists(cache_path):
-            shutil.rmtree(cache_path)
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        if os.path.exists(md_path):
+            os.remove(md_path)
 
 def test_discover_live_resources_mocked_subprocess():
     project_id = "live-project-abc"
-    cache_path = os.path.join("cloud", "gcp", "projects", project_id)
+    cache_dir = os.path.join("discover", "gcp-project")
+    json_path = os.path.join(cache_dir, f"{project_id}.json")
+    md_path = os.path.join(cache_dir, f"{project_id}.md")
     
     # Ensure clean state
-    if os.path.exists(cache_path):
-        shutil.rmtree(cache_path)
+    if os.path.exists(json_path):
+        os.remove(json_path)
+    if os.path.exists(md_path):
+        os.remove(md_path)
         
     try:
         # Mock subprocess outputs to replicate exact live response parsing
@@ -103,12 +114,26 @@ def test_discover_live_resources_mocked_subprocess():
                 "ipConfiguration": {"ipv4Enabled": True, "authorizedNetworks": []}
             }
         }])
+        mock_gcs_out = json.dumps([{
+            "name": "live-bucket",
+            "location": "us-east1",
+            "public_access_prevention": "inherited",
+            "default_storage_class": "STANDARD",
+            "uniform_bucket_level_access": True
+        }])
+        mock_network_out = json.dumps([{
+            "name": "default",
+            "autoCreateSubnetworks": True,
+            "subnetworks": ["live-subnet-1"]
+        }])
         
         def mock_subprocess_run(cmd, *args, **kwargs):
             mock_res = MagicMock()
             mock_res.returncode = 0
-            if "compute" in cmd:
+            if "compute" in cmd and "instances" in cmd:
                 mock_res.stdout = mock_vm_out
+            elif "compute" in cmd and "networks" in cmd:
+                mock_res.stdout = mock_network_out
             elif "run" in cmd and "get-iam-policy" in cmd:
                 mock_res.stdout = mock_run_iam_out
             elif "run" in cmd:
@@ -117,38 +142,50 @@ def test_discover_live_resources_mocked_subprocess():
                 mock_res.stdout = mock_gke_out
             elif "sql" in cmd:
                 mock_res.stdout = mock_sql_out
+            elif "storage" in cmd:
+                mock_res.stdout = mock_gcs_out
             return mock_res
             
         with patch.dict(os.environ, {"MOCK_TOOLING": "false"}), \
              patch("subprocess.run", side_effect=mock_subprocess_run):
              
-            json_path = discover_project_resources(project_id)
+            ret_json_path = discover_project_resources(project_id)
+            assert ret_json_path == json_path
             assert os.path.exists(json_path)
+            assert os.path.exists(md_path)
             
             with open(json_path, "r") as f:
                 resources = json.load(f)
                 
-            assert len(resources) == 4
+            assert len(resources) == 6
             for r in resources:
                 assert r["vulnerable"] is True  # All mocked resources were set up vulnerable
     finally:
-        if os.path.exists(cache_path):
-            shutil.rmtree(cache_path)
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        if os.path.exists(md_path):
+            os.remove(md_path)
 
 def test_cli_discover_subcommand():
     project_id = "cli-test-project"
-    cache_path = os.path.join("cloud", "gcp", "projects", project_id)
+    cache_dir = os.path.join("discover", "gcp-project")
+    json_path = os.path.join(cache_dir, f"{project_id}.json")
+    md_path = os.path.join(cache_dir, f"{project_id}.md")
     
     # Ensure clean state
-    if os.path.exists(cache_path):
-        shutil.rmtree(cache_path)
+    if os.path.exists(json_path):
+        os.remove(json_path)
+    if os.path.exists(md_path):
+        os.remove(md_path)
         
     try:
         with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
             exit_code = run_cli(["discover", "--project-id", project_id])
             assert exit_code == 0
-            assert os.path.exists(os.path.join(cache_path, "discovery.json"))
-            assert os.path.exists(os.path.join(cache_path, "README.md"))
+            assert os.path.exists(json_path)
+            assert os.path.exists(md_path)
     finally:
-        if os.path.exists(cache_path):
-            shutil.rmtree(cache_path)
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        if os.path.exists(md_path):
+            os.remove(md_path)

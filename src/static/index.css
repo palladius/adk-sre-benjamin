@@ -1151,6 +1151,33 @@ body {
     cursor: help;
 }
 
+/* Live vs Mock Status Banners */
+.project-status-banner {
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: fadeInDown 0.3s ease-out;
+}
+
+.project-status-banner.mock-active {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    box-shadow: 0 4px 20px rgba(239, 68, 68, 0.15);
+}
+
+.project-status-banner.live-active {
+    background: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #a7f3d0;
+    box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+}
+
 /* Deterministic Project Discovery View (Big Page on Right) */
 .project-discovery-view {
     display: flex;
@@ -1230,7 +1257,33 @@ body {
     border: 1px solid var(--neon-red);
     color: var(--neon-red);
     box-shadow: 0 0 10px rgba(255, 49, 49, 0.15);
-    animation: pulse-red 2s infinite ease-in-out;
+}
+
+/* Collapsible Asset Panels */
+.asset-panel .clickable-header {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: var(--transition-smooth);
+    border-radius: 8px;
+    padding: 4px 8px;
+}
+
+.asset-panel .clickable-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.asset-panel .panel-toggle-btn {
+    font-size: 14px;
+    color: var(--neon-cyan);
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+.asset-panel.collapsed .panel-body {
+    display: none;
 }
 
 /* Statistics Metrics Row */
@@ -1314,11 +1367,11 @@ body {
 .asset-card {
     background: rgba(255, 255, 255, 0.01);
     border: 1px solid rgba(255, 255, 255, 0.04);
-    border-radius: 10px;
-    padding: 14px 16px;
+    border-radius: 8px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
     transition: var(--transition-smooth);
 }
 
@@ -1342,7 +1395,7 @@ body {
 }
 
 .asset-card-title {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     color: var(--text-primary);
     font-family: var(--font-mono);
@@ -1351,7 +1404,7 @@ body {
 .asset-card-body {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
 }
 
 .asset-meta-item {
@@ -1377,12 +1430,12 @@ body {
     border: 1px solid rgba(255, 49, 49, 0.2);
     color: var(--neon-red);
     border-radius: 6px;
-    padding: 6px 12px;
-    font-size: 10.5px;
+    padding: 4px 8px;
+    font-size: 10px;
     font-weight: 700;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .asset-metadata-toggle {
@@ -1409,5 +1462,77 @@ body {
     color: #8b949e;
     overflow-x: auto;
     max-height: 150px;
+}
+
+/* GCP Projects List Sidebar Styles */
+.sidebar-projects-section {
+    margin-bottom: 25px;
+}
+
+.sidebar-projects-section h2 {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+.project-history-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.project-history-list::-webkit-scrollbar {
+    width: 4px;
+}
+.project-history-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.project-history-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+}
+
+.project-history-item {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: var(--transition-smooth);
+}
+
+.project-history-item:hover {
+    background: rgba(0, 255, 255, 0.05);
+    border-color: var(--neon-cyan);
+    transform: translateX(3px);
+}
+
+.project-history-item.active {
+    background: rgba(0, 255, 255, 0.08);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.15);
+}
+
+.project-history-icon {
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+}
+
+.project-history-id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
