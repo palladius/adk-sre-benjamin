@@ -79,6 +79,42 @@ def test_server_integration():
             assert resp_opt.status == 200
             assert resp_opt.headers.get("Access-Control-Allow-Origin") == "*"
             
+        # Test GET /api/config
+        url_config = f"http://localhost:{port}/api/config"
+        req_config = urllib.request.Request(url_config)
+        with urllib.request.urlopen(req_config) as resp_config:
+            assert resp_config.status == 200
+            data_config = json.loads(resp_config.read().decode('utf-8'))
+            assert "project_id" in data_config
+
+        # Test POST /api/incidents/INC-MOCK-123/approve (mocked)
+        with patch("src.server.resume_simulation") as mock_resume, \
+             patch("src.server.parse_incident_folder") as mock_parse, \
+             patch("os.path.exists") as mock_exists:
+            mock_exists.return_value = True
+            mock_parse.return_value = {"incident_id": "INC-MOCK-123", "status": "CLOSED"}
+            url_approve = f"http://localhost:{port}/api/incidents/INC-MOCK-123/approve"
+            req_approve = urllib.request.Request(url_approve, data=b"", method="POST")
+            with urllib.request.urlopen(req_approve) as resp_approve:
+                assert resp_approve.status == 200
+                data_approve = json.loads(resp_approve.read().decode('utf-8'))
+                assert data_approve["status"] == "CLOSED"
+                mock_resume.assert_called_once_with("INC-MOCK-123", approved=True)
+
+        # Test POST /api/incidents/INC-MOCK-123/reject (mocked)
+        with patch("src.server.resume_simulation") as mock_resume, \
+             patch("src.server.parse_incident_folder") as mock_parse, \
+             patch("os.path.exists") as mock_exists:
+            mock_exists.return_value = True
+            mock_parse.return_value = {"incident_id": "INC-MOCK-123", "status": "ABORTED"}
+            url_reject = f"http://localhost:{port}/api/incidents/INC-MOCK-123/reject"
+            req_reject = urllib.request.Request(url_reject, data=b"", method="POST")
+            with urllib.request.urlopen(req_reject) as resp_reject:
+                assert resp_reject.status == 200
+                data_reject = json.loads(resp_reject.read().decode('utf-8'))
+                assert data_reject["status"] == "ABORTED"
+                mock_resume.assert_called_once_with("INC-MOCK-123", approved=False)
+            
     finally:
         server.shutdown()
         server.server_close()

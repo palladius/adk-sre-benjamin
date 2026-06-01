@@ -210,28 +210,130 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
     )
     log_event(f"Logistics Lead {logistics.agent.name}", f"Command risk assessment complete. Status: APPROVED. Risk level: {max_risk}.", evaluation)
     
-    # Step 8: Madhavi broadcasts safety clearance and Mutation Agent executes mutation
-    hitl_msg = comms.request_hitl_approval(incident.incident_id, proposed_command, max_risk, reasons)
-    log_event(f"Communications Lead {comms.agent.name}", f"Safety clearance granted for whitelisted mutation command: {proposed_command}.", hitl_msg)
+    # Pause on Safety Gate: Write AWAITING_APPROVAL status to state.md and wait for user manual approval
+    log_event(f"Logistics Lead {logistics.agent.name}", f"Safety gate holds proposed command: `{proposed_command}` ({max_risk} Risk). Awaiting Human-in-the-Loop operator authorization.")
     
-    # Mutation Agent executes mutation
-    log_event("Mutation Agent", f"Executing whitelisted mutation command: {proposed_command}")
-    
-    # Step 9: Diagnostic checks confirm metric recovery
-    log_event(f"Operations Lead {ops.agent.name}", "Performing post-mutation recovery verification metrics check.")
-    recovered_latency = [15.0, 14.5, 15.0]
-    recovered_cpu = [12.0, 10.5, 11.0]
-    log_event(f"Operations Lead {ops.agent.name}", f"Post-mutation checks complete. Latency: {recovered_latency[-1]}ms (threshold: 100ms). CPU: {recovered_cpu[-1]}%. Status: RECOVERED.")
-    
-    # Step 10: Scribe updates state, commits all chronicles, and attaches a Git Note
-    log_event(f"Planning Lead {planning.agent.name}", "Scribe Agent closing incident chronicles.")
     with open(state_path, "w") as f:
         f.write(f"""# Active SRE Incident State: {incident.incident_id}
 
 ## Metadata
-- **Status:** CLOSED
+- **Status:** AWAITING_APPROVAL
 - **Target Project:** `{trigger.project_id}`
 - **Trigger Event:** `{trigger.event_type}`
+- **Incident Commander:** Benjamin
+- **Safety Level:** {max_risk} Risk
+- **Proposed Mutation:** `{proposed_command}`
+
+## Active Diagnostic Pipeline
+- Risk assessment complete. Awaiting operator safety clearance on the dashboard panel to execute mutation.
+""")
+        
+    # Commit initial diagnostics state dynamically using Scribe version-control
+    message = f"scribe(audit): Diagnostics and safety gate pause for {incident.incident_id}"
+    commit_hash = commit_scribe_changes(incident.folder_path, message)
+    
+    audit_notes = f"""Incident Checkpoint (Paused): {incident.incident_id}
+- Incident ID: {incident.incident_id}
+- Trigger Event: {trigger.event_type}
+- Status: AWAITING_APPROVAL
+- Proposed Command: {proposed_command} (Risk: {max_risk})
+"""
+    add_git_note(incident.folder_path, commit_hash, audit_notes)
+    
+    return incident.incident_id, incident.folder_path
+
+def resume_simulation(incident_id: str, approved: bool, base_dir: str = "investigations") -> tuple[str, str]:
+    """Resumes a paused SRE simulation based on human-in-the-loop manual dashboard approval or rejection."""
+    import re
+    folder_path = os.path.join(base_dir, incident_id)
+    state_path = os.path.join(folder_path, "state.md")
+    timeline_path = os.path.join(folder_path, "timeline.md")
+    raw_audit_path = os.path.join(folder_path, "raw_audit.jsonl")
+    artifacts_dir = os.path.join(folder_path, "artifacts")
+    
+    # 1. Parse existing state.md to extract metadata
+    status = "UNKNOWN"
+    project_id = "UNKNOWN"
+    trigger_event = "UNKNOWN"
+    proposed_command = "systemctl restart mysql"
+    max_risk = "HIGH"
+    
+    if os.path.exists(state_path):
+        with open(state_path, "r") as f:
+            state_content = f.read()
+        status_match = re.search(r'\-\s+\*\*Status:\*\*\s*([A-Za-z0-9_]+)', state_content, re.IGNORECASE)
+        if status_match: status = status_match.group(1).strip()
+        project_match = re.search(r'\-\s+\*\*Target Project:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+        if project_match: project_id = project_match.group(1).strip()
+        trigger_match = re.search(r'\-\s+\*\*Trigger Event:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+        if trigger_match: trigger_event = trigger_match.group(1).strip()
+        mutation_match = re.search(r'\-\s+\*\*Proposed Mutation:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+        if mutation_match: proposed_command = mutation_match.group(1).strip()
+        risk_match = re.search(r'\-\s+\*\*Safety Level:\*\*\s*([A-Za-z0-9_]+)', state_content, re.IGNORECASE)
+        if risk_match: max_risk = risk_match.group(1).strip()
+
+    # Re-instantiate agents & channels
+    comms = CommunicationsLead()
+    ops = OperationsLead()
+    planning = PlanningLead()
+    logistics = LogisticsLead()
+    
+    github_issue_path = os.path.join(artifacts_dir, "github_issue.json")
+    telegram_feed_path = os.path.join(artifacts_dir, "telegram_feed.json")
+    github = GitHubTicketingEngine(issue_file_path=github_issue_path)
+    
+    # Extract existing issue_id from github_issue.json if exists
+    issue_id = "1"
+    if os.path.exists(github_issue_path):
+        try:
+            with open(github_issue_path, "r") as f:
+                issue_data = json.load(f)
+                issue_id = issue_data.get("issue_id", "1")
+        except Exception:
+            pass
+
+    def log_event(agent_name: str, message: str, step_details: str = ""):
+        timestamp = datetime.now(timezone.utc).isoformat()
+        with open(timeline_path, "a") as f:
+            f.write(f"- **[{timestamp}]** [{agent_name}] {message}\n")
+        audit_entry = {
+            "timestamp": timestamp,
+            "agent": agent_name,
+            "message": message,
+            "details": step_details
+        }
+        with open(raw_audit_path, "a") as f:
+            f.write(json.dumps(audit_entry) + "\n")
+            
+        github.add_issue_comment(issue_id, agent_name, message, incident_id)
+        send_telegram_alert(
+            message=f"[{agent_name}] {message}",
+            incident_id=incident_id,
+            feed_file_path=telegram_feed_path
+        )
+
+    if approved:
+        # Step 8: Madhavi broadcasts safety clearance and Mutation Agent executes mutation
+        hitl_msg = comms.request_hitl_approval(incident_id, proposed_command, max_risk, ["Approved by human operator via SRE dashboard."])
+        log_event(f"Communications Lead {comms.agent.name}", f"Safety clearance granted for whitelisted mutation command: {proposed_command}.", hitl_msg)
+        
+        log_event("Mutation Agent", f"Executing whitelisted mutation command: {proposed_command}")
+        
+        # Step 9: Diagnostic checks confirm metric recovery
+        log_event(f"Operations Lead {ops.agent.name}", "Performing post-mutation recovery verification metrics check.")
+        recovered_latency = [15.0, 14.5, 15.0]
+        recovered_cpu = [12.0, 10.5, 11.0]
+        log_event(f"Operations Lead {ops.agent.name}", f"Post-mutation checks complete. Latency: {recovered_latency[-1]}ms (threshold: 100ms). CPU: {recovered_cpu[-1]}%. Status: RECOVERED.")
+        
+        # Step 10: Scribe updates state, commits all chronicles, and attaches a Git Note
+        log_event(f"Planning Lead {planning.agent.name}", "Scribe Agent closing incident chronicles.")
+        with open(state_path, "w") as f:
+            f.write(f"""# Active SRE Incident State: {incident_id}
+
+## Metadata
+- **Status:** CLOSED
+- **Target Project:** `{project_id}`
+- **Trigger Event:** `{trigger_event}`
 - **Incident Commander:** Benjamin
 - **Safety Level:** LOW Risk
 
@@ -239,37 +341,55 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
 - Incident resolved via whitelisted restart of MySQL database.
 - All services healthy and verified.
 """)
+        log_event(f"Planning Lead {planning.agent.name}", "Incident resolved successfully. Closed.")
         
-    log_event(f"Planning Lead {planning.agent.name}", "Incident resolved successfully. Closed.")
-    
-    # Close GitHub issue & send final Telegram notification
-    github.close_incident_issue(issue_id, f"Restarted database service successfully under {max_risk} Risk clearance.", incident.incident_id)
-    send_telegram_alert(
-        message=f"Incident resolved successfully! Closed.",
-        incident_id=incident.incident_id,
-        feed_file_path=telegram_feed_path
-    )
-    
+        github.close_incident_issue(issue_id, f"Restarted database service successfully under {max_risk} Risk clearance.", incident_id)
+        send_telegram_alert(message="Incident resolved successfully! Closed.", incident_id=incident_id, feed_file_path=telegram_feed_path)
+    else:
+        # Rejection path
+        log_event(f"Communications Lead {comms.agent.name}", f"Safety clearance REJECTED by human operator for command: {proposed_command}.")
+        log_event("Mutation Agent", f"Halted mutation execution. Safety gate block active.")
+        
+        with open(state_path, "w") as f:
+            f.write(f"""# Active SRE Incident State: {incident_id}
+
+## Metadata
+- **Status:** ABORTED
+- **Target Project:** `{project_id}`
+- **Trigger Event:** `{trigger_event}`
+- **Incident Commander:** Benjamin
+- **Safety Level:** {max_risk} Risk
+- **Proposed Mutation:** `{proposed_command}` (REJECTED)
+
+## Active Diagnostic Pipeline
+- Mutation rejected by human operator. Safety gate aborted operations.
+""")
+        log_event(f"Planning Lead {planning.agent.name}", "Incident aborted successfully. Closed as BLOCKED.")
+        
+        github.close_incident_issue(issue_id, "Aborted: Mutation command rejected by operator safety override.", incident_id)
+        send_telegram_alert(message="Incident aborted by user safety override. Closed.", incident_id=incident_id, feed_file_path=telegram_feed_path)
+
     # Commit changes dynamically using Scribe version-control
-    message = f"scribe(audit): Checkpoint resolution state for {incident.incident_id}"
-    commit_hash = commit_scribe_changes(incident.folder_path, message)
+    message = f"scribe(audit): Checkpoint resolution state for {incident_id} (Approved: {approved})"
+    commit_hash = commit_scribe_changes(folder_path, message)
     
-    # Attach Git Notes checkpoint log
-    audit_notes = f"""Incident Resolution Checkpoint: {incident.incident_id}
-- Incident ID: {incident.incident_id}
-- Trigger Event: {trigger.event_type}
-- Status: RESOLVED
-- Mutation Applied: {proposed_command} (APPROVED, Risk: {max_risk})
+    audit_notes = f"""Incident Checkpoint: {incident_id}
+- Incident ID: {incident_id}
+- Trigger Event: {trigger_event}
+- Status: {"RESOLVED" if approved else "ABORTED"}
+- Mutation {"Applied: " + proposed_command if approved else "Rejected"}
 - Scribe Chronicles: Committed at {commit_hash}
-- Lineage Provenance: 2 artifacts registered in registry.json
 """
-    add_git_note(incident.folder_path, commit_hash, audit_notes)
+    add_git_note(folder_path, commit_hash, audit_notes)
     
-    return incident.incident_id, incident.folder_path
+    return incident_id, folder_path
 
 if __name__ == "__main__":
     import sys
     print("Starting Project Benjamin SRE incident simulation...")
     inc_id, inc_folder = run_simulation()
-    print(f"Incident {inc_id} completed successfully!")
+    print(f"Incident {inc_id} declared and paused on safety gate!")
     print(f" Chronicles saved in: {inc_folder}")
+    print("Auto-approving to complete full simulation...")
+    resume_simulation(inc_id, approved=True)
+    print("Incident fully resolved!")

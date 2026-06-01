@@ -20,6 +20,23 @@ def test_parse_trigger_invalid():
     with pytest.raises(ValueError, match="Empty event_type"):
         parse_trigger({"event_type": ""})
 
+def test_parse_trigger_fallback(monkeypatch):
+    # Set fallback environment variables
+    monkeypatch.setenv("GCP_PROJECT_ID", "env-gcp-project-123")
+    
+    payload = {
+        "event_type": "frontend_latency_slo_violated",
+        "project_id": ""
+    }
+    trigger = parse_trigger(payload)
+    assert trigger.project_id == "env-gcp-project-123"
+    
+    # Empty payload project_id but PROJECT_ID set
+    monkeypatch.delenv("GCP_PROJECT_ID")
+    monkeypatch.setenv("PROJECT_ID", "env-project-456")
+    trigger = parse_trigger(payload)
+    assert trigger.project_id == "env-project-456"
+
 def test_scaffold_incident(tmp_path):
     # Set up mock trigger
     trigger = Trigger(event_type="frontend_latency_slo_violated", project_id="prod-db-999")

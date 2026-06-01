@@ -29,13 +29,76 @@ document.addEventListener("DOMContentLoaded", () => {
     const leadPlanning = document.getElementById("lead-planning");
     const leadComms = document.getElementById("lead-comms");
     
+    // HITL Elements
+    const btnApprove = document.getElementById("btn-approve-mutation");
+    const btnReject = document.getElementById("btn-reject-mutation");
+    const hitlActionsContainer = document.getElementById("hitl-actions-container");
+    const projectIdInput = document.getElementById("project-id-input");
+    
     let activeIncidentId = null;
     
     // Initialize
+    loadConfig();
     loadIncidentRepository();
     
     // Event Listeners
     btnTrigger.addEventListener("click", triggerLiveSimulation);
+    if (btnApprove) btnApprove.addEventListener("click", approveMutation);
+    if (btnReject) btnReject.addEventListener("click", rejectMutation);
+    
+    // 0. Fetch Server Configurations
+    async function loadConfig() {
+        try {
+            const res = await fetch("/api/config");
+            const data = await res.json();
+            if (data && data.project_id && projectIdInput) {
+                projectIdInput.value = data.project_id;
+                projectIdInput.placeholder = data.project_id;
+            }
+        } catch (err) {
+            console.error("Failed to load server configurations:", err);
+        }
+    }
+
+    // Approve proposed mutation via Safety Gate
+    async function approveMutation() {
+        if (!activeIncidentId) return;
+        if (btnApprove) btnApprove.disabled = true;
+        if (btnReject) btnReject.disabled = true;
+        try {
+            const res = await fetch(`/api/incidents/${activeIncidentId}/approve`, {
+                method: "POST"
+            });
+            const data = await res.json();
+            await loadIncidentRepository(activeIncidentId);
+        } catch (err) {
+            console.error("Failed to approve mutation:", err);
+            alert("Error approving mutation.");
+        } finally {
+            if (btnApprove) btnApprove.disabled = false;
+            if (btnReject) btnReject.disabled = false;
+        }
+    }
+
+    // Reject and abort proposed mutation
+    async function rejectMutation() {
+        if (!activeIncidentId) return;
+        if (btnApprove) btnApprove.disabled = true;
+        if (btnReject) btnReject.disabled = true;
+        try {
+            const res = await fetch(`/api/incidents/${activeIncidentId}/reject`, {
+                method: "POST"
+            });
+            const data = await res.json();
+            await loadIncidentRepository(activeIncidentId);
+        } catch (err) {
+            console.error("Failed to reject mutation:", err);
+            alert("Error rejecting mutation.");
+        } finally {
+            if (btnApprove) btnApprove.disabled = false;
+            if (btnReject) btnReject.disabled = false;
+        }
+    }
     
     // 1. Fetch SRE Incident List
     async function loadIncidentRepository(selectedId = null) {
@@ -121,10 +184,19 @@ document.addEventListener("DOMContentLoaded", () => {
         renderLogs(inc.artifacts);
         
         // Render Safety Gate Evaluation
-        renderSafetyGate(inc.timeline);
+        renderSafetyGate(inc.timeline, status);
         
         // Render Comms Feeds
         renderComms(inc.artifacts);
+
+        // Show/hide HITL buttons based on status
+        if (hitlActionsContainer) {
+            if (status === "AWAITING_APPROVAL") {
+                hitlActionsContainer.style.display = "flex";
+            } else {
+                hitlActionsContainer.style.display = "none";
+            }
+        }
     }
     
     // Highlight which SRE leads participated in the incident timeline
@@ -276,7 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     
     // Render risk and safety commands evaluated by Logistics Lead
-    function renderSafetyGate(timeline) {
+    function renderSafetyGate(timeline, status) {
         const logiEvents = timeline.filter(e => e.agent.toLowerCase() === "logistics lead");
         if (logiEvents.length === 0) {
             proposedCommandText.textContent = "N/A";
@@ -295,7 +367,11 @@ document.addEventListener("DOMContentLoaded", () => {
         let cmd = "systemctl restart mysql";
         if (commandEvent) {
             const cmdMatch = commandEvent.message.match(/command:\s*(.*)/);
-            if (cmdMatch) cmd = cmdMatch.group(1).trim();
+            if (cmdMatch) {
+                cmd = cmdMatch[1].trim();
+            } else if (commandEvent.message.includes("command: ")) {
+                cmd = commandEvent.message.split("command: ")[1].trim();
+            }
         }
         
         proposedCommandText.textContent = cmd;
@@ -304,10 +380,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const riskMatch = riskEvent.message.match(/level:\s*([A-Za-z]+)/i);
             const riskLevel = riskMatch ? riskMatch[1].toUpperCase() : "MEDIUM";
             
-            safetyStatusText.textContent = "APPROVED";
-            safetyStatusText.className = "metric-value text-success";
-            safetyReasonsText.textContent = riskEvent.message;
-            
             safetyRiskBadge.textContent = riskLevel + " RISK";
             if (riskLevel === "HIGH") {
                 safetyRiskBadge.className = "risk-badge badge-high";
@@ -315,6 +387,28 @@ document.addEventListener("DOMContentLoaded", () => {
                 safetyRiskBadge.className = "risk-badge badge-med";
             } else {
                 safetyRiskBadge.className = "risk-badge badge-low";
+            }
+        }
+
+        // Override status rendering based on manual approval gate state
+        const upperStatus = status ? status.toUpperCase() : "UNKNOWN";
+        if (upperStatus === "AWAITING_APPROVAL") {
+            safetyStatusText.textContent = "AWAITING CLEARANCE";
+            safetyStatusText.className = "metric-value text-warning";
+            safetyReasonsText.textContent = "Proposed mutation command is held. Awaiting human operator safety clearance on the dashboard.";
+        } else if (upperStatus === "ABORTED") {
+            safetyStatusText.textContent = "REJECTED";
+            safetyStatusText.className = "metric-value text-danger";
+            safetyReasonsText.textContent = "Mutation command rejected and halted by manual safety override.";
+        } else if (upperStatus === "CLOSED" || upperStatus === "RESOLVED") {
+            safetyStatusText.textContent = "EXECUTED";
+            safetyStatusText.className = "metric-value text-success";
+            safetyReasonsText.textContent = "Mutation command approved and executed successfully.";
+        } else {
+            safetyStatusText.textContent = "APPROVED";
+            safetyStatusText.className = "metric-value text-success";
+            if (riskEvent) {
+                safetyReasonsText.textContent = riskEvent.message;
             }
         }
     }
@@ -418,10 +512,19 @@ document.addEventListener("DOMContentLoaded", () => {
         btnTrigger.textContent = "Simulating Live Incident...";
         btnTrigger.classList.remove("animate-pulse");
         
+        const projectIdVal = projectIdInput ? projectIdInput.value.trim() : "";
+        const payload = {
+            event_type: "frontend_latency_slo_violated"
+        };
+        if (projectIdVal) {
+            payload.project_id = projectIdVal;
+        }
+        
         try {
             const res = await fetch("/api/simulate", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" }
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             
@@ -460,12 +563,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Finally populate metrics and logs
                 renderMetrics(inc.artifacts);
                 renderLogs(inc.artifacts);
-                renderSafetyGate(inc.timeline);
+                renderSafetyGate(inc.timeline, inc.status.toUpperCase());
                 renderComms(inc.artifacts);
                 
                 const status = inc.status.toUpperCase();
                 activeStatusBadge.textContent = status;
                 activeStatusBadge.className = "status-badge " + (status === "RESOLVED" || status === "CLOSED" ? "status-resolved" : "status-active");
+                
+                // Show/hide HITL buttons based on status
+                if (hitlActionsContainer) {
+                    if (status === "AWAITING_APPROVAL") {
+                        hitlActionsContainer.style.display = "flex";
+                    } else {
+                        hitlActionsContainer.style.display = "none";
+                    }
+                }
                 return;
             }
             

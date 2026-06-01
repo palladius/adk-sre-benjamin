@@ -4,7 +4,7 @@ import re
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import datetime, timezone
 import urllib.parse
-from run_simulation import run_simulation
+from run_simulation import run_simulation, resume_simulation
 
 def parse_incident_folder(folder_path: str) -> dict:
     """Parses Scribe files inside an incident folder to return structured JSON."""
@@ -116,8 +116,18 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         
+        # API: Get Server Configuration
+        if path == "/api/config":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            
+            project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("PROJECT_ID") or "prod-db-999"
+            self.wfile.write(json.dumps({"project_id": project_id}).encode("utf-8"))
+            return
+            
         # 1. API: List Incidents
-        if path == "/api/incidents":
+        elif path == "/api/incidents":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -222,6 +232,51 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps(details).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+        # 5. API: Approve paused safety gate mutation
+        elif path.startswith("/api/incidents/") and path.endswith("/approve"):
+            try:
+                incident_id = path.split("/")[3]
+                incident_path = os.path.join("investigations", incident_id)
+                if os.path.exists(incident_path):
+                    resume_simulation(incident_id, approved=True)
+                    details = parse_incident_folder(incident_path)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(details).encode("utf-8"))
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                
+        # 6. API: Reject paused safety gate mutation
+        elif path.startswith("/api/incidents/") and path.endswith("/reject"):
+            try:
+                incident_id = path.split("/")[3]
+                incident_path = os.path.join("investigations", incident_id)
+                if os.path.exists(incident_path):
+                    resume_simulation(incident_id, approved=False)
+                    details = parse_incident_folder(incident_path)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(details).encode("utf-8"))
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")

@@ -138,6 +138,54 @@ body {
     letter-spacing: 1px;
 }
 
+/* SRE Config Override Styles */
+.sidebar-config {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar-config label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+}
+
+.glass-input {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+    transition: var(--transition-smooth);
+    width: 100%;
+}
+
+.glass-input:focus {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.15);
+}
+
+/* Color Status Utilities */
+.text-success {
+    color: var(--neon-green) !important;
+}
+
+.text-warning {
+    color: var(--neon-yellow) !important;
+}
+
+.text-danger {
+    color: var(--neon-red) !important;
+}
+
 /* Primary Trigger Button */
 .btn-primary {
     background: linear-gradient(135deg, #ff3131, #b50000);
