@@ -2,9 +2,9 @@
 
 ## Phase 1: Modular SRE Skill Adapter
 
-- [ ] Task: Implement dynamic Skill Loader and YAML Parser
-    - [ ] Write unit tests verifying skill folder resolution, frontmatter YAML parsing, and prompt integration
-    - [ ] Implement `src/skills_adapter.py` providing the `SkillAdapter` utility
+- [x] Task: Implement dynamic Skill Loader and YAML Parser [131f6a7]
+    - [x] Write unit tests verifying skill folder resolution, frontmatter YAML parsing, and prompt integration [131f6a7]
+    - [x] Implement `src/skills_adapter.py` providing the `SkillAdapter` utility [131f6a7]
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Modular SRE Skill Adapter' (Protocol in workflow.md)
 
 ## Phase 2: Agent Hydration & Simulation integration
