@@ -1,12 +1,12 @@
 # Implementation Plan: comms_integration_20260601
 
-## Phase 1: Telegram & GitHub Communication Engines
+## Phase 1: Telegram & GitHub Communication Engines [checkpoint: ab3c190]
 
 - [x] Task: Create Telegram and GitHub messaging dispatchers [e5cb427]
     - [x] Write unit tests verifying Telegram Markdown payloads and GitHub issue lifecycles (with mock and live toggles) [e5cb427]
     - [x] Implement `src/comms_telegram.py` dispatching real and mock messages [e5cb427]
     - [x] Implement `src/comms_github.py` managing real and mock tracking tickets [e5cb427]
-- [ ] Task: Conductor - User Manual Verification 'Phase 1: Telegram & GitHub Communication Engines' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Phase 1: Telegram & GitHub Communication Engines' (Protocol in workflow.md) [ab3c190]
 
 ## Phase 2: Orchestration & UI Synchronization
 
