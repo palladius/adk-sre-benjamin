@@ -7,6 +7,8 @@ from src.diagnostics import query_logs, query_metrics
 from src.safety import is_command_safe, decompose_command
 from src.registry import add_artifact_to_registry
 from src.scribe_git import commit_scribe_changes, add_git_note
+from src.comms_telegram import send_telegram_alert
+from src.comms_github import GitHubTicketingEngine
 from src.agents import (
     IncidentCommander,
     CommunicationsLead,
@@ -44,7 +46,40 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
     planning = PlanningLead()
     logistics = LogisticsLead()
     
-    # Helper to append to timeline.md and raw_audit.jsonl
+    # Initialize Comms Engines
+    github_issue_path = os.path.join(artifacts_dir, "github_issue.json")
+    telegram_feed_path = os.path.join(artifacts_dir, "telegram_feed.json")
+    github = GitHubTicketingEngine(issue_file_path=github_issue_path)
+    
+    # Create GitHub issue & send active Telegram alert immediately
+    issue_id = github.create_incident_issue(
+        incident_id=incident.incident_id,
+        trigger_event=trigger.event_type,
+        project_id=trigger.project_id
+    )
+    send_telegram_alert(
+        message=f"SLO violation alert detected! Declared ACTIVE.",
+        incident_id=incident.incident_id,
+        feed_file_path=telegram_feed_path
+    )
+    
+    # Register comms artifacts in registry.json
+    add_artifact_to_registry(
+        incident_folder=incident.folder_path,
+        file_path=telegram_feed_path,
+        source_type="MCP",
+        source_command="MCP://telegram/sendMessage",
+        source_arguments={"incident_id": incident.incident_id}
+    )
+    add_artifact_to_registry(
+        incident_folder=incident.folder_path,
+        file_path=github_issue_path,
+        source_type="MCP",
+        source_command="MCP://github/create_issue",
+        source_arguments={"incident_id": incident.incident_id}
+    )
+    
+    # Helper to append to timeline.md, raw_audit.jsonl, Telegram, and GitHub Issues
     def log_event(agent_name: str, message: str, step_details: str = ""):
         timestamp = datetime.now(timezone.utc).isoformat()
         # Append to human-readable timeline
@@ -59,6 +94,14 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
         }
         with open(raw_audit_path, "a") as f:
             f.write(json.dumps(audit_entry) + "\n")
+            
+        # Log to external channels
+        github.add_issue_comment(issue_id, agent_name, message, incident.incident_id)
+        send_telegram_alert(
+            message=f"[{agent_name}] {message}",
+            incident_id=incident.incident_id,
+            feed_file_path=telegram_feed_path
+        )
             
     # Step 1: Benjamin Declares Incident Active
     declaration = commander.declare_incident(
@@ -198,6 +241,14 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
 """)
         
     log_event("Planning Lead", "Incident resolved successfully. Closed.")
+    
+    # Close GitHub issue & send final Telegram notification
+    github.close_incident_issue(issue_id, f"Restarted database service successfully under {max_risk} Risk clearance.", incident.incident_id)
+    send_telegram_alert(
+        message=f"Incident resolved successfully! Closed.",
+        incident_id=incident.incident_id,
+        feed_file_path=telegram_feed_path
+    )
     
     # Commit changes dynamically using Scribe version-control
     message = f"scribe(audit): Checkpoint resolution state for {incident.incident_id}"
