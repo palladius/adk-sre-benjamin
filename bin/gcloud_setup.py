@@ -34,6 +34,61 @@ def load_env_vars() -> dict:
             
     return env
 
+def find_gcloud_account(env: dict) -> str:
+    """Discovers the active or configured gcloud account using multiple robust fallbacks."""
+    # 1. Check configured environment or .env values first
+    for key in ["GCLOUD_IDENTITY", "GCP_ACCOUNT", "ACCOUNT", "GCP_ACCOUNT_ID"]:
+        val = env.get(key)
+        if val:
+            val = val.strip("'\"")
+            if val and "ENTER" not in val:
+                return val
+
+    # 2. Try to find the active configuration's account before switching
+    try:
+        res = subprocess.run(
+            ["gcloud", "config", "configurations", "list", "--format=json"],
+            capture_output=True,
+            text=True
+        )
+        if res.returncode == 0:
+            configs = json.loads(res.stdout)
+            # A. Check currently active configuration first
+            for c in configs:
+                if c.get("is_active"):
+                    acc = c.get("properties", {}).get("core", {}).get("account")
+                    if acc:
+                        return acc
+            # B. If active is empty, fallback to first non-empty account from any config
+            for c in configs:
+                acc = c.get("properties", {}).get("core", {}).get("account")
+                if acc:
+                    return acc
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to query gcloud configurations list: {e}")
+
+    # 3. Fallback to auth list
+    try:
+        res = subprocess.run(
+            ["gcloud", "auth", "list", "--format=json"],
+            capture_output=True,
+            text=True
+        )
+        if res.returncode == 0:
+            auths = json.loads(res.stdout)
+            # A. Active auth account
+            for a in auths:
+                if a.get("status") == "ACTIVE" and a.get("account"):
+                    return a.get("account")
+            # B. First auth account
+            for a in auths:
+                if a.get("account"):
+                    return a.get("account")
+    except Exception as e:
+        print(f"⚠️ Warning: Failed to query gcloud auth list: {e}")
+
+    return None
+
 def main():
     print("=====================================================")
     print("🛡️ PROJECT BENJAMIN: SRE GCP GCLOUD CONFIG SETUP")
@@ -121,6 +176,16 @@ def main():
             check=True
         )
         
+        gcp_account = find_gcloud_account(env)
+        if gcp_account:
+            print(f"[+] Setting active configuration account: {gcp_account}")
+            subprocess.run(
+                ["gcloud", "config", "set", "account", gcp_account],
+                check=True
+            )
+        else:
+            print("⚠️ Warning: No gcloud account found/configured to bind to configuration profile.")
+
         print(f"[+] Setting service account impersonation identity: {gcp_service_account}")
         subprocess.run(
             ["gcloud", "config", "set", "auth/impersonate_service_account", gcp_service_account], 
@@ -131,6 +196,7 @@ def main():
         print("🎉 SUCCESS: 'sre-benjamin-dflt-project' IS READY!")
         print("=====================================================")
         print(f" Active Project    : {gcp_project_id}")
+        print(f" Active Account    : {gcp_account or 'None'}")
         print(f" Impersonated SA   : {gcp_service_account}")
         print("=====================================================")
         

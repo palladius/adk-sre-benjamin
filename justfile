@@ -21,6 +21,7 @@ coverage:
 
 # Install dependencies into virtual environment and configure GCP profile
 install:
+    @uv venv
     @uv pip install -r requirements.txt
     @just setup
 
@@ -36,5 +37,5 @@ clean:
 
 
 telegram-send-test-message:
-  PYTHONPATH=. uv run python3 src/cli.py telegram send "Hello Operator! Testing the new CLI telegram send command from Justfile! 🏰🚀"
+  PYTHONPATH=. uv run python3 src/cli.py telegram send "Hello Operator! Testing the new CLI telegram send command from *$(hostname)*! 🏰🚀"
 
