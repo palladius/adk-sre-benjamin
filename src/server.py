@@ -462,11 +462,372 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
+def get_incidents_list() -> list[dict]:
+    """Helper to query all active and historical incidents inside investigations/ directory."""
+    import os
+    incidents = []
+    if os.path.exists("investigations"):
+        for folder in sorted(os.listdir("investigations")):
+            folder_path = os.path.join("investigations", folder)
+            if os.path.isdir(folder_path):
+                details = parse_incident_folder(folder_path)
+                incidents.append({
+                    "id": folder,
+                    "status": details.get("status", "UNKNOWN"),
+                    "project_id": details.get("project_id", "UNKNOWN"),
+                    "trigger_event": details.get("trigger_event", "UNKNOWN")
+                })
+    return incidents
+
+def transcribe_voice_bytes(audio_bytes: bytes) -> str:
+    """Helper to transcribe small voice notes/audio files using the live Gemini 2.5 API with zero dependencies."""
+    import os
+    import json
+    import base64
+    import urllib.request
+    
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return "Error: GEMINI_API_KEY environment variable is not configured."
+        
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    encoded_audio = base64.b64encode(audio_bytes).decode("utf-8")
+    
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "inlineData": {
+                            "mimeType": "audio/ogg",
+                            "data": encoded_audio
+                        }
+                    },
+                    {
+                        "text": "Please transcribe this SRE voice note carefully. Return ONLY the transcribed text itself. If the audio is unclear, return the closest readable transcription."
+                    }
+                ]
+            }
+        ]
+    }
+    
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            url,
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=30) as response:
+            if response.status == 200:
+                res_body = json.loads(response.read().decode("utf-8"))
+                text = res_body["candidates"][0]["content"]["parts"][0]["text"]
+                return text.strip()
+    except Exception as e:
+        return f"Voice note transcription failed: {e}"
+        
+    return "Voice note transcription timed out."
+
+def send_raw_telegram_message(bot_token: str, chat_id: str, message: str):
+    """Utility to dispatch a simple, markdown Telegram bot alert."""
+    import urllib.request
+    import urllib.parse
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        data = urllib.parse.urlencode({
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "Markdown"
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[Telegram Bot] Message dispatch error: {e}")
+
+def send_telegram_menu(bot_token: str, chat_id: str, message: str):
+    """Dispatches a Telegram message with structured interactive SRE navigation menu buttons."""
+    import urllib.request
+    import urllib.parse
+    import json
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        keyboard = {
+            "keyboard": [
+                [{"text": "🚨 Status Check"}, {"text": "📋 List Incidents"}],
+                [{"text": "☁️ Target Project"}, {"text": "🆔 Select Incident"}]
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": False
+        }
+        data = urllib.parse.urlencode({
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "Markdown",
+            "reply_markup": json.dumps(keyboard)
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[Telegram Bot] Menu dispatch error: {e}")
+
+def start_telegram_bot():
+    """Background polling daemon thread that makes SRE Benjamin Bot fully interactive."""
+    import time
+    import os
+    import urllib.request
+    import urllib.parse
+    import json
+    from datetime import datetime, timezone
+    
+    print("[Telegram Bot] Interactive polling loop initialized.")
+    
+    last_update_id = 0
+    selected_incident_id = None
+    
+    while True:
+        bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        
+        # Clean quotes
+        if bot_token:
+            bot_token = bot_token.strip("'\"")
+        if chat_id:
+            chat_id = chat_id.strip("'\"")
+            
+        if not bot_token or not chat_id or "ENTER_BOT" in bot_token or "ENTER_CHAT" in chat_id:
+            # Poll config changes every 5 seconds
+            time.sleep(5)
+            continue
+            
+        # Select latest active incident if none selected
+        if not selected_incident_id:
+            incidents = get_incidents_list()
+            if incidents:
+                selected_incident_id = incidents[-1]["id"]
+                
+        try:
+            url = f"https://api.telegram.org/bot{bot_token}/getUpdates?offset={last_update_id + 1}&timeout=5"
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status == 200:
+                    data = json.loads(response.read().decode("utf-8"))
+                    updates = data.get("result", [])
+                    for update in updates:
+                        last_update_id = max(last_update_id, update.get("update_id", 0))
+                        message = update.get("message")
+                        if not message:
+                            continue
+                            
+                        msg_chat_id = str(message.get("chat", {}).get("id", ""))
+                        # Guard to only process messages from the authorized operator chat
+                        if msg_chat_id != chat_id:
+                            continue
+                            
+                        msg_text = message.get("text", "").strip()
+                        voice = message.get("voice") or message.get("audio")
+                        
+                        # 1. Handle incoming voice and audio messages with on-the-fly STT
+                        if voice:
+                            file_id = voice.get("file_id")
+                            get_file_url = f"https://api.telegram.org/bot{bot_token}/getFile?file_id={file_id}"
+                            try:
+                                with urllib.request.urlopen(get_file_url, timeout=10) as f_res:
+                                    if f_res.status == 200:
+                                        f_data = json.loads(f_res.read().decode("utf-8"))
+                                        file_path = f_data.get("result", {}).get("file_path")
+                                        if file_path:
+                                            # Download raw voice bytes
+                                            download_url = f"https://api.telegram.org/file/bot{bot_token}/{file_path}"
+                                            with urllib.request.urlopen(download_url, timeout=15) as d_res:
+                                                if d_res.status == 200:
+                                                    audio_bytes = d_res.read()
+                                                    # Transcribe directly using live Gemini API inline payload
+                                                    transcription = transcribe_voice_bytes(audio_bytes)
+                                                    
+                                                    send_raw_telegram_message(
+                                                        bot_token, chat_id,
+                                                        f"🎙️ *Voice Note Transcribed:* \"_{transcription}_\"\n\n*Sending to SRE Co-Pilot...*"
+                                                    )
+                                                    # Pipeline transcribed text to the active chat prompt
+                                                    msg_text = transcription
+                                                else:
+                                                    send_raw_telegram_message(bot_token, chat_id, "❌ Failed to download audio voice note.")
+                                                    continue
+                            except Exception as file_err:
+                                print(f"[Telegram Bot] Audio fetch error: {file_err}")
+                                send_raw_telegram_message(bot_token, chat_id, "❌ Error retrieving voice note file.")
+                                continue
+                                
+                        if not msg_text:
+                            continue
+                            
+                        # 2. Check for menu selections and command shortcuts
+                        lower_text = msg_text.lower()
+                        if lower_text.startswith("/start") or lower_text == "/help" or lower_text == "help":
+                            welcome_msg = (
+                                "🏰 *Project Benjamin SRE Command Hub*\n\n"
+                                f"• *Active Incident Context:* `{selected_incident_id}`\n"
+                                f"• *Target GCP Project ID:* `{os.getenv('PROJECT_ID', 'sre-next')}`\n\n"
+                                "Use the menu buttons below to quickly monitor status, or send any "
+                                "text or audio note to direct SRE Commander Benjamin!"
+                            )
+                            send_telegram_menu(bot_token, chat_id, welcome_msg)
+                            continue
+                            
+                        elif msg_text == "🚨 Status Check":
+                            if not selected_incident_id or selected_incident_id == "None":
+                                send_raw_telegram_message(bot_token, chat_id, "❌ No active SRE incident selected.")
+                                continue
+                            incident_path = os.path.join("investigations", selected_incident_id)
+                            details = parse_incident_folder(incident_path)
+                            status_msg = (
+                                f"🏰 *Status for Incident:* `{selected_incident_id}`\n"
+                                f"• *Status:* `{details.get('status', 'UNKNOWN')}`\n"
+                                f"• *Target Project:* `{details.get('project_id', 'UNKNOWN')}`\n"
+                                f"• *Trigger Event:* `{details.get('trigger_event', 'UNKNOWN')}`\n"
+                                f"• *Timeline entries:* {len(details.get('timeline', []))}"
+                            )
+                            send_raw_telegram_message(bot_token, chat_id, status_msg)
+                            continue
+                            
+                        elif msg_text == "📋 List Incidents":
+                            inc_list = get_incidents_list()
+                            if not inc_list:
+                                send_raw_telegram_message(bot_token, chat_id, "📋 No SRE incidents recorded in repository.")
+                                continue
+                            list_msg = "📋 *Historical SRE Incidents:*\n\n"
+                            for idx, inc in enumerate(inc_list, 1):
+                                list_msg += f"{idx}. `{inc['id']}` ({inc['status']}) | Project: `{inc['project_id']}`\n"
+                            list_msg += "\n💡 *Reply `/select <Incident_ID>` to switch incident context.*"
+                            send_raw_telegram_message(bot_token, chat_id, list_msg)
+                            continue
+                            
+                        elif msg_text == "☁️ Target Project":
+                            curr_proj = os.getenv("PROJECT_ID", "sre-next")
+                            send_raw_telegram_message(
+                                bot_token, chat_id,
+                                f"☁️ *Active GCP Project context:* `{curr_proj}`\n\n"
+                                f"💡 *To change this project, reply:* `/setproject <Project_ID>`"
+                            )
+                            continue
+                            
+                        elif msg_text == "🆔 Select Incident":
+                            send_raw_telegram_message(
+                                bot_token, chat_id,
+                                "🆔 *Switch Incident Context*\n\n"
+                                "Please reply with this format:\n`/select <Incident_ID>`\n\n"
+                                "Example: `/select INC-PLAYGROUND`"
+                            )
+                            continue
+                            
+                        elif msg_text.startswith("/select"):
+                            parts = msg_text.split(" ", 1)
+                            if len(parts) < 2:
+                                send_raw_telegram_message(bot_token, chat_id, "❌ Usage: `/select <Incident_ID>`")
+                                continue
+                            target_inc = parts[1].strip()
+                            if os.path.exists(os.path.join("investigations", target_inc)):
+                                selected_incident_id = target_inc
+                                send_raw_telegram_message(bot_token, chat_id, f"✅ Active incident switched to: `{target_inc}`")
+                            else:
+                                send_raw_telegram_message(bot_token, chat_id, f"❌ Incident `{target_inc}` not found in repository.")
+                            continue
+                            
+                        elif msg_text.startswith("/setproject"):
+                            parts = msg_text.split(" ", 1)
+                            if len(parts) < 2:
+                                send_raw_telegram_message(bot_token, chat_id, "❌ Usage: `/setproject <Project_ID>`")
+                                continue
+                            target_proj = parts[1].strip()
+                            
+                            # Update .env
+                            env_path = ".env"
+                            if os.path.exists(env_path):
+                                with open(env_path, "r") as f:
+                                    content = f.read()
+                                import re
+                                if "PROJECT_ID=" in content:
+                                    content = re.sub(r"PROJECT_ID=.*", f"PROJECT_ID='{target_proj}'", content)
+                                else:
+                                    content += f"\nPROJECT_ID='{target_proj}'\n"
+                                with open(env_path, "w") as f:
+                                    f.write(content.strip() + "\n")
+                                    
+                            os.environ["PROJECT_ID"] = target_proj
+                            send_raw_telegram_message(bot_token, chat_id, f"✅ GCP Project ID set to: `{target_proj}`")
+                            continue
+                            
+                        # 3. Direct interactive SRE agent chat dispatch
+                        if not selected_incident_id or selected_incident_id == "None":
+                            send_raw_telegram_message(bot_token, chat_id, "⚠️ No incident selected. Tapp '📋 List Incidents' to select one first.")
+                            continue
+                            
+                        incident_path = os.path.join("investigations", selected_incident_id)
+                        details = parse_incident_folder(incident_path)
+                        status = details.get("status", "UNKNOWN").upper()
+                        project_id = details.get("project_id", "sre-next")
+                        trigger_event = details.get("trigger_event", "frontend_latency_slo_violated")
+                        
+                        try:
+                            from src.agents import IncidentCommander
+                            commander = IncidentCommander()
+                            
+                            chat_context = (
+                                f"[Telegram Interface]\n"
+                                f"Active Incident ID: {selected_incident_id}\n"
+                                f"Current Incident Status: {status}\n"
+                                f"Target GCP Project ID: {project_id}\n"
+                                f"Trigger Alert Event: {trigger_event}\n\n"
+                                f"Operator Message:\n{msg_text}"
+                            )
+                            reply_msg = commander.run(chat_context)
+                        except Exception as e:
+                            reply_msg = f"[System Alert] SRE chat logic failed: {e}"
+                            
+                        # Log message exchange in chat.json to mirror on the Web Dashboard
+                        chat_path = os.path.join(incident_path, "chat.json")
+                        chat_data = []
+                        if os.path.exists(chat_path):
+                            try:
+                                with open(chat_path, "r") as f:
+                                    chat_data = json.load(f)
+                            except Exception:
+                                pass
+                                
+                        chat_data.append({
+                            "sender": "Operator (Telegram)",
+                            "message": msg_text,
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        chat_data.append({
+                            "sender": "Benjamin Agent (IC)",
+                            "message": reply_msg,
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        
+                        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
+                        with open(chat_path, "w") as f:
+                            json.dump(chat_data, f, indent=2)
+                            
+                        send_raw_telegram_message(bot_token, chat_id, f"🏰 *Benjamin (IC):*\n{reply_msg}")
+                        
+        except Exception as e:
+            print(f"[Telegram Bot Loop] Error: {e}")
+            
+        time.sleep(1)
+
 def run_server(port=8080):
     server_address = ('', port)
     httpd = HTTPServer(server_address, SREHttpRequestHandler)
     print(f"Starting Project Benjamin SRE Dashboard Server on port {port}...")
     print(f"Visit: http://localhost:{port}/")
+    
+    # Launch background interactive SRE Telegram Bot daemon thread
+    import threading
+    t = threading.Thread(target=start_telegram_bot, daemon=True)
+    t.start()
+    
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

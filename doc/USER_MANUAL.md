@@ -83,6 +83,25 @@ TELEGRAM_BOT_TOKEN="your_telegram_bot_token"
 TELEGRAM_CHAT_ID="your_telegram_chat_id"
 ```
 
+### 💬 Two-Way Interactive SRE Chatbot & Voice Commands
+
+Once your credentials are connected, `@SREBenjaminBot` functions as a fully interactive two-way SRE Command Console directly inside Telegram. Message the bot `/start` or `help` to initialize the control hub interface:
+
+1. **Structured Quick Navigation Menu**:
+   * **`🚨 Status Check`**: Instantly prints the live status, target project, alert trigger event, and timeline logs count for the active selected incident.
+   * **`📋 List Incidents`**: Lists all active and historical incidents recorded inside the SRE repository.
+   * **`☁️ Target Project`**: Displays the active GCP Project context.
+   * **`🆔 Select Incident`**: Instructs how to safely swap active incident coordinates.
+2. **Context-Switching Control Commands**:
+   * **`/select <Incident_ID>`**: Dynamically switches the active incident chat and status context (e.g. `/select INC-PLAYGROUND`).
+   * **`/setproject <Project_ID>`**: Updates the core GCP Project ID config inside `.env` on-the-fly and syncs active environment states.
+3. **🎙️ Voice Note Transcription & SRE Actioning (On-The-Fly STT)**:
+   * **Send Voice Notes**: You can record and send standard Telegram **voice messages** or audio notes directly to the bot.
+   * **Auto-Transcription**: The bot immediately downloads the audio file, processes it through Google's Gemini 2.5 Flash API with zero local dependencies, and replies back with a clean text transcription.
+   * **Intelligent Actioning**: The transcribed text is automatically routed as a direct operational chat message to SRE Commander Benjamin, updating the incident's timeline chat log in real-time, mirroring onto the Web Dashboard, and replying back with the commander's strategic SRE instructions!
+4. **Active Incident Conversation Mirroring**:
+   * Any text message or transcribed voice command you send is automatically appended to the incident's `chat.json` logs, enabling **flawless dual-screen alignment** between your Telegram app and your Web Command Dashboard!
+
 ---
 
 ## 📟 4. SRE Command Line Tools Reference
