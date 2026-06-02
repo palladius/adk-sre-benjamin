@@ -19,9 +19,14 @@ web:
 coverage:
     @nice -n 19 systemd-run --user --scope -p MemoryMax=4G -p CPUQuota=80% uv run pytest --cov=src
 
-# Install dependencies into virtual environment
+# Install dependencies into virtual environment and configure GCP profile
 install:
     @uv pip install -r requirements.txt
+    @just setup
+
+# Configure local gcloud profile 'sre-benjamin-dflt-project' with SRE credentials
+setup:
+    @python3 bin/gcloud_setup.py
 
 # Clean temporary files, pytest caches, and cached project discoveries
 clean:
