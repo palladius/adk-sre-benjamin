@@ -11,6 +11,7 @@ htmlcov/
 investigations/**/artifacts/
 investigations/**/artifacts_registry.json
 investigations/**/*.jsonl
+investigations/**/chat.json
 private/
 .git-privatize
 

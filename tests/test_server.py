@@ -5,7 +5,7 @@ import threading
 import urllib.request
 import urllib.error
 from http.server import HTTPServer
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, mock_open
 from src.server import parse_incident_folder, SREHttpRequestHandler
 
 def test_parse_incident_folder(tmp_path):
@@ -132,7 +132,7 @@ def test_server_integration():
         # Test POST /api/incidents/INC-MOCK-123/chat (mocked)
         with patch("os.path.exists") as mock_exists, \
              patch("src.server.parse_incident_folder") as mock_parse, \
-             patch("builtins.open", MagicMock()):
+             patch("src.server.open", mock_open()):
             mock_exists.side_effect = lambda p: not p.endswith("chat.json")
             mock_parse.return_value = {"status": "AWAITING_APPROVAL", "trigger_event": "frontend_latency_slo_violated", "project_id": "sre-next"}
             url_chat_post = f"http://localhost:{port}/api/incidents/INC-MOCK-123/chat"
