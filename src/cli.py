@@ -23,12 +23,18 @@ def run_cli(args_list=None) -> int:
 
     if len(args) > 0 and args[0] == "telegram":
         import re
-        parser = argparse.ArgumentParser(description="Configure Telegram Alerts Integration")
+        from dotenv import load_dotenv
+        load_dotenv() # Load local .env variables into environment context
+        
+        parser = argparse.ArgumentParser(description="Configure and test Telegram Alerts Integration")
         subparsers = parser.add_subparsers(dest="subcommand", required=True)
         
         set_parser = subparsers.add_parser("set", help="Set Telegram alerts configurations")
         set_parser.add_argument("chat_id", help="Telegram Chat or Channel ID")
         set_parser.add_argument("bot_token", help="Telegram Bot HTTP API Token")
+        
+        send_parser = subparsers.add_parser("send", help="Send a live Telegram alert message directly")
+        send_parser.add_argument("message", help="Message text to send")
         
         parsed_args = parser.parse_args(args[1:])
         
@@ -61,6 +67,27 @@ def run_cli(args_list=None) -> int:
             print(f"   Chat/Channel ID: {chat_id}")
             print(f"   Bot Token: {bot_token[:6]}...{bot_token[-4:] if len(bot_token) > 10 else ''}")
             return 0
+            
+        elif parsed_args.subcommand == "send":
+            message_text = parsed_args.message
+            from src.comms_telegram import send_telegram_alert
+            
+            bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+            chat_id = os.getenv("TELEGRAM_CHAT_ID")
+            
+            if not bot_token or not chat_id:
+                sys.stderr.write("❌ Error: Telegram alerts are not configured in your .env file! Run 'telegram set' first.\n")
+                return 1
+                
+            print(f"🚀 Dispatching live Telegram message to Chat ID {chat_id}...")
+            # Bypassing local mock file feed by NOT providing feed_file_path and forcing live dispatch
+            success = send_telegram_alert(message_text, "INC-CLI-DIRECT")
+            if success:
+                print("✅ Telegram alert successfully sent!")
+                return 0
+            else:
+                sys.stderr.write("❌ Error: Failed to send Telegram alert. Please check your token/chat ID and internet connection.\n")
+                return 1
 
     parser = argparse.ArgumentParser(description="Piped Agent CLI evaluation harness.")
     parser.add_argument("--agent", required=True, help="Name of the SRE Agent persona (e.g. ops_agent).")

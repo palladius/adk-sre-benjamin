@@ -56,19 +56,23 @@ To maintain a clean, space-efficient interface capable of tracking hundreds of c
 The SRE framework is pre-wired to dispatch live event notifications to engineering Telegram channels or chat groups during incident simulation runs.
 
 ### 🛠️ Method A: Setup via the SRE CLI (Recommended)
-You can configure your Telegram bot credentials directly into your environment using the SRE Agent CLI harness:
+You can configure and test your Telegram bot credentials directly into your environment using the SRE Agent CLI harness:
 
 ```bash
-# Set your Telegram alert channel/group ID and bot HTTP API token
+# 1. Set your Telegram alert channel/group ID and bot HTTP API token
 PYTHONPATH=. uv run python3 src/cli.py telegram set "<CHAT_ID>" "<BOT_TOKEN>"
+
+# 2. Send a live test alert to verify the connection is active
+PYTHONPATH=. uv run python3 src/cli.py telegram send "Hello, SRE! Live alert test complete."
 ```
 
 *Example:*
 ```bash
-PYTHONPATH=. uv run python3 src/cli.py telegram set "-100123456789" "123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ"
+PYTHONPATH=. uv run python3 src/cli.py telegram set "605724096" "8936005425:AAEjkDi0r25p2vKpTkkopAgLpXSwESFilLI"
+PYTHONPATH=. uv run python3 src/cli.py telegram send "Castle Security Breach Simulated!"
 ```
 
-The command will automatically parse, secure, and write the credentials into your local `.env` configuration file.
+The set command will automatically parse, secure, and write the credentials into your local `.env` configuration file, and the send command will instantly dispatch a live alert using the configured credentials.
 
 ### 📝 Method B: Manual Configuration
 Alternatively, open your local `.env` file and append the following variables manually:
@@ -83,7 +87,7 @@ TELEGRAM_CHAT_ID="your_telegram_chat_id"
 
 ## 📟 4. SRE Command Line Tools Reference
 
-Project Benjamin ships with several automation scripts configured in the project `justfile`:
+Project Benjamin ships with several automation scripts configured in the project `justfile` or accessed via the direct python CLI:
 
 | Command | Purpose | Description |
 | :--- | :--- | :--- |
@@ -91,3 +95,5 @@ Project Benjamin ships with several automation scripts configured in the project
 | `just test` | **Run Test Deck** | Runs all 49 pytest checkers and integration suites |
 | `just simulate` | **Incident Simulator** | Launches the complete E2E Incident ICS delegation simulation |
 | `just clean` | **Purge Cache** | Wipes build files, test covers, and local project crawl JSONs |
+| `PYTHONPATH=. uv run python3 src/cli.py telegram set <ID> <TOKEN>` | **Telegram Connect** | Connects and saves Telegram credentials to `.env` |
+| `PYTHONPATH=. uv run python3 src/cli.py telegram send "<MSG>"` | **Telegram Send** | Sends a live, direct alert message to Telegram |
