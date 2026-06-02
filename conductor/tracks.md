@@ -32,3 +32,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Manage SRE WebChat and Telegram Chat, enable cross-visibility mirrored conversations, fix Gemini 404 error, and upgrade clearance buttons to use the explosion emoji.**
 *Link: [./tracks/cross_chat_mirroring_20260602/](./tracks/cross_chat_mirroring_20260602/)*
 
+---
+
+- [ ] **Track: Cross-Chat Statefulness and Memory Synchronization**
+*Link: [./tracks/cross_chat_statefulness_20260602/](./tracks/cross_chat_statefulness_20260602/)*
+

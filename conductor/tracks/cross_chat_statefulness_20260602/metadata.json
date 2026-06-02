@@ -1,0 +1,8 @@
+{
+  "track_id": "cross_chat_statefulness_20260602",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-06-02T08:52:00Z",
+  "updated_at": "2026-06-02T08:52:00Z",
+  "description": "We should have some sort of statefulness. Sth like: on Telegram i select project X and it gets selected on UI as well, by default. I select incident id Y? Same here. Maybe the UI can suipercede, but on top i should see the DEFAULT project and dEFAULT incident selected and/or selectable with an easy CLICK. Those for now seem the only TWO memories i want to have."
+}
