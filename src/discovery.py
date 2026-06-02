@@ -334,6 +334,11 @@ def discover_project_resources(project_id: str) -> str:
 
     use_live = (not mock_tooling) or (project_id == "sre-next")
 
+    # Temporarily override service account impersonation for other projects during live discovery
+    original_sdk_impersonate = os.environ.get("CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT")
+    if use_live and project_id != "sre-next":
+        os.environ["CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"] = ""
+
     if not use_live:
         resources = mock_resources
     else:
@@ -570,6 +575,13 @@ def discover_project_resources(project_id: str) -> str:
         if not resources:
             print(f"Live discovery returned 0 resources for project {project_id} (e.g. not logged in, no project, or no assets). Falling back to mock data.")
             resources = mock_resources
+
+    # Restore service account impersonation setting if it was overridden
+    if use_live and project_id != "sre-next":
+        if original_sdk_impersonate is not None:
+            os.environ["CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"] = original_sdk_impersonate
+        else:
+            os.environ.pop("CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT", None)
 
     # Build the deterministic directory paths and save JSON cache and Markdown Wiki
     cache_dir = os.path.join("discover", "gcp-project")
