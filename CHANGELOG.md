@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-06-02
+### Added
+- **Interactive Safety Gate Buttons**: Implemented SRE approval validation buttons (`✅ Yes, I am sure` and `❌ No, abort mutation`) presented directly to the operator in Telegram during a safety gate hold.
+- **Two-Way Web & Telegram Sync**: Connected REST endpoints `/approve` and `/reject` to dynamically reset Telegram keyboards back to standard when choices are confirmed from either interface.
+- **Operator Chat Logging**: Automatically recorded safety gate confirmation responses and Benjamin IC status alerts directly within the incident's `chat.json` log for live synchronization.
+- **Resource Usage Capping**: Integrated systemd scopes and cgroup memory limits inside the SRE CLI and test runners (`justfile`) to enforce resource caps on host systems.
+- **Safety Gate Test Suite**: Authored `tests/test_telegram_safety_gate.py` to verify dispatches of keyboard markup payloads.
+
 ## [1.1.0] - 2026-06-01
 ### Added
 - **Dynamic GCP Project ID Input**: Introduced a glassmorphic Project ID input in the SRE dashboard sidebar allowing custom override values.

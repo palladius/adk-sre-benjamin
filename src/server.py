@@ -316,6 +316,47 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 incident_path = os.path.join("investigations", incident_id)
                 if os.path.exists(incident_path):
                     resume_simulation(incident_id, approved=True)
+                    
+                    # 1. Sync operator's response in chat.json
+                    try:
+                        chat_path = os.path.join(incident_path, "chat.json")
+                        chat_data = []
+                        if os.path.exists(chat_path):
+                            try:
+                                with open(chat_path, "r") as f:
+                                    chat_data = json.load(f)
+                            except Exception:
+                                pass
+                        chat_data.append({
+                            "sender": "Operator (Web Dashboard)",
+                            "message": "Approved proposed mutation command via SRE Web Panel.",
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        chat_data.append({
+                            "sender": "Benjamin Agent (IC)",
+                            "message": "✅ Safety Gate Clearance Granted! Resuming SRE incident resolution pipeline.",
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
+                        with open(chat_path, "w") as f:
+                            json.dump(chat_data, f, indent=2)
+                    except Exception as chat_err:
+                        print(f"[Server] Failed to write chat log to chat.json: {chat_err}")
+                        
+                    # 2. Reset Telegram bot keyboard to standard navigation
+                    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+                    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+                    if bot_token and chat_id:
+                        bot_token = bot_token.strip("'\"")
+                        chat_id = chat_id.strip("'\"")
+                        if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
+                            msg = (
+                                f"✅ *Safety Gate Clearance Granted via Web Dashboard!*\n\n"
+                                f"Proposed SRE mutation command was approved by the operator on the web panel.\n"
+                                f"Resuming incident resolution... Benjamin is executing the action."
+                            )
+                            send_telegram_menu(bot_token, chat_id, msg)
+                            
                     details = parse_incident_folder(incident_path)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
@@ -339,6 +380,47 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 incident_path = os.path.join("investigations", incident_id)
                 if os.path.exists(incident_path):
                     resume_simulation(incident_id, approved=False)
+                    
+                    # 1. Sync operator's response in chat.json
+                    try:
+                        chat_path = os.path.join(incident_path, "chat.json")
+                        chat_data = []
+                        if os.path.exists(chat_path):
+                            try:
+                                with open(chat_path, "r") as f:
+                                    chat_data = json.load(f)
+                            except Exception:
+                                pass
+                        chat_data.append({
+                            "sender": "Operator (Web Dashboard)",
+                            "message": "Rejected/Aborted proposed mutation command via SRE Web Panel.",
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        chat_data.append({
+                            "sender": "Benjamin Agent (IC)",
+                            "message": "❌ Safety Gate Override Active. SRE operations halted.",
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
+                        with open(chat_path, "w") as f:
+                            json.dump(chat_data, f, indent=2)
+                    except Exception as chat_err:
+                        print(f"[Server] Failed to write chat log to chat.json: {chat_err}")
+                        
+                    # 2. Reset Telegram bot keyboard to standard navigation
+                    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+                    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+                    if bot_token and chat_id:
+                        bot_token = bot_token.strip("'\"")
+                        chat_id = chat_id.strip("'\"")
+                        if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
+                            msg = (
+                                f"❌ *Safety Gate Override Active via Web Dashboard!*\n\n"
+                                f"Proposed SRE mutation command was rejected by the operator on the web panel.\n"
+                                f"SRE operations halted. Safety gate aborted operations successfully."
+                            )
+                            send_telegram_menu(bot_token, chat_id, msg)
+                            
                     details = parse_incident_folder(incident_path)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
@@ -546,7 +628,7 @@ def send_raw_telegram_message(bot_token: str, chat_id: str, message: str):
         print(f"[Telegram Bot] Message dispatch error: {e}")
 
 def send_telegram_menu(bot_token: str, chat_id: str, message: str):
-    """Dispatches a Telegram message with structured interactive SRE navigation menu buttons."""
+    """Dispatches a Telegram message with structured interactive SRE SRE navigation menu buttons."""
     import urllib.request
     import urllib.parse
     import json
@@ -570,6 +652,31 @@ def send_telegram_menu(bot_token: str, chat_id: str, message: str):
         urllib.request.urlopen(req, timeout=5)
     except Exception as e:
         print(f"[Telegram Bot] Menu dispatch error: {e}")
+
+def send_telegram_safety_gate_menu(bot_token: str, chat_id: str, message: str):
+    """Dispatches a Telegram message with safety gate approval/rejection validation buttons."""
+    import urllib.request
+    import urllib.parse
+    import json
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        keyboard = {
+            "keyboard": [
+                [{"text": "✅ Yes, I am sure"}, {"text": "❌ No, abort mutation"}]
+            ],
+            "resize_keyboard": True,
+            "one_time_keyboard": False
+        }
+        data = urllib.parse.urlencode({
+            "chat_id": chat_id,
+            "text": message,
+            "parse_mode": "Markdown",
+            "reply_markup": json.dumps(keyboard)
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[Telegram Bot] Safety gate menu dispatch error: {e}")
 
 def start_telegram_bot():
     """Background polling daemon thread that makes SRE Benjamin Bot fully interactive."""
@@ -681,14 +788,43 @@ def start_telegram_bot():
                                 continue
                             incident_path = os.path.join("investigations", selected_incident_id)
                             details = parse_incident_folder(incident_path)
+                            status_val = details.get('status', 'UNKNOWN')
                             status_msg = (
                                 f"🏰 *Status for Incident:* `{selected_incident_id}`\n"
-                                f"• *Status:* `{details.get('status', 'UNKNOWN')}`\n"
+                                f"• *Status:* `{status_val}`\n"
                                 f"• *Target Project:* `{details.get('project_id', 'UNKNOWN')}`\n"
                                 f"• *Trigger Event:* `{details.get('trigger_event', 'UNKNOWN')}`\n"
                                 f"• *Timeline entries:* {len(details.get('timeline', []))}"
                             )
-                            send_raw_telegram_message(bot_token, chat_id, status_msg)
+                            
+                            if status_val == "AWAITING_APPROVAL":
+                                # Extract proposed mutation & safety level dynamically
+                                state_path = os.path.join(incident_path, "state.md")
+                                proposed_mutation = "systemctl restart mysql"
+                                safety_level = "HIGH"
+                                if os.path.exists(state_path):
+                                    try:
+                                        with open(state_path, "r") as sf:
+                                            state_content = sf.read()
+                                        import re
+                                        mutation_match = re.search(r'\-\s+\*\*Proposed Mutation:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+                                        if mutation_match:
+                                            proposed_mutation = mutation_match.group(1).strip()
+                                        risk_match = re.search(r'\-\s+\*\*Safety Level:\*\*\s*([A-Za-z0-9_ ]+)', state_content, re.IGNORECASE)
+                                        if risk_match:
+                                            safety_level = risk_match.group(1).strip()
+                                    except Exception:
+                                        pass
+                                
+                                status_msg += (
+                                    f"\n\n⚠️ *Safety Gate Hold!*\n"
+                                    f"Proposed Mutation: `{proposed_mutation}`\n"
+                                    f"Safety Level: *{safety_level}*\n\n"
+                                    f"Please approve or reject below:"
+                                )
+                                send_telegram_safety_gate_menu(bot_token, chat_id, status_msg)
+                            else:
+                                send_raw_telegram_message(bot_token, chat_id, status_msg)
                             continue
                             
                         elif msg_text == "📋 List Incidents":
@@ -727,9 +863,42 @@ def start_telegram_bot():
                                 send_raw_telegram_message(bot_token, chat_id, "❌ Usage: `/select <Incident_ID>`")
                                 continue
                             target_inc = parts[1].strip()
-                            if os.path.exists(os.path.join("investigations", target_inc)):
+                            target_inc_path = os.path.join("investigations", target_inc)
+                            if os.path.exists(target_inc_path):
                                 selected_incident_id = target_inc
-                                send_raw_telegram_message(bot_token, chat_id, f"✅ Active incident switched to: `{target_inc}`")
+                                details = parse_incident_folder(target_inc_path)
+                                status_val = details.get('status', 'UNKNOWN')
+                                
+                                if status_val == "AWAITING_APPROVAL":
+                                    # Extract proposed mutation & safety level dynamically
+                                    state_path = os.path.join(target_inc_path, "state.md")
+                                    proposed_mutation = "systemctl restart mysql"
+                                    safety_level = "HIGH"
+                                    if os.path.exists(state_path):
+                                        try:
+                                            with open(state_path, "r") as sf:
+                                                state_content = sf.read()
+                                            import re
+                                            mutation_match = re.search(r'\-\s+\*\*Proposed Mutation:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+                                            if mutation_match:
+                                                proposed_mutation = mutation_match.group(1).strip()
+                                            risk_match = re.search(r'\-\s+\*\*Safety Level:\*\*\s*([A-Za-z0-9_ ]+)', state_content, re.IGNORECASE)
+                                            if risk_match:
+                                                safety_level = risk_match.group(1).strip()
+                                        except Exception:
+                                            pass
+                                            
+                                    msg = (
+                                        f"✅ *Active incident switched to:* `{target_inc}`\n\n"
+                                        f"⚠️ *Safety Gate Hold!*\n"
+                                        f"A dangerous SRE mutation command is currently awaiting operator approval:\n"
+                                        f"Proposed: `{proposed_mutation}`\n"
+                                        f"Safety Level: *{safety_level}*\n\n"
+                                        f"Please authorize execution by selecting one of the options below:"
+                                    )
+                                    send_telegram_safety_gate_menu(bot_token, chat_id, msg)
+                                else:
+                                    send_telegram_menu(bot_token, chat_id, f"✅ Active incident switched to: `{target_inc}`")
                             else:
                                 send_raw_telegram_message(bot_token, chat_id, f"❌ Incident `{target_inc}` not found in repository.")
                             continue
@@ -758,7 +927,126 @@ def start_telegram_bot():
                             send_raw_telegram_message(bot_token, chat_id, f"✅ GCP Project ID set to: `{target_proj}`")
                             continue
                             
-                        # 3. Direct interactive SRE agent chat dispatch
+                        # 3. Check for Safety Gate Intercept if incident is awaiting approval
+                        is_awaiting_approval = False
+                        proposed_mutation = "systemctl restart mysql"
+                        safety_level = "HIGH"
+                        incident_path = None
+                        if selected_incident_id and selected_incident_id != "None":
+                            incident_path = os.path.join("investigations", selected_incident_id)
+                            state_path = os.path.join(incident_path, "state.md")
+                            if os.path.exists(state_path):
+                                try:
+                                    with open(state_path, "r") as sf:
+                                        state_content = sf.read()
+                                    if "AWAITING_APPROVAL" in state_content:
+                                        is_awaiting_approval = True
+                                        import re
+                                        mutation_match = re.search(r'\-\s+\*\*Proposed Mutation:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+                                        if mutation_match:
+                                            proposed_mutation = mutation_match.group(1).strip()
+                                        risk_match = re.search(r'\-\s+\*\*Safety Level:\*\*\s*([A-Za-z0-9_ ]+)', state_content, re.IGNORECASE)
+                                        if risk_match:
+                                            safety_level = risk_match.group(1).strip()
+                                except Exception as e:
+                                    print(f"[Telegram Bot] Error checking safety gate status: {e}")
+
+                        if is_awaiting_approval:
+                            if msg_text == "✅ Yes, I am sure":
+                                # Approve & Resume
+                                try:
+                                    resume_simulation(selected_incident_id, approved=True)
+                                    reply_msg = (
+                                        f"✅ *Safety Gate Clearance Granted!*\n\n"
+                                        f"Operator approved proposed mutation command:\n`{proposed_mutation}`\n\n"
+                                        f"Resuming SRE incident resolution... Benjamin is executing the action."
+                                    )
+                                except Exception as e:
+                                    reply_msg = f"❌ *Failed to resume simulation:* {e}"
+                                    
+                                send_telegram_menu(bot_token, chat_id, reply_msg)
+                                
+                                # Sync operator's response in chat.json
+                                try:
+                                    chat_path = os.path.join(incident_path, "chat.json")
+                                    chat_data = []
+                                    if os.path.exists(chat_path):
+                                        try:
+                                            with open(chat_path, "r") as f:
+                                                chat_data = json.load(f)
+                                        except Exception:
+                                            pass
+                                    chat_data.append({
+                                        "sender": "Operator (Telegram)",
+                                        "message": msg_text,
+                                        "timestamp": datetime.now(timezone.utc).isoformat()
+                                    })
+                                    chat_data.append({
+                                        "sender": "Benjamin Agent (IC)",
+                                        "message": reply_msg,
+                                        "timestamp": datetime.now(timezone.utc).isoformat()
+                                    })
+                                    os.makedirs(os.path.dirname(chat_path), exist_ok=True)
+                                    with open(chat_path, "w") as f:
+                                        json.dump(chat_data, f, indent=2)
+                                except Exception as chat_err:
+                                    print(f"[Telegram Bot] Failed to write chat log to chat.json: {chat_err}")
+                                continue
+                                
+                            elif msg_text == "❌ No, abort mutation":
+                                # Reject & Abort
+                                try:
+                                    resume_simulation(selected_incident_id, approved=False)
+                                    reply_msg = (
+                                        f"❌ *Safety Gate Override Active!*\n\n"
+                                        f"Operator rejected proposed mutation command:\n`{proposed_mutation}`\n\n"
+                                        f"SRE operations halted. Safety gate aborted operations successfully."
+                                    )
+                                except Exception as e:
+                                    reply_msg = f"❌ *Failed to abort simulation:* {e}"
+                                    
+                                send_telegram_menu(bot_token, chat_id, reply_msg)
+                                
+                                # Sync operator's response in chat.json
+                                try:
+                                    chat_path = os.path.join(incident_path, "chat.json")
+                                    chat_data = []
+                                    if os.path.exists(chat_path):
+                                        try:
+                                            with open(chat_path, "r") as f:
+                                                chat_data = json.load(f)
+                                        except Exception:
+                                            pass
+                                    chat_data.append({
+                                        "sender": "Operator (Telegram)",
+                                        "message": msg_text,
+                                        "timestamp": datetime.now(timezone.utc).isoformat()
+                                    })
+                                    chat_data.append({
+                                        "sender": "Benjamin Agent (IC)",
+                                        "message": reply_msg,
+                                        "timestamp": datetime.now(timezone.utc).isoformat()
+                                    })
+                                    os.makedirs(os.path.dirname(chat_path), exist_ok=True)
+                                    with open(chat_path, "w") as f:
+                                        json.dump(chat_data, f, indent=2)
+                                except Exception as chat_err:
+                                    print(f"[Telegram Bot] Failed to write chat log to chat.json: {chat_err}")
+                                continue
+                                
+                            else:
+                                # Prompt user with safety gate approval message and buttons
+                                msg = (
+                                    f"⚠️ *Safety Gate Hold!* [Incident: `{selected_incident_id}`]\n\n"
+                                    f"A dangerous SRE mutation command is currently awaiting operator approval:\n"
+                                    f"Proposed: `{proposed_mutation}`\n"
+                                    f"Safety Level: *{safety_level}*\n\n"
+                                    f"Please authorize execution by selecting one of the options below:"
+                                )
+                                send_telegram_safety_gate_menu(bot_token, chat_id, msg)
+                                continue
+
+                        # 4. Direct interactive SRE agent chat dispatch
                         if not selected_incident_id or selected_incident_id == "None":
                             send_raw_telegram_message(bot_token, chat_id, "⚠️ No incident selected. Tapp '📋 List Incidents' to select one first.")
                             continue

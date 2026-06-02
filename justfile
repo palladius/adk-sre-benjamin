@@ -7,17 +7,17 @@ default:
 simulate:
     @uv run python3 run_simulation.py
 
-# Run all automated unit and integration tests
+# Run all automated unit and integration tests inside a resource-limited cage (max 4GB RAM)
 test:
-    @uv run pytest
+    @nice -n 19 systemd-run --user --scope -p MemoryMax=4G -p CPUQuota=80% uv run pytest
 
 # Relaunch the SRE dashboard web server on port 8080
 web:
     @PYTHONPATH=. uv run python3 src/server.py
 
-# Run test suite with code coverage reports
+# Run test suite with code coverage reports inside a resource-limited cage (max 4GB RAM)
 coverage:
-    @uv run pytest --cov=src
+    @nice -n 19 systemd-run --user --scope -p MemoryMax=4G -p CPUQuota=80% uv run pytest --cov=src
 
 # Install dependencies into virtual environment
 install:

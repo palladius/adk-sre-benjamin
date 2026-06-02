@@ -102,6 +102,15 @@ Once your credentials are connected, `@SREBenjaminBot` functions as a fully inte
 4. **Active Incident Conversation Mirroring**:
    * Any text message or transcribed voice command you send is automatically appended to the incident's `chat.json` logs, enabling **flawless dual-screen alignment** between your Telegram app and your Web Command Dashboard!
 
+### 🔒 5. Human-in-the-Loop (HITL) Safety Gates & Approvals
+
+When a dangerous system mutation (e.g. `systemctl restart mysql`) is proposed by SRE Commander Benjamin, the incident is placed on a safety gate hold, transitioning to the `AWAITING_APPROVAL` status. During this hold:
+* **Safety Gate Interception**: Standard chat commands are intercepted, and the Telegram bot dispatches a safety confirmation warning containing the proposed command, safety risk level, and a specialized confirmation keyboard.
+* **Specialized Clearance Buttons**:
+  * **`✅ Yes, I am sure`**: Authorizes the mutation command. This executes the action via `resume_simulation`, recovers SRE services, closes the incident, logs the response in the incident's `chat.json` feed, and resets the operator's Telegram keyboard back to standard navigation.
+  * **`❌ No, abort mutation`**: Aborts and blocks the mutation. This halts the operation, updates the incident state as blocked/aborted, logs the abort action in `chat.json`, and resets the Telegram keyboard back to standard.
+* **Two-Way Synchronization**: If an operator authorizes or rejects the pending mutation directly from the Web Command Dashboard, the active Telegram session is instantly notified, sending a confirmation log message and automatically resetting the operator's Telegram keyboard back to standard.
+
 ---
 
 ## 📟 4. SRE Command Line Tools Reference

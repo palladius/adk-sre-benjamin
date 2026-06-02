@@ -1,5 +1,5 @@
 # GCP Resource Catalog: prod-db-999
-Auto-generated on **2026-06-01 19:40:12 UTC** by Project Benjamin SRE Discovery Engine.
+Auto-generated on **2026-06-02 06:20:53 UTC** by Project Benjamin SRE Discovery Engine.
 
 ## Executive SRE Audit Summary
 🚨 **VULNERABILITY WARNING**: Found **5** exposed/vulnerable resources out of **11** analyzed assets. Action required!

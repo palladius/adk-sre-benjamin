@@ -1,5 +1,5 @@
 # GCP Resource Catalog: sre-next
-Auto-generated on **2026-06-01 19:40:51 UTC** by Project Benjamin SRE Discovery Engine.
+Auto-generated on **2026-06-02 06:21:13 UTC** by Project Benjamin SRE Discovery Engine.
 
 ## Executive SRE Audit Summary
 🚨 **VULNERABILITY WARNING**: Found **10** exposed/vulnerable resources out of **12** analyzed assets. Action required!

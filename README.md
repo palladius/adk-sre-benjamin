@@ -1,4 +1,4 @@
-# 🏰 Project Benjamin SRE Agentic Framework (v1.13)
+# 🏰 Project Benjamin SRE Agentic Framework (v1.2.0)
 
 Project Benjamin is a production-grade, highly secure automation harness for Site Reliability Engineering (SRE), built using Google's **Antigravity Development Kit (ADK) for Python** and strictly aligned with the **IMAG (Incident Management At Google) Incident Command System (ICS)** command chain.
 
@@ -51,6 +51,12 @@ You can interact, prompt, and query specific ADK agents directly via the termina
   uv run python3 src/cli.py --agent commander --message "status"
   ```
 - **Programmatic `.run()` Method:** Every lead exposes a `.run(prompt)` method that executes the underlying `google.adk.agents.LlmAgent` (or safe fallback handler), enabling seamless inter-agent communications and manual engineering prompts.
+
+### 4. 📢 Interactive SRE Telegram Bot & Safety Gates
+Integrates a fully interactive SRE terminal console directly via Telegram (`@SREBenjaminBot`):
+- **Structured Keyboard Menus**: Triage active incident status, projects, and incidents list instantly using mobile-friendly navigation menus.
+- **Gemini STT Voice Commands**: Send audio or voice notes to auto-transcribe and dispatch complex SRE commands on-the-fly.
+- **Human-in-the-Loop Safety Gate Approvals**: Safeguard mutations with interactive validation buttons (`✅ Yes, I am sure` and `❌ No, abort mutation`). It automatically synchronizes states across mobile and web platforms, maintaining flawless audit logging within `chat.json` and Scribe's Git version-controlled history.
 
 ---
 
