@@ -39,6 +39,13 @@ This track introduces a centralized memory store (`investigations/active_state.j
   * The Web UI's background poll cycle queries `GET /api/active-state`.
   * If a state change initiated from Telegram is detected (i.e. default project or incident has changed), the Web UI automatically shifts focus/selection to align in real-time, while presenting a subtle notification overlay.
 
+### 2.4 Telegram `/status` Quick Inspection Command
+* **Focused Telegram Status**: The Telegram bot must handle the command `/status` (or the persistent `🚨 Status Check` reply button tap) to fetch coordinates from `GET /api/active-state` and return a clean, concise card:
+  1. Active target Project ID.
+  2. Active Incident ID.
+  3. Short incident status (e.g. `AWAITING_APPROVAL`, `ACTIVE`, `CLOSED`).
+  4. A brief, readable one-sentence narrative summarizing the current state.
+
 ---
 
 ## 3.0 Non-Functional Requirements
