@@ -27,3 +27,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [ ] **Track: GCP Resource Discovery and Asset Audit**
 *Link: [./tracks/gcp_resource_discovery_20260601/](./tracks/gcp_resource_discovery_20260601/)*
 
+---
+
+- [ ] **Track: Manage SRE WebChat and Telegram Chat, enable cross-visibility mirrored conversations, fix Gemini 404 error, and upgrade clearance buttons to use the explosion emoji.**
+*Link: [./tracks/cross_chat_mirroring_20260602/](./tracks/cross_chat_mirroring_20260602/)*
+
