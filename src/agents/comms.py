@@ -1,11 +1,17 @@
 try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+try:
     from google.adk.agents import LlmAgent
 except ImportError:
     class LlmAgent:
-        def __init__(self, name, instruction, model="gemini-1.5-flash", **kwargs):
+        def __init__(self, name, instruction, model=None, **kwargs):
             self.name = name
             self.instruction = instruction
-            self.model = model
+            self.model = model or os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
             self.kwargs = kwargs
 
 from src.prompt_loader import load_prompt
@@ -13,7 +19,9 @@ from src.prompt_loader import load_prompt
 import os
 
 class CommunicationsLead:
-    def __init__(self, model_name: str = "gemini-1.5-flash"):
+    def __init__(self, model_name: str = None):
+        if model_name is None:
+            model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         comms_name = os.getenv("COMMS_LEAD_NAME") or os.getenv("COMMUNICATIONS_LEAD_NAME") or os.getenv("MADHAVI_NAME") or "Madhavi"
         system_instruction = load_prompt("madhavi", prompt_key="system_instruction")
         

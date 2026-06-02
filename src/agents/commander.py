@@ -1,4 +1,10 @@
 try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
+try:
     from google.adk.agents import LlmAgent
 except ImportError:
     import urllib.request
@@ -8,10 +14,10 @@ except ImportError:
 
     # Dynamic fallback to support local execution with authentic Gemini API queries
     class LlmAgent:
-        def __init__(self, name, instruction, model="gemini-1.5-flash", **kwargs):
+        def __init__(self, name, instruction, model=None, **kwargs):
             self.name = name
             self.instruction = instruction
-            self.model = model
+            self.model = model or os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
             self.kwargs = kwargs
             
         def run(self, prompt: str) -> str:
@@ -26,10 +32,10 @@ except ImportError:
                 else:
                     return f"[{name}] Operational command noted: '{prompt}'. Ready to guide SRE leads to resolution. (Mock Mode)"
             
-            # Map model names gracefully if needed (e.g. gemini-1.5-flash or gemini-2.0-flash)
-            model_target = self.model
-            if "2.5" in model_target or "1.5" in model_target:
-                model_target = "gemini-1.5-flash"
+            # Map model names gracefully if needed (prefer DEFAULT_GEMINI_MODEL and avoid gemini-1.5-flash)
+            model_target = (self.model or os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite")).strip("'\"")
+            if "1.5" in model_target or "2.5" in model_target:
+                model_target = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
             
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_target}:generateContent?key={api_key}"
             
@@ -71,7 +77,9 @@ from src.prompt_loader import load_prompt
 import os
 
 class IncidentCommander:
-    def __init__(self, model_name: str = "gemini-1.5-flash"):
+    def __init__(self, model_name: str = None):
+        if model_name is None:
+            model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         commander_name = os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
         # Load system instruction template from YAML
         system_instruction = load_prompt("benjamin", prompt_key="system_instruction")

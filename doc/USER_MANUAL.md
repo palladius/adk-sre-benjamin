@@ -32,7 +32,7 @@ The SRE Dashboard is designed as a three-column command console, giving you unif
    * Dynamically switches between the **Incident Playbook & Diagnostic Metrics View** and the **GCP Project Asset Discovery panels** (GKE, GCS, VPC, GCE VMs, SQL, Cloud Run).
    * Features interactive telemetry graphs, safety gate clearance controls, and live broadcast dispatch logs.
 3. **Right Panel (SRE AI Co-Pilot Chat Console)**:
-   * An **always-visible SRE chat assistant** powered by the Gemini 2.5 Flash API.
+   * An **always-visible SRE chat assistant** powered by the dynamically resolved Gemini API.
    * Automatically ingests active screen metadata, status changes, and target project parameters on every message, providing genuine context-aware SRE troubleshooting guidance.
 
 ---
@@ -97,7 +97,7 @@ Once your credentials are connected, `@SREBenjaminBot` functions as a fully inte
    * **`/setproject <Project_ID>`**: Updates the core GCP Project ID config inside `.env` on-the-fly and syncs active environment states.
 3. **🎙️ Voice Note Transcription & SRE Actioning (On-The-Fly STT)**:
    * **Send Voice Notes**: You can record and send standard Telegram **voice messages** or audio notes directly to the bot.
-   * **Auto-Transcription**: The bot immediately downloads the audio file, processes it through Google's Gemini 2.5 Flash API with zero local dependencies, and replies back with a clean text transcription.
+   * **Auto-Transcription**: The bot immediately downloads the audio file, processes it through Google's dynamically resolved Gemini API with zero local dependencies, and replies back with a clean text transcription.
    * **Intelligent Actioning**: The transcribed text is automatically routed as a direct operational chat message to SRE Commander Benjamin, updating the incident's timeline chat log in real-time, mirroring onto the Web Dashboard, and replying back with the commander's strategic SRE instructions!
 4. **Active Incident Conversation Mirroring**:
    * Any text message or transcribed voice command you send is automatically appended to the incident's `chat.json` logs, enabling **flawless dual-screen alignment** between your Telegram app and your Web Command Dashboard!

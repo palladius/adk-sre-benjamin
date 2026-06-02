@@ -70,7 +70,8 @@ def test_full_e2e_simulation_flow(tmp_path):
     with open(timeline_path, "r") as f:
         timeline_content = f.read()
         
-    assert "Benjamin" in timeline_content
+    commander_name = os.getenv("COMMANDER_NAME") or "Benjamin"
+    assert commander_name in timeline_content
     assert "Logistics" in timeline_content
     assert "Operations" in timeline_content or "Ops" in timeline_content
     assert "restart" in timeline_content.lower() or "mutation" in timeline_content.lower()

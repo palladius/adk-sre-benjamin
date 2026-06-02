@@ -46,16 +46,16 @@ def test_communications_lead_dynamic_name(monkeypatch):
 def test_agent_run_methods():
     from src.agents import IncidentCommander, OperationsLead, PlanningLead, LogisticsLead
     ic = IncidentCommander()
-    assert "Benjamin" in ic.run("hello")
+    assert ic.agent.name in ic.run("hello")
     
     ops = OperationsLead()
-    assert "OpsAgent" in ops.run("status")
+    assert ops.agent.name in ops.run("status")
     
     planning = PlanningLead()
-    assert "PlanningAgent" in planning.run("hello")
+    assert planning.agent.name in planning.run("hello")
     
     logistics = LogisticsLead()
-    assert "LogisticsAgent" in logistics.run("status")
+    assert logistics.agent.name in logistics.run("status")
 
 def test_operations_lead(monkeypatch):
     monkeypatch.delenv("OPS_LEAD_NAME", raising=False)
