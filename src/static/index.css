@@ -93,7 +93,7 @@ body {
 /* Application Layout */
 .app-container {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 280px 1fr 380px;
     height: 100vh;
     width: 100vw;
 }
@@ -1705,4 +1705,24 @@ body {
     transform: scale(1.02);
 }
 
+/* Dedicated Chat Column Sidebar */
+.chat-column {
+    background: rgba(13, 17, 23, 0.85);
+    border-left: 1px solid var(--panel-border);
+    backdrop-filter: blur(20px);
+    display: flex;
+    flex-direction: column;
+    padding: 24px;
+    height: 100vh;
+    overflow: hidden;
+    z-index: 10;
+}
 
+.chat-column .chat-panel {
+    height: 100%;
+    max-height: 100%;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+}

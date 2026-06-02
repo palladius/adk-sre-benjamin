@@ -327,12 +327,7 @@
                                 <div class="hitl-btn-group">
                                     <button class="btn-success" id="btn-approve-mutation">Approve Restart</button>
                                     <button class="btn-danger" id="btn-reject-mutation">Reject & Halt</button>
-                                </div>
-                            </div>
-                        </div>
-                    </section>
-
-                    <!-- Madhavi Communications Card -->
+                                           <!-- Madhavi Communications Card -->
                     <section class="panel comms-panel">
                         <div class="panel-header">
                             <h3>📢 MADHAVI COMMUNICATIONS HUB</h3>
@@ -350,27 +345,29 @@
                             </div>
                         </div>
                     </section>
-
-                    <!-- Contextual Chat Agent Card -->
-                    <section class="panel chat-panel" id="incident-chat-card">
-                        <div class="panel-header">
-                            <h3>💬 INCIDENT COMMAND CHAT AGENT</h3>
-                            <span class="panel-subtitle" id="chat-agent-status">Online | Interactive SRE Co-Pilot</span>
-                        </div>
-                        <div class="panel-body flex-column">
-                            <div class="chat-messages-container" id="chat-messages-container">
-                                <div class="chat-placeholder">Select or trigger an incident to initialize a co-pilot chat session.</div>
-                            </div>
-                            <div class="chat-input-bar">
-                                <input type="text" id="chat-user-input" placeholder="Ask sth about this incident..." class="glass-input-chat">
-                                <button class="btn-chat-send" id="btn-chat-send">Send</button>
-                            </div>
-                        </div>
-                    </section>
                 </div>
             </div>
             </div> <!-- Closing incident-dashboard-view wrapper -->
         </main>
+
+        <!-- Dedicated SRE AI Incident Co-pilot Chat Column (Always Visible) -->
+        <aside class="chat-column">
+            <section class="panel chat-panel" id="incident-chat-card">
+                <div class="panel-header">
+                    <h3>💬 SRE AI INCIDENT COMMAND CO-PILOT</h3>
+                    <span class="panel-subtitle" id="chat-agent-status">Online | Active Incident Assistant</span>
+                </div>
+                <div class="panel-body flex-column">
+                    <div class="chat-messages-container" id="chat-messages-container">
+                        <div class="chat-placeholder">Select or trigger an incident to initialize a co-pilot chat session.</div>
+                    </div>
+                    <div class="chat-input-bar">
+                        <input type="text" id="chat-user-input" placeholder="Ask sth about this incident..." class="glass-input-chat">
+                        <button class="btn-chat-send" id="btn-chat-send">Send</button>
+                    </div>
+                </div>
+            </section>
+        </aside>
     </div>
 
     <!-- Verbose Vulnerabilities Report Modal Overlay -->
