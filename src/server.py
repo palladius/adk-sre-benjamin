@@ -492,6 +492,18 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     })
                     
+                    # Push Web Operator message directly to Telegram if configured
+                    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+                    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+                    if bot_token and chat_id:
+                        bot_token = bot_token.strip("'\"")
+                        chat_id = chat_id.strip("'\"")
+                        if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
+                            try:
+                                send_raw_telegram_message(bot_token, chat_id, f"💬 *[Web Operator]:* {user_msg}")
+                            except Exception as tg_err:
+                                print(f"[Server] Failed to push operator msg to Telegram: {tg_err}")
+                    
                     # Generate authentic contextual reply via SRE ADK Incident Commander
                     details = parse_incident_folder(incident_path)
                     status = details.get("status", "UNKNOWN").upper()
@@ -520,6 +532,14 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         "message": reply_msg,
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     })
+                    
+                    # Push Benjamin Agent reply directly to Telegram if configured
+                    if bot_token and chat_id:
+                        if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
+                            try:
+                                send_raw_telegram_message(bot_token, chat_id, f"🏰 *Benjamin (IC):*\n{reply_msg}")
+                            except Exception as tg_err:
+                                print(f"[Server] Failed to push commander reply to Telegram: {tg_err}")
                     
                     # Save updated chat log
                     with open(chat_path, "w") as f:
@@ -692,6 +712,24 @@ def start_telegram_bot():
     last_update_id = 0
     selected_incident_id = None
     
+    # 1. Fetch latest update ID on startup to discard past backlogs and avoid flood loops
+    try:
+        bot_token_init = os.getenv("TELEGRAM_BOT_TOKEN")
+        if bot_token_init:
+            bot_token_init = bot_token_init.strip("'\"")
+            if "ENTER_BOT" not in bot_token_init:
+                init_url = f"https://api.telegram.org/bot{bot_token_init}/getUpdates?limit=1&offset=-1"
+                init_req = urllib.request.Request(init_url, method="GET")
+                with urllib.request.urlopen(init_req, timeout=5) as init_resp:
+                    if init_resp.status == 200:
+                        init_data = json.loads(init_resp.read().decode("utf-8"))
+                        init_updates = init_data.get("result", [])
+                        if init_updates:
+                            last_update_id = init_updates[0].get("update_id", 0)
+                            print(f"[Telegram Bot] Backlog discarded. Starting poll from update_id: {last_update_id}")
+    except Exception as init_err:
+        print(f"[Telegram Bot] Startup backlog check bypassed: {init_err}")
+        
     while True:
         bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
         chat_id = os.getenv("TELEGRAM_CHAT_ID")
