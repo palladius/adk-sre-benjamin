@@ -662,7 +662,7 @@ def send_telegram_safety_gate_menu(bot_token: str, chat_id: str, message: str):
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         keyboard = {
             "keyboard": [
-                [{"text": "✅ Yes, I am sure"}, {"text": "❌ No, abort mutation"}]
+                [{"text": "💥 Yes, I am sure"}, {"text": "❌ No, abort mutation"}]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": False
@@ -952,7 +952,7 @@ def start_telegram_bot():
                                     print(f"[Telegram Bot] Error checking safety gate status: {e}")
 
                         if is_awaiting_approval:
-                            if msg_text == "✅ Yes, I am sure":
+                            if msg_text == "💥 Yes, I am sure":
                                 # Approve & Resume
                                 try:
                                     resume_simulation(selected_incident_id, approved=True)

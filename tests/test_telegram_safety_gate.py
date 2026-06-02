@@ -41,5 +41,5 @@ def test_send_telegram_safety_gate_menu(mock_request, mock_urlopen):
     reply_markup = json.loads(decoded_params["reply_markup"][0])
     assert "keyboard" in reply_markup
     buttons = reply_markup["keyboard"][0]
-    assert buttons[0]["text"] == "✅ Yes, I am sure"
+    assert buttons[0]["text"] == "💥 Yes, I am sure"
     assert buttons[1]["text"] == "❌ No, abort mutation"
