@@ -30,6 +30,9 @@ This document details the software, languages, databases, and third-party integr
   * *Rationale:* Easy configuration decoupling, securely guarded by `.gitignore`.
 * **Testing Toolchain:** **`pytest` + `pytest-asyncio` + `pytest-cov`**
   * *Rationale:* Industry-standard Python testing suite offering rich async testing capabilities and coverage percentage reports.
+* **Client-side Rendering & Compilation:** **Viz.js CDN Library** (for client-side Graphviz DOT SVG compilation)
+* **Client-side Router:** **HTML5 History API** (for SPA path-based routing fallbacks)
+
 
 ## 📢 5. Communication & Integrations
 * **Real-time & HITL Notifications:** **Telegram Bot API**
