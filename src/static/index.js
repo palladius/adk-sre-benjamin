@@ -62,12 +62,19 @@ document.addEventListener("DOMContentLoaded", () => {
     const assetsListBucket = document.getElementById("assets-list-bucket");
     const assetsListNetwork = document.getElementById("assets-list-network");
     
+    // Verbose Vulnerabilities Modal Elements
+    const vulnerabilitiesModal = document.getElementById("vulnerabilities-modal");
+    const btnCloseModal = document.getElementById("btn-close-modal");
+    const modalVulnsBody = document.getElementById("modal-vulns-body");
+    const warningStatBox = document.querySelector(".stat-box.warning-state");
+    
     // Chat DOM Elements
     const chatMessagesContainer = document.getElementById("chat-messages-container");
     const chatUserInput = document.getElementById("chat-user-input");
     const btnChatSend = document.getElementById("btn-chat-send");
     
     let activeIncidentId = null;
+    let currentProjectResources = []; // Dynamic cache of loaded resources for modal display
     
     // Initialize
     loadConfig();
@@ -79,6 +86,33 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnReject) btnReject.addEventListener("click", rejectMutation);
     if (btnChatSend) btnChatSend.addEventListener("click", sendChatMessage);
     if (btnDiscoverProject) btnDiscoverProject.addEventListener("click", handleProjectDiscovery);
+    
+    // Close modal action
+    if (btnCloseModal && vulnerabilitiesModal) {
+        btnCloseModal.addEventListener("click", () => {
+            vulnerabilitiesModal.classList.remove("active");
+            setTimeout(() => {
+                vulnerabilitiesModal.style.display = "none";
+            }, 300);
+        });
+        
+        // Close modal when clicking outside contents
+        vulnerabilitiesModal.addEventListener("click", (e) => {
+            if (e.target === vulnerabilitiesModal) {
+                vulnerabilitiesModal.classList.remove("active");
+                setTimeout(() => {
+                    vulnerabilitiesModal.style.display = "none";
+                }, 300);
+            }
+        });
+    }
+    
+    if (warningStatBox) {
+        warningStatBox.addEventListener("click", () => {
+            const projectId = projectIdInput ? projectIdInput.value.trim() : "Unknown";
+            openVulnerabilitiesReport(projectId, currentProjectResources);
+        });
+    }
     
     if (btnCloseProjectView) {
         btnCloseProjectView.addEventListener("click", () => {
@@ -903,6 +937,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}.json`;
         
         const resources = data.resources || [];
+        currentProjectResources = resources; // Cache globally for the interactive modal
+        
         const total = resources.length;
         const exposed = resources.filter(r => r.vulnerable).length;
         const safe = total - exposed;
@@ -921,6 +957,17 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 projectComplianceBadge.textContent = "✅ COMPLIANT";
                 projectComplianceBadge.className = "compliance-badge badge-safe";
+            }
+        }
+
+        // Configure clickability of Exposed/Vulnerable stat card
+        if (warningStatBox) {
+            if (exposed > 0) {
+                warningStatBox.classList.add("has-vulns");
+                warningStatBox.title = "⚠️ Click to open full verbose vulnerabilities report";
+            } else {
+                warningStatBox.classList.remove("has-vulns");
+                warningStatBox.removeAttribute("title");
             }
         }
 
@@ -955,44 +1002,44 @@ document.addEventListener("DOMContentLoaded", () => {
         const bucketAssets = resources.filter(r => r.type === "gcs_bucket");
         const networkAssets = resources.filter(r => r.type === "vpc_network");
         
-        renderAssetGroup(vmAssets, assetsListVm, "🖥️ GCE VM Instance", r => `
+        renderAssetGroup(projectId, vmAssets, assetsListVm, "🖥️ GCE VM Instance", r => `
             <div class="asset-meta-item"><span class="asset-meta-label">Zone:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Internal IP:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.internal_ip || 'N/A')}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">External IP:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.external_ip || 'None')}</span></div>
         `);
         
-        renderAssetGroup(runAssets, assetsListRun, "🏃 Cloud Run Service", r => `
+        renderAssetGroup(projectId, runAssets, assetsListRun, "🏃 Cloud Run Service", r => `
             <div class="asset-meta-item"><span class="asset-meta-label">Region:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Service URL:</span> <a href="${escapeHTML(r.metadata.url)}" target="_blank" class="asset-meta-value text-cyan" style="word-break: break-all;">${escapeHTML(r.metadata.url || 'N/A')}</a></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Public Access:</span> <span class="asset-meta-value">${r.metadata.all_users_invoker ? 'Enabled (unauthenticated)' : 'Disabled (secured)'}</span></div>
         `);
         
-        renderAssetGroup(gkeAssets, assetsListGke, "☸️ GKE Cluster", r => `
+        renderAssetGroup(projectId, gkeAssets, assetsListGke, "☸️ GKE Cluster", r => `
             <div class="asset-meta-item"><span class="asset-meta-label">Location:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Control Endpoint:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.endpoint || 'N/A')}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Boundary Security:</span> <span class="asset-meta-value">${r.metadata.private_cluster ? 'Private Cluster Enabled' : 'Public Control Plane Exposure'}</span></div>
         `);
         
-        renderAssetGroup(sqlAssets, assetsListSql, "💾 Cloud SQL Instance", r => `
+        renderAssetGroup(projectId, sqlAssets, assetsListSql, "💾 Cloud SQL Instance", r => `
             <div class="asset-meta-item"><span class="asset-meta-label">Region:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Public Access:</span> <span class="asset-meta-value">${r.metadata.public_ip_enabled ? 'Enabled' : 'Disabled (Private IP only)'}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Authorized Networks:</span> <span class="asset-meta-value">${r.metadata.authorized_networks && r.metadata.authorized_networks.length > 0 ? escapeHTML(r.metadata.authorized_networks.join(', ')) : 'None (open or private)'}</span></div>
         `);
 
-        renderAssetGroup(bucketAssets, assetsListBucket, "🪣 GCS Storage Bucket", r => `
+        renderAssetGroup(projectId, bucketAssets, assetsListBucket, "🪣 GCS Storage Bucket", r => `
             <div class="asset-meta-item"><span class="asset-meta-label">Location:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Storage Class:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.storage_class || 'STANDARD')}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Public Prevention:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.public_access_prevention || 'inherited')}</span></div>
         `);
         
-        renderAssetGroup(networkAssets, assetsListNetwork, "🌐 VPC Network", r => `
+        renderAssetGroup(projectId, networkAssets, assetsListNetwork, "🌐 VPC Network", r => `
             <div class="asset-meta-item"><span class="asset-meta-label">Subnets count:</span> <span class="asset-meta-value">${r.metadata.subnetworks ? r.metadata.subnetworks.length : 0}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Routing Mode:</span> <span class="asset-meta-value">${escapeHTML(r.metadata.routing_mode || 'REGIONAL')}</span></div>
             <div class="asset-meta-item"><span class="asset-meta-label">Auto-Subnets Mode:</span> <span class="asset-meta-value">${r.metadata.auto_create_subnetworks ? 'Enabled (Auto)' : 'Disabled (Custom subnets)'}</span></div>
         `);
     }
     
-    function renderAssetGroup(assets, container, typeName, metaHtmlBuilder) {
+    function renderAssetGroup(projectId, assets, container, typeName, metaHtmlBuilder) {
         if (!container) return;
         if (assets.length === 0) {
             container.innerHTML = `<p class="loading-placeholder">No active ${escapeHTML(typeName)} instances found.</p>`;
@@ -1003,9 +1050,17 @@ document.addEventListener("DOMContentLoaded", () => {
             const card = document.createElement("div");
             card.className = `asset-card ${r.vulnerable ? 'vulnerable' : 'safe'}`;
             
+            // Build red hover indicator emoji next to title if resource is vulnerable
+            const warningIconHtml = r.vulnerable ? `
+                <span class="vuln-hover-icon" title="⚠️ Click to open full verbose vulnerabilities report&#10;&#10;Problem: ${escapeHTML(r.warning)}">🚨</span>
+            ` : '';
+
             card.innerHTML = `
                 <div class="asset-card-header">
-                    <span class="asset-card-title">${escapeHTML(r.name)}</span>
+                    <div style="display: flex; align-items: center; gap: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span class="asset-card-title">${escapeHTML(r.name)}</span>
+                        ${warningIconHtml}
+                    </div>
                     <span class="status-badge ${r.status === 'RUNNING' || r.status === 'READY' ? 'status-active' : 'status-unknown'}">${escapeHTML(r.status)}</span>
                 </div>
                 <div class="asset-card-body">
@@ -1019,17 +1074,20 @@ document.addEventListener("DOMContentLoaded", () => {
                         </div>
                     ` : ''}
                     
-                    ${r.vulnerable ? `
-                        <div class="asset-warning-block">
-                            <span>🚨 Warning: ${escapeHTML(r.warning)}</span>
-                        </div>
-                    ` : ''}
-                    
                     <span class="asset-metadata-toggle" style="margin-top: 8px;">View raw metadata</span>
                     <pre class="asset-metadata-content" style="display: none; margin-top: 6px;">${escapeHTML(JSON.stringify(r.metadata, null, 2))}</pre>
                 </div>
             `;
             
+            // Wire warning icon click to open modal
+            const vulnIcon = card.querySelector(".vuln-hover-icon");
+            if (vulnIcon) {
+                vulnIcon.addEventListener("click", (e) => {
+                    e.stopPropagation();
+                    openVulnerabilitiesReport(projectId, currentProjectResources);
+                });
+            }
+
             // Wire metadata toggle
             const toggle = card.querySelector(".asset-metadata-toggle");
             const metadataBlock = card.querySelector(".asset-metadata-content");
@@ -1043,5 +1101,61 @@ document.addEventListener("DOMContentLoaded", () => {
             
             container.appendChild(card);
         });
+    }
+
+    // Opens a verbose, full-page vulnerabilities report modal for deep diagnostics
+    function openVulnerabilitiesReport(projectId, resources) {
+        if (!modalVulnsBody || !vulnerabilitiesModal) return;
+        
+        const vulns = resources.filter(r => r.vulnerable);
+        if (vulns.length === 0) {
+            modalVulnsBody.innerHTML = `<p class="loading-placeholder">🟢 No security warnings detected! Project '${escapeHTML(projectId)}' is completely compliant and secure.</p>`;
+        } else {
+            modalVulnsBody.innerHTML = "";
+            vulns.forEach(r => {
+                const item = document.createElement("div");
+                item.className = "vuln-report-item";
+                item.innerHTML = `
+                    <div class="vuln-report-header">
+                        <span class="vuln-report-title">${escapeHTML(r.name)}</span>
+                        <span class="vuln-report-badge">${escapeHTML(r.type.replace('_', ' '))}</span>
+                    </div>
+                    <div class="vuln-report-desc">
+                        🚨 <strong>Vulnerability Warning:</strong> ${escapeHTML(r.warning)}
+                    </div>
+                    <div class="vuln-report-meta">
+                        <div class="asset-meta-item"><span class="asset-meta-label">Location:</span> <span class="asset-meta-value">${escapeHTML(r.location)}</span></div>
+                        <div class="asset-meta-item"><span class="asset-meta-label">Status:</span> <span class="asset-meta-value">${escapeHTML(r.status)}</span></div>
+                        ${r.console_url ? `
+                            <div class="asset-meta-item" style="margin-top: 6px;">
+                                <a href="${escapeHTML(r.console_url)}" target="_blank" class="text-cyan" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: underline; font-weight: 600;">
+                                    🔗 Open in GCP Console
+                                </a>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <span class="asset-metadata-toggle" style="margin-top: 8px;">View raw metadata</span>
+                    <pre class="asset-metadata-content" style="display: none; margin-top: 6px;">${escapeHTML(JSON.stringify(r.metadata, null, 2))}</pre>
+                `;
+                
+                // Wire metadata toggle inside modal report items
+                const toggle = item.querySelector(".asset-metadata-toggle");
+                const metadataBlock = item.querySelector(".asset-metadata-content");
+                if (toggle && metadataBlock) {
+                    toggle.addEventListener("click", () => {
+                        const isHidden = metadataBlock.style.display === "none";
+                        metadataBlock.style.display = isHidden ? "block" : "none";
+                        toggle.textContent = isHidden ? "Hide raw metadata" : "View raw metadata";
+                    });
+                }
+                
+                modalVulnsBody.appendChild(item);
+            });
+        }
+        
+        vulnerabilitiesModal.style.display = "flex";
+        setTimeout(() => {
+            vulnerabilitiesModal.classList.add("active");
+        }, 10);
     }
 });

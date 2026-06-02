@@ -1536,3 +1536,173 @@ body {
     color: var(--text-primary);
 }
 
+/* ==========================================================================
+   VERBOSE VULNERABILITIES MODAL & PREMIUM CONTROLS
+   ========================================================================== */
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(8, 10, 14, 0.85);
+    backdrop-filter: blur(14px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.modal.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-content {
+    background: rgba(13, 17, 23, 0.96);
+    border: 1px solid rgba(255, 49, 49, 0.3);
+    box-shadow: 0 0 50px rgba(255, 49, 49, 0.2);
+    border-radius: 16px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: translateY(20px);
+    transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.modal.active .modal-content {
+    transform: translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-header h3 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--text-primary);
+}
+
+.modal-close {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    line-height: 1;
+    transition: var(--transition-smooth);
+}
+
+.modal-close:hover {
+    color: var(--neon-red);
+    transform: scale(1.1);
+}
+
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.vuln-report-item {
+    background: rgba(255, 49, 49, 0.03);
+    border: 1px solid rgba(255, 49, 49, 0.15);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.vuln-report-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.vuln-report-title {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.vuln-report-badge {
+    background: rgba(255, 49, 49, 0.15);
+    border: 1px solid var(--neon-red);
+    color: var(--neon-red);
+    padding: 2px 8px;
+    font-size: 9px;
+    font-weight: 700;
+    border-radius: 4px;
+    text-transform: uppercase;
+}
+
+.vuln-report-desc {
+    font-size: 12px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    background: rgba(255, 49, 49, 0.05);
+    padding: 8px 12px;
+    border-left: 3px solid var(--neon-red);
+    border-radius: 4px;
+}
+
+.vuln-report-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+/* Red Hover Warning Emoji Icon */
+.vuln-hover-icon {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(255, 49, 49, 0.15);
+    border: 1px solid rgba(255, 49, 49, 0.3);
+    border-radius: 4px;
+    width: 22px;
+    height: 22px;
+    cursor: pointer;
+    font-size: 11px;
+    line-height: 1;
+    transition: var(--transition-smooth);
+    vertical-align: middle;
+}
+
+.vuln-hover-icon:hover {
+    background: var(--neon-red);
+    border-color: var(--neon-red);
+    box-shadow: 0 0 10px rgba(255, 49, 49, 0.6);
+    transform: scale(1.15);
+}
+
+/* Warning stat-box styling when clickable */
+.stat-box.warning-state.has-vulns {
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.stat-box.warning-state.has-vulns:hover {
+    border-color: var(--neon-red);
+    background: rgba(255, 49, 49, 0.08);
+    box-shadow: 0 0 15px rgba(255, 49, 49, 0.25);
+    transform: scale(1.02);
+}
+
+

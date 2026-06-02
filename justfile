@@ -11,6 +11,10 @@ simulate:
 test:
     @uv run pytest
 
+# Relaunch the SRE dashboard web server on port 8080
+web:
+    @PYTHONPATH=. uv run python3 src/server.py
+
 # Run test suite with code coverage reports
 coverage:
     @uv run pytest --cov=src
