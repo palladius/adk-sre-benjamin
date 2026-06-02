@@ -1,13 +1,70 @@
 try:
     from google.adk.agents import LlmAgent
 except ImportError:
-    # Robust mock fallback to support local execution and evaluations without ADK installed
+    import urllib.request
+    import urllib.parse
+    import json
+    import os
+
+    # Dynamic fallback to support local execution with authentic Gemini API queries
     class LlmAgent:
         def __init__(self, name, instruction, model="gemini-2.5-flash", **kwargs):
             self.name = name
             self.instruction = instruction
             self.model = model
             self.kwargs = kwargs
+            
+        def run(self, prompt: str) -> str:
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                # Local development placeholder if API key is not present
+                name = self.name
+                if "hello" in prompt.lower() or "hi" in prompt.lower():
+                    return f"Hello, SRE. I am Incident Commander {name}. I coordinate all functional leads according to Google's strict IMAG ICS command hierarchy. (Mock Mode: No GEMINI_API_KEY found)"
+                elif "status" in prompt.lower() or "active" in prompt.lower():
+                    return f"[{name}] Standing by. I can declare SRE incidents active, configure the response context, and oversee mitigation. (Mock Mode)"
+                else:
+                    return f"[{name}] Operational command noted: '{prompt}'. Ready to guide SRE leads to resolution. (Mock Mode)"
+            
+            # Map model names gracefully if needed (e.g. gemini-2.5-flash or gemini-2.0-flash)
+            model_target = self.model
+            if "2.5" in model_target:
+                model_target = "gemini-2.5-flash"
+            
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_target}:generateContent?key={api_key}"
+            
+            payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": prompt}
+                        ]
+                    }
+                ],
+                "systemInstruction": {
+                    "parts": [
+                        {"text": self.instruction}
+                    ]
+                }
+            }
+            
+            try:
+                data = json.dumps(payload).encode("utf-8")
+                req = urllib.request.Request(
+                    url,
+                    data=data,
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=20) as response:
+                    if response.status == 200:
+                        res_body = json.loads(response.read().decode("utf-8"))
+                        text = res_body["candidates"][0]["content"]["parts"][0]["text"]
+                        return text.strip()
+                    else:
+                        return f"[{self.name}] Failed Gemini call (HTTP {response.status})"
+            except Exception as e:
+                return f"[{self.name}] Error communicating with Gemini API: {e}"
 
 from src.prompt_loader import load_prompt
 

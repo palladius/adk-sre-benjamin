@@ -394,35 +394,28 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     })
                     
-                    # Generate contextual reply
+                    # Generate authentic contextual reply via SRE ADK Incident Commander
                     details = parse_incident_folder(incident_path)
                     status = details.get("status", "UNKNOWN").upper()
-                    project_id = details.get("project_id", "sre-bnext-prod")
+                    project_id = details.get("project_id", "sre-next")
                     trigger_event = details.get("trigger_event", "frontend_latency_slo_violated")
                     
-                    reply_msg = ""
-                    lower_msg = user_msg.lower()
-                    
-                    if "status" in lower_msg or "incident" in lower_msg or "what is" in lower_msg:
-                        if status == "AWAITING_APPROVAL":
-                            reply_msg = f"The incident '{incident_id}' is currently AWAITING APPROVAL. Operations Lead has proposed restarting the MySQL service on project '{project_id}' to resolve a deadlock. You can clear this gate from the Risk Assessor panel."
-                        elif status == "CLOSED" or status == "RESOLVED":
-                            reply_msg = f"This incident has been CLOSED/RESOLVED. The service is healthy, and the timeline is archived under git notes."
-                        elif status == "ABORTED":
-                            reply_msg = f"The proposed change was rejected. Incident '{incident_id}' is closed as ABORTED/BLOCKED."
-                        else:
-                            reply_msg = f"The current incident status is {status}. Telemetry check is active on project '{project_id}'."
-                    elif "project" in lower_msg or "gcp" in lower_msg:
-                        reply_msg = f"We are operating in the GCP project context '{project_id}'. Least-privilege monitoring reads are powered by our service account wrapper."
-                    elif "restart" in lower_msg or "command" in lower_msg or "mysql" in lower_msg or "mutation" in lower_msg:
-                        if status == "AWAITING_APPROVAL":
-                            reply_msg = "The proposed restart command 'systemctl restart mysql' is safe (Risk: MEDIUM). To authorize it, please approve the mutation on the Logistics Safety Gate dashboard card."
-                        else:
-                            reply_msg = "The database operations have concluded. Service is verified and healthy."
-                    elif "help" in lower_msg or "what can you do" in lower_msg:
-                        reply_msg = "I am the UI SRE Agent. You can ask me about: 1. The incident status or target project. 2. The safety gate status of proposed mutations. 3. General incident diagnostic data."
-                    else:
-                        reply_msg = f"Copy that, operator. I have recorded your message regarding '{user_msg}' inside the incident logs. We are closely monitoring project '{project_id}' telemetry streams."
+                    try:
+                        from src.agents import IncidentCommander
+                        commander = IncidentCommander()
+                        
+                        # Supply full screen operational context dynamically to the model
+                        chat_context = (
+                            f"[Operational Context]\n"
+                            f"Selected Incident ID: {incident_id}\n"
+                            f"Current Incident Status: {status}\n"
+                            f"Target GCP Project ID: {project_id}\n"
+                            f"Trigger Alert Event: {trigger_event}\n\n"
+                            f"Operator Prompt:\n{user_msg}"
+                        )
+                        reply_msg = commander.run(chat_context)
+                    except Exception as e:
+                        reply_msg = f"[System Alert] Incident Commander failed: {e}"
                     
                     chat_data.append({
                         "sender": "Benjamin Agent (IC)",
