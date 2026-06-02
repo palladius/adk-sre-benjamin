@@ -37,3 +37,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [ ] **Track: Cross-Chat Statefulness and Memory Synchronization**
 *Link: [./tracks/cross_chat_statefulness_20260602/](./tracks/cross_chat_statefulness_20260602/)*
 
+---
+
+- [ ] **Track: Pending Mutation Approvals Queue**
+*Link: [./tracks/pending_mutations_registry_20260602/](./tracks/pending_mutations_registry_20260602/)*
+
