@@ -21,6 +21,47 @@ def run_cli(args_list=None) -> int:
             sys.stderr.write(f"Discovery failed: {e}\n")
             return 1
 
+    if len(args) > 0 and args[0] == "telegram":
+        import re
+        parser = argparse.ArgumentParser(description="Configure Telegram Alerts Integration")
+        subparsers = parser.add_subparsers(dest="subcommand", required=True)
+        
+        set_parser = subparsers.add_parser("set", help="Set Telegram alerts configurations")
+        set_parser.add_argument("chat_id", help="Telegram Chat or Channel ID")
+        set_parser.add_argument("bot_token", help="Telegram Bot HTTP API Token")
+        
+        parsed_args = parser.parse_args(args[1:])
+        
+        if parsed_args.subcommand == "set":
+            chat_id = parsed_args.chat_id
+            bot_token = parsed_args.bot_token
+            
+            env_path = ".env"
+            env_content = ""
+            if os.path.exists(env_path):
+                with open(env_path, "r") as f:
+                    env_content = f.read()
+            
+            # Update or append TELEGRAM_CHAT_ID
+            if "TELEGRAM_CHAT_ID=" in env_content:
+                env_content = re.sub(r"TELEGRAM_CHAT_ID=.*", f"TELEGRAM_CHAT_ID='{chat_id}'", env_content)
+            else:
+                env_content += f"\nTELEGRAM_CHAT_ID='{chat_id}'\n"
+                
+            # Update or append TELEGRAM_BOT_TOKEN
+            if "TELEGRAM_BOT_TOKEN=" in env_content:
+                env_content = re.sub(r"TELEGRAM_BOT_TOKEN=.*", f"TELEGRAM_BOT_TOKEN='{bot_token}'", env_content)
+            else:
+                env_content += f"\nTELEGRAM_BOT_TOKEN='{bot_token}'\n"
+                
+            with open(env_path, "w") as f:
+                f.write(env_content.strip() + "\n")
+                
+            print(f"✅ Telegram configuration successfully saved to .env!")
+            print(f"   Chat/Channel ID: {chat_id}")
+            print(f"   Bot Token: {bot_token[:6]}...{bot_token[-4:] if len(bot_token) > 10 else ''}")
+            return 0
+
     parser = argparse.ArgumentParser(description="Piped Agent CLI evaluation harness.")
     parser.add_argument("--agent", required=True, help="Name of the SRE Agent persona (e.g. ops_agent).")
     parser.add_argument("--incident-dir", help="Path to the active incident folder.")
