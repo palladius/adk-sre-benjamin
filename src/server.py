@@ -379,10 +379,26 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             chat_data = json.load(f)
                     else:
                         details = parse_incident_folder(incident_path)
+                        
+                        # Detect if Telegram variables are configured
+                        has_telegram = bool(os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("TELEGRAM_CHAT_ID"))
+                        telegram_proposal = ""
+                        if not has_telegram:
+                            telegram_proposal = (
+                                "\n\n💡 **System Notice:** Telegram alerts are not yet active. "
+                                "To route live incident broadcasts directly to a Telegram channel, configure your credentials "
+                                "by running this command in your workspace:\n`PYTHONPATH=. uv run python3 src/cli.py telegram set <CHAT_ID> <BOT_TOKEN>`"
+                            )
+                        
                         chat_data = [
                             {
                                 "sender": "Benjamin Agent (IC)",
-                                "message": f"Welcome to the tactical Incident Chat for {incident_id}. I am Benjamin, the SRE Incident Commander. We are currently analyzing the incident alert '{details.get('trigger_event')}' targeting project '{details.get('project_id')}'. How can I assist you?",
+                                "message": (
+                                    f"Welcome to the tactical Incident Chat for {incident_id}. "
+                                    f"I am Benjamin, the SRE Incident Commander. We are currently analyzing the alert "
+                                    f"'{details.get('trigger_event')}' targeting project '{details.get('project_id')}'. "
+                                    f"How can I assist you today?{telegram_proposal}"
+                                ),
                                 "timestamp": datetime.now(timezone.utc).isoformat()
                             }
                         ]
