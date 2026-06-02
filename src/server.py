@@ -130,8 +130,8 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/projects/") and path.endswith("/discover"):
             try:
                 project_id = path.split("/")[3]
-                cache_dir = os.path.join("discover", "gcp-project")
-                json_path = os.path.join(cache_dir, f"{project_id}.json")
+                cache_dir = os.path.join("discover", "gcp-project", project_id)
+                json_path = os.path.join(cache_dir, "discover.json")
                 
                 # Check cache: if it exists, read it
                 if os.path.exists(json_path):
@@ -152,7 +152,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     "project_id": project_id,
                     "resources": resources,
                     "cache_path": json_path,
-                    "wiki_path": os.path.join(cache_dir, f"{project_id}.md")
+                    "wiki_path": os.path.join(cache_dir, "wiki.md")
                 }
                 self.wfile.write(json.dumps(response_data).encode("utf-8"))
             except Exception as e:
@@ -166,13 +166,13 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/projects/") and path.endswith("/wiki"):
             try:
                 project_id = path.split("/")[3]
-                cache_dir = os.path.join("discover", "gcp-project")
-                md_path = os.path.join(cache_dir, f"{project_id}.md")
+                cache_dir = os.path.join("discover", "gcp-project", project_id)
+                md_path = os.path.join(cache_dir, "wiki.md")
                 
                 os.makedirs(cache_dir, exist_ok=True)
                 if not os.path.exists(md_path):
                     # Check if json cache exists to regenerate or bootstrap it
-                    json_path = os.path.join(cache_dir, f"{project_id}.json")
+                    json_path = os.path.join(cache_dir, "discover.json")
                     if os.path.exists(json_path):
                         from src.discovery import discover_project_resources
                         discover_project_resources(project_id)
@@ -199,8 +199,8 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/projects/") and path.endswith("/graph"):
             try:
                 project_id = path.split("/")[3]
-                cache_dir = os.path.join("discover", "gcp-project")
-                dot_path = os.path.join(cache_dir, f"{project_id}.dot")
+                cache_dir = os.path.join("discover", "gcp-project", project_id)
+                dot_path = os.path.join(cache_dir, "graph.dot")
                 
                 os.makedirs(cache_dir, exist_ok=True)
                 if not os.path.exists(dot_path):
@@ -523,9 +523,9 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 payload = json.loads(post_data.decode("utf-8"))
                 content = payload.get("content", "")
                 
-                cache_dir = os.path.join("discover", "gcp-project")
+                cache_dir = os.path.join("discover", "gcp-project", project_id)
                 os.makedirs(cache_dir, exist_ok=True)
-                md_path = os.path.join(cache_dir, f"{project_id}.md")
+                md_path = os.path.join(cache_dir, "wiki.md")
                 with open(md_path, "w") as f:
                     f.write(content)
                 
@@ -549,9 +549,9 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 payload = json.loads(post_data.decode("utf-8"))
                 content = payload.get("content", "")
                 
-                cache_dir = os.path.join("discover", "gcp-project")
+                cache_dir = os.path.join("discover", "gcp-project", project_id)
                 os.makedirs(cache_dir, exist_ok=True)
-                dot_path = os.path.join(cache_dir, f"{project_id}.dot")
+                dot_path = os.path.join(cache_dir, "graph.dot")
                 with open(dot_path, "w") as f:
                     f.write(content)
                 

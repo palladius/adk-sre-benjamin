@@ -8,9 +8,9 @@ from src.cli import run_cli
 
 def test_discover_mock_resources():
     project_id = "test-project-123"
-    cache_dir = os.path.join("discover", "gcp-project")
-    json_path = os.path.join(cache_dir, f"{project_id}.json")
-    md_path = os.path.join(cache_dir, f"{project_id}.md")
+    cache_dir = os.path.join("discover", "gcp-project", project_id)
+    json_path = os.path.join(cache_dir, "discover.json")
+    md_path = os.path.join(cache_dir, "wiki.md")
     
     # Ensure clean state
     if os.path.exists(json_path):
@@ -71,9 +71,9 @@ def test_discover_mock_resources():
 
 def test_discover_live_resources_mocked_subprocess():
     project_id = "live-project-abc"
-    cache_dir = os.path.join("discover", "gcp-project")
-    json_path = os.path.join(cache_dir, f"{project_id}.json")
-    md_path = os.path.join(cache_dir, f"{project_id}.md")
+    cache_dir = os.path.join("discover", "gcp-project", project_id)
+    json_path = os.path.join(cache_dir, "discover.json")
+    md_path = os.path.join(cache_dir, "wiki.md")
     
     # Ensure clean state
     if os.path.exists(json_path):
@@ -191,9 +191,9 @@ def test_discover_live_resources_mocked_subprocess():
 
 def test_cli_discover_subcommand():
     project_id = "cli-test-project"
-    cache_dir = os.path.join("discover", "gcp-project")
-    json_path = os.path.join(cache_dir, f"{project_id}.json")
-    md_path = os.path.join(cache_dir, f"{project_id}.md")
+    cache_dir = os.path.join("discover", "gcp-project", project_id)
+    json_path = os.path.join(cache_dir, "discover.json")
+    md_path = os.path.join(cache_dir, "wiki.md")
     
     # Ensure clean state
     if os.path.exists(json_path):

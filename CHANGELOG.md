@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2026-06-02
+### Changed
+- **Project Folder Grouping**: Transitioned the flat cache file storage inside `discover/gcp-project/` to clean project-specific subdirectories (`discover/gcp-project/<project_id>/`), structuring resource discoveries in `discover.json`, Markdown indices in `wiki.md`, and dependency diagrams in `graph.dot`.
+- **API & UI Telemetry Updates**: Updated GET/POST discover, wiki, and graph server handlers, test assertions, and UI labels to search and print the new directory-grouped paths.
+- **Automatic Migration**: Executed a safe file migration script moving all existing SRE wikis, resources, and DOT graphs cleanly to their corresponding project subdirectories with zero data loss.
+
 ## [1.2.2] - 2026-06-02
 ### Added
 - **Markdown Wiki Editor & Live Preview**: Wired up the `.project-tab-btn` buttons to display the split markdown editor/preview layout, dynamically loading existing project wiki notes via `GET /api/projects/<id>/wiki`, compiled in real-time in the browser, and persisted via `POST /api/projects/<id>/wiki`.

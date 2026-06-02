@@ -147,9 +147,9 @@ def test_server_integration():
                 assert data_chat_post[-2]["message"] == "Hello Benjamin"
                 
         # Test GET /api/projects/test-project-server/discover
-        server_cache_dir = os.path.join("discover", "gcp-project")
-        json_file = os.path.join(server_cache_dir, "test-project-server.json")
-        md_file = os.path.join(server_cache_dir, "test-project-server.md")
+        server_cache_dir = os.path.join("discover", "gcp-project", "test-project-server")
+        json_file = os.path.join(server_cache_dir, "discover.json")
+        md_file = os.path.join(server_cache_dir, "wiki.md")
         
         for fpath in [json_file, md_file]:
             if os.path.exists(fpath):

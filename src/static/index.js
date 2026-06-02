@@ -876,7 +876,7 @@ document.addEventListener("DOMContentLoaded", () => {
         switchView("project");
         
         if (projectViewTitle) projectViewTitle.textContent = `GCP PROJECT ASSETS: ${projectId}`;
-        if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}.json`;
+        if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}/discover.json`;
         
         // Reset navigation tab state to "audit" (default)
         const tabButtons = document.querySelectorAll(".project-tab-btn");
@@ -994,7 +994,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         if (projectViewTitle) projectViewTitle.textContent = `GCP PROJECT ASSETS: ${projectId}`;
-        if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}.json`;
+        if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}/discover.json`;
         
         const resources = data.resources || [];
         currentProjectResources = resources; // Cache globally for the interactive modal

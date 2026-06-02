@@ -1,4 +1,4 @@
-# 🏰 Project Benjamin SRE Agentic Framework (v1.2.2)
+# 🏰 Project Benjamin SRE Agentic Framework (v1.2.3)
 
 Project Benjamin is a production-grade, highly secure automation harness for Site Reliability Engineering (SRE), built using Google's **Antigravity Development Kit (ADK) for Python** and strictly aligned with the **IMAG (Incident Management At Google) Incident Command System (ICS)** command chain.
 

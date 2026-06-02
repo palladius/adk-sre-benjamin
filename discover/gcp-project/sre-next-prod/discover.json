@@ -1,0 +1,90 @@
+[
+  {
+    "name": "gke-online-boutique-prod-main-pool-61456b2b-x9ux",
+    "type": "gce_vm",
+    "location": "us-central1-a",
+    "status": "RUNNING",
+    "vulnerable": false,
+    "warning": null,
+    "console_url": "https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-a/instances/gke-online-boutique-prod-main-pool-61456b2b-x9ux?project=sre-next-prod",
+    "is_mock": false,
+    "metadata": {
+      "internal_ip": "10.0.0.30",
+      "external_ip": null
+    }
+  },
+  {
+    "name": "gke-online-boutique-prod-main-pool-0a19b5be-7wl6",
+    "type": "gce_vm",
+    "location": "us-central1-c",
+    "status": "RUNNING",
+    "vulnerable": false,
+    "warning": null,
+    "console_url": "https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-c/instances/gke-online-boutique-prod-main-pool-0a19b5be-7wl6?project=sre-next-prod",
+    "is_mock": false,
+    "metadata": {
+      "internal_ip": "10.0.0.31",
+      "external_ip": null
+    }
+  },
+  {
+    "name": "gke-online-boutique-prod-main-pool-31a00ce1-qec8",
+    "type": "gce_vm",
+    "location": "us-central1-f",
+    "status": "RUNNING",
+    "vulnerable": false,
+    "warning": null,
+    "console_url": "https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-f/instances/gke-online-boutique-prod-main-pool-31a00ce1-qec8?project=sre-next-prod",
+    "is_mock": false,
+    "metadata": {
+      "internal_ip": "10.0.0.32",
+      "external_ip": null
+    }
+  },
+  {
+    "name": "online-boutique-prod",
+    "type": "gke_cluster",
+    "location": "us-central1",
+    "status": "RUNNING",
+    "vulnerable": true,
+    "warning": "\u26a0\ufe0f EXPOSED: Public GKE control plane endpoint access enabled",
+    "console_url": "https://console.cloud.google.com/kubernetes/clusters/details/us-central1/online-boutique-prod/overview?project=sre-next-prod",
+    "is_mock": false,
+    "metadata": {
+      "endpoint": "34.121.227.243",
+      "private_cluster": false
+    }
+  },
+  {
+    "name": "test-riccardo-demo-sre",
+    "type": "gcs_bucket",
+    "location": "EU",
+    "status": "ACTIVE",
+    "vulnerable": false,
+    "warning": null,
+    "console_url": "https://console.cloud.google.com/storage/browser/test-riccardo-demo-sre?project=sre-next-prod",
+    "is_mock": false,
+    "metadata": {
+      "public_access_prevention": "enforced",
+      "storage_class": "STANDARD",
+      "uniform_bucket_level_access": true
+    }
+  },
+  {
+    "name": "online-boutique-prod-vpc",
+    "type": "vpc_network",
+    "location": "global",
+    "status": "ACTIVE",
+    "vulnerable": false,
+    "warning": null,
+    "console_url": "https://console.cloud.google.com/networking/networks/details/online-boutique-prod-vpc?project=sre-next-prod",
+    "is_mock": false,
+    "metadata": {
+      "auto_create_subnetworks": false,
+      "subnetworks": [
+        "online-boutique-prod-subnet"
+      ],
+      "routing_mode": "REGIONAL"
+    }
+  }
+]

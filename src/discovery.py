@@ -589,14 +589,14 @@ def discover_project_resources(project_id: str) -> str:
             os.environ.pop("CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT", None)
 
     # Build the deterministic directory paths and save JSON cache and Markdown Wiki
-    cache_dir = os.path.join("discover", "gcp-project")
+    cache_dir = os.path.join("discover", "gcp-project", project_id)
     os.makedirs(cache_dir, exist_ok=True)
     
-    json_path = os.path.join(cache_dir, f"{project_id}.json")
+    json_path = os.path.join(cache_dir, "discover.json")
     with open(json_path, "w") as f:
         json.dump(resources, f, indent=2)
         
-    md_path = os.path.join(cache_dir, f"{project_id}.md")
+    md_path = os.path.join(cache_dir, "wiki.md")
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     
     # Generate beautiful index page with bold red warning flags
