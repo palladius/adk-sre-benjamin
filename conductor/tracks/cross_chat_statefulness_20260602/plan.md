@@ -25,10 +25,12 @@ This document maps out the atomic tasks and test-driven checkpoints to implement
     - [ ] Assert `/select` command updates the shared state store
     - [ ] Assert `/setproject` command updates the shared state store
     - [ ] Assert `/status` command returns the formatted status card containing project_id, incident_id, and incident status summary
-- [ ] Task: Implement Selection/Project/Status Updates inside Telegram bot loop in `src/server.py`
+    - [ ] Assert `/restart` command triggers process replacement or signals self-restart
+- [ ] Task: Implement Selection/Project/Status/Restart Updates inside Telegram bot loop in `src/server.py`
     - [ ] Update `/select` handler to hit `POST /api/active-state` state update routine
     - [ ] Update `/setproject` handler to hit `POST /api/active-state` state update routine
     - [ ] Handle `/status` command (and `🚨 Status Check` menu button) to query active state, load incident context, and return a concise card summary
+    - [ ] Handle `/restart` command to dispatch confirmation and programmatically execute self-restart via `os.execv`
     - [ ] Log active state switches dynamically within the incident's `chat.json` log
     - [ ] Verify test suite passes (`uv run pytest`)
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)

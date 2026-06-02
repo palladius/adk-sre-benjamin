@@ -46,6 +46,10 @@ This track introduces a centralized memory store (`investigations/active_state.j
   3. Short incident status (e.g. `AWAITING_APPROVAL`, `ACTIVE`, `CLOSED`).
   4. A brief, readable one-sentence narrative summarizing the current state.
 
+### 2.5 Server `/restart` Process Reload Command
+* **Server Self-Restart command**: The Telegram bot and REST API must expose a `/restart` command.
+* **Mechanism**: When triggered, the server dispatches a confirmation message `"🔄 Server restarting. Reloading fresh code from disk..."` and programmatically reloads its process using `os.execv(sys.executable, [sys.executable] + sys.argv)`. This ensures that all memory caches are cleared, and any newly pulled git code changes are loaded instantly without needing shell shell process management intervention!
+
 ---
 
 ## 3.0 Non-Functional Requirements
