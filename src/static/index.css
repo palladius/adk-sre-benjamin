@@ -1781,3 +1781,334 @@ body {
     box-shadow: none;
     backdrop-filter: none;
 }
+
+/* ==========================================================================
+   Multi-View Project Explorer Styles (Track: multi_view_project_explorer_20260602)
+   ========================================================================== */
+
+/* Project Navigation Tabs */
+.project-tabs-nav {
+    display: flex;
+    gap: 12px;
+    padding: 4px;
+    margin: 16px 0;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    width: fit-content;
+}
+
+.project-tab-btn {
+    padding: 10px 18px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-secondary);
+    font-family: var(--font-outfit);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.project-tab-btn:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.project-tab-btn.active {
+    color: var(--neon-cyan);
+    background: rgba(0, 255, 255, 0.08);
+    border: 1px solid rgba(0, 255, 255, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+}
+
+/* Tab content panes */
+.tab-content-pane {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Wiki split editor & preview layout */
+.wiki-editor-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    height: 520px;
+    width: 100%;
+}
+
+.wiki-editor-pane, .wiki-preview-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+/* Polished Dark Neon Textarea */
+.glass-textarea {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    background: rgba(10, 12, 16, 0.6);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 18px;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.6;
+    resize: none;
+    outline: none;
+    transition: var(--transition-smooth);
+    backdrop-filter: blur(10px);
+}
+
+.glass-textarea:focus {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
+    background: rgba(10, 12, 16, 0.85);
+}
+
+/* Markdown Wiki Preview */
+.wiki-preview {
+    width: 100%;
+    height: 100%;
+    min-height: 400px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 20px;
+    overflow-y: auto;
+    color: var(--text-primary);
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.wiki-preview h1, .wiki-preview h2, .wiki-preview h3 {
+    font-family: var(--font-outfit);
+    color: var(--text-primary);
+    margin-top: 20px;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.wiki-preview h1 { font-size: 24px; }
+.wiki-preview h2 { font-size: 20px; }
+.wiki-preview h3 { font-size: 17px; }
+
+.wiki-preview p {
+    margin-bottom: 16px;
+}
+
+.wiki-preview ul, .wiki-preview ol {
+    margin-bottom: 16px;
+    padding-left: 24px;
+}
+
+.wiki-preview li {
+    margin-bottom: 6px;
+}
+
+.wiki-preview code {
+    font-family: var(--font-mono);
+    background: rgba(255, 255, 255, 0.08);
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--neon-cyan);
+}
+
+.wiki-preview pre {
+    background: rgba(10, 12, 16, 0.8);
+    border: 1px solid var(--panel-border);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+}
+
+.wiki-preview pre code {
+    background: transparent;
+    padding: 0;
+    color: var(--text-primary);
+    font-size: 13px;
+}
+
+/* Save Status text alert */
+.save-status {
+    margin-left: 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--neon-green);
+    text-shadow: 0 0 8px rgba(57, 255, 20, 0.4);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.save-status.visible {
+    opacity: 1;
+}
+
+/* Graph Editor layout */
+.graph-layout {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 24px;
+    height: 520px;
+    width: 100%;
+}
+
+.graph-editor-pane {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+}
+
+.graph-preview-pane {
+    flex: 1;
+    background: rgba(10, 12, 16, 0.6);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 16px;
+    overflow: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 400px;
+    position: relative;
+    backdrop-filter: blur(10px);
+}
+
+.network-preview-pane {
+    grid-column: 1 / -1;
+    width: 100%;
+}
+
+/* SVG Rendering within Graph View */
+.graph-preview-pane svg {
+    max-width: 100%;
+    height: auto;
+    max-height: 480px;
+    filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.3));
+}
+
+.graph-preview-pane svg polygon {
+    fill: transparent !important;
+}
+
+.graph-preview-pane svg text {
+    font-family: var(--font-outfit) !important;
+}
+
+/* Clouds directory landing page */
+.clouds-directory-view {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+}
+
+.clouds-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    width: 100%;
+}
+
+.cloud-card {
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(12px);
+    transition: var(--transition-smooth);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 240px;
+}
+
+.cloud-card:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+    transform: translateY(-4px);
+}
+
+.cloud-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 12px;
+}
+
+.cloud-icon {
+    font-size: 24px;
+}
+
+.cloud-card-header h3 {
+    font-family: var(--font-outfit);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.cloud-projects-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 160px;
+    overflow-y: auto;
+}
+
+.cloud-projects-list li {
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    transition: var(--transition-smooth);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.cloud-projects-list li:hover {
+    background: rgba(0, 255, 255, 0.05);
+    border-color: rgba(0, 255, 255, 0.2);
+    color: var(--neon-cyan);
+}
+
+.cloud-projects-list li.text-muted {
+    cursor: default;
+    background: transparent;
+    border-color: transparent;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Sidebar header hover styling */
+.sidebar-header.clickable-header {
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    padding: 4px;
+    border-radius: 8px;
+}
+
+.sidebar-header.clickable-header:hover {
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.05);
+}
+

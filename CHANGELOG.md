@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-06-02
+### Added
+- **Markdown Wiki Editor & Live Preview**: Wired up the `.project-tab-btn` buttons to display the split markdown editor/preview layout, dynamically loading existing project wiki notes via `GET /api/projects/<id>/wiki`, compiled in real-time in the browser, and persisted via `POST /api/projects/<id>/wiki`.
+- **SPA Routing Router & History sync**: Integrated client-side `navigateTo(url)` and `handleRouting()` popstate router, capturing `/clouds` and `/projects/<id>` deep-links cleanly with zero page reloads.
+- **Dynamic Physical Network Topology Graphs**: Programmed dynamic physical VPC attachment map auto-generation client-side, representing VMs, private databases, GCS buckets, GKE controls, and subnets inside beautifully styled Graphviz cluster subgraphs compiled to SVGs asynchronously via Viz.js.
+- **Custom Logical Graphs Integration**: Wired Graphviz dependency graphs editing and compiling asynchronously using Viz.js CDN rendering, with dynamic saving back to `discover/gcp-project/<id>.dot`.
+
 ## [1.2.1] - 2026-06-02
 ### Fixed
 - **Live Discovery Impersonation Override**: Added logic to automatically override/bypass active Google Cloud service account impersonation settings when performing a live resource discovery scan on non-default GCP projects (such as `sre-next-prod`), allowing authentications to naturally fall back to the active authorized gcloud credentials configuration. This eliminates the fake/mock fallback notice caused by default service account access boundaries.

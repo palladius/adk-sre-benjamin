@@ -85,7 +85,17 @@ document.addEventListener("DOMContentLoaded", () => {
     if (btnApprove) btnApprove.addEventListener("click", approveMutation);
     if (btnReject) btnReject.addEventListener("click", rejectMutation);
     if (btnChatSend) btnChatSend.addEventListener("click", sendChatMessage);
-    if (btnDiscoverProject) btnDiscoverProject.addEventListener("click", handleProjectDiscovery);
+    
+    const triggerSearch = () => {
+        const projectId = projectIdInput ? projectIdInput.value.trim() : "";
+        if (projectId) {
+            navigateTo(`/projects/${encodeURIComponent(projectId)}`);
+        } else {
+            alert("Please provide a valid GCP Project ID.");
+        }
+    };
+
+    if (btnDiscoverProject) btnDiscoverProject.addEventListener("click", triggerSearch);
     
     // Close modal action
     if (btnCloseModal && vulnerabilitiesModal) {
@@ -116,17 +126,28 @@ document.addEventListener("DOMContentLoaded", () => {
     
     if (btnCloseProjectView) {
         btnCloseProjectView.addEventListener("click", () => {
-            if (incidentDashboardView && projectDiscoveryView) {
-                incidentDashboardView.style.display = "block";
-                projectDiscoveryView.style.display = "none";
-            }
+            navigateTo("/");
+        });
+    }
+    
+    const sidebarHeader = document.getElementById("sidebar-header-btn");
+    if (sidebarHeader) {
+        sidebarHeader.addEventListener("click", () => {
+            navigateTo("/");
+        });
+    }
+    
+    const btnShowClouds = document.getElementById("btn-show-clouds");
+    if (btnShowClouds) {
+        btnShowClouds.addEventListener("click", () => {
+            navigateTo("/clouds");
         });
     }
     
     const projectLabel = document.querySelector('label[for="project-id-input"]');
     if (projectLabel) {
         projectLabel.style.cursor = "pointer";
-        projectLabel.addEventListener("click", handleProjectDiscovery);
+        projectLabel.addEventListener("click", triggerSearch);
     }
 
     // Wire collapsible panel headers
@@ -144,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (projectIdInput) {
         projectIdInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
-                handleProjectDiscovery();
+                triggerSearch();
             }
         });
     }
@@ -184,8 +205,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 updateProjectHistoryList();
                 
-                // Automatically trigger resource discovery on load
-                handleProjectDiscovery();
+                // Route current URL
+                handleRouting();
             }
         } catch (err) {
             console.error("Failed to load server configurations:", err);
@@ -844,21 +865,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 500); // 500ms delay per agent execution block
     }
 
-    async function handleProjectDiscovery() {
-        const projectId = projectIdInput ? projectIdInput.value.trim() : "";
+    async function handleProjectDiscovery(specifiedProjectId) {
+        const projectId = (typeof specifiedProjectId === "string" ? specifiedProjectId : (projectIdInput ? projectIdInput.value.trim() : "")).trim();
         if (!projectId) {
             alert("Please provide a valid GCP Project ID.");
             return;
         }
         
         // Show right-hand side view
-        if (projectDiscoveryView && incidentDashboardView) {
-            incidentDashboardView.style.display = "none";
-            projectDiscoveryView.style.display = "flex";
-        }
+        switchView("project");
         
         if (projectViewTitle) projectViewTitle.textContent = `GCP PROJECT ASSETS: ${projectId}`;
         if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}.json`;
+        
+        // Reset navigation tab state to "audit" (default)
+        const tabButtons = document.querySelectorAll(".project-tab-btn");
+        const tabPanes = document.querySelectorAll(".tab-content-pane");
+        tabButtons.forEach(b => {
+            if (b.dataset.tab === "audit") b.classList.add("active");
+            else b.classList.remove("active");
+        });
+        tabPanes.forEach(pane => {
+            if (pane.id === "tab-content-audit") pane.style.display = "flex";
+            else pane.style.display = "none";
+        });
         
         // Show placeholders
         if (assetsListVm) assetsListVm.innerHTML = `<p class="loading-placeholder">Discovering VM instances on '${projectId}'...</p>`;
@@ -890,6 +920,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     item.classList.remove("active");
                 }
             });
+            
+            // Sync URL in address bar if it's different
+            if (window.location.pathname !== `/projects/${projectId}`) {
+                history.pushState(null, "", `/projects/${projectId}`);
+            }
         } catch (err) {
             console.error("Discovery request failed:", err);
             const errMsg = `<p class="loading-placeholder text-danger">Failed to connect to discovery server.</p>`;
@@ -944,12 +979,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 `;
                 
                 li.addEventListener("click", () => {
-                    document.querySelectorAll(".project-history-item").forEach(item => item.classList.remove("active"));
-                    li.classList.add("active");
-                    if (projectIdInput) {
-                        projectIdInput.value = pid;
-                    }
-                    handleProjectDiscovery();
+                    navigateTo(`/projects/${encodeURIComponent(pid)}`);
                 });
                 
                 projectHistoryList.appendChild(li);
@@ -1187,5 +1217,443 @@ document.addEventListener("DOMContentLoaded", () => {
         setTimeout(() => {
             vulnerabilitiesModal.classList.add("active");
         }, 10);
+    }
+
+    // --- Dynamic Spa Router, Markdown Parser & Graphviz Render System ---
+    const cloudsDirectoryView = document.getElementById("clouds-directory-view");
+    
+    function switchView(viewName) {
+        if (viewName === "clouds") {
+            if (cloudsDirectoryView) cloudsDirectoryView.style.display = "flex";
+            if (projectDiscoveryView) projectDiscoveryView.style.display = "none";
+            if (incidentDashboardView) incidentDashboardView.style.display = "none";
+            
+            // Populate GCP projects in the clouds page dynamically
+            const gcpList = document.getElementById("gcp-projects-list");
+            if (gcpList) {
+                gcpList.innerHTML = "";
+                if (projectHistory.length === 0) {
+                    gcpList.innerHTML = `<li class="text-muted">no-active-projects</li>`;
+                } else {
+                    projectHistory.forEach(pid => {
+                        const li = document.createElement("li");
+                        li.innerHTML = `<span>☁️</span> <strong>${escapeHTML(pid)}</strong>`;
+                        li.addEventListener("click", () => {
+                            navigateTo(`/projects/${encodeURIComponent(pid)}`);
+                        });
+                        gcpList.appendChild(li);
+                    });
+                }
+            }
+        } else if (viewName === "project") {
+            if (cloudsDirectoryView) cloudsDirectoryView.style.display = "none";
+            if (projectDiscoveryView) projectDiscoveryView.style.display = "flex";
+            if (incidentDashboardView) incidentDashboardView.style.display = "none";
+        } else {
+            // dashboard
+            if (cloudsDirectoryView) cloudsDirectoryView.style.display = "none";
+            if (projectDiscoveryView) projectDiscoveryView.style.display = "none";
+            if (incidentDashboardView) incidentDashboardView.style.display = "block";
+        }
+    }
+
+    function navigateTo(url) {
+        history.pushState(null, "", url);
+        handleRouting();
+    }
+
+    function handleRouting() {
+        const path = window.location.pathname;
+        if (path === "/clouds" || path === "/clouds/") {
+            switchView("clouds");
+        } else if (path.startsWith("/projects/")) {
+            const parts = path.split("/");
+            const projectId = decodeURIComponent(parts[2] || "").trim();
+            if (projectId) {
+                if (projectIdInput) {
+                    projectIdInput.value = projectId;
+                }
+                switchView("project");
+                handleProjectDiscovery(projectId);
+            } else {
+                navigateTo("/");
+            }
+        } else {
+            switchView("dashboard");
+        }
+    }
+
+    window.addEventListener("popstate", handleRouting);
+
+    // Project Navigation Tabs Event Handling
+    const tabButtons = document.querySelectorAll(".project-tab-btn");
+    const tabPanes = document.querySelectorAll(".tab-content-pane");
+    
+    tabButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const tabName = btn.dataset.tab;
+            
+            tabButtons.forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            
+            tabPanes.forEach(pane => pane.style.display = "none");
+            const activePane = document.getElementById(`tab-content-${tabName}`);
+            if (activePane) activePane.style.display = "flex";
+            
+            const projectId = projectIdInput ? projectIdInput.value.trim() : "";
+            if (projectId) {
+                if (tabName === "wiki") {
+                    loadProjectWiki(projectId);
+                } else if (tabName === "graph") {
+                    loadProjectGraph(projectId);
+                } else if (tabName === "network") {
+                    renderNetworkGraph(projectId, currentProjectResources);
+                }
+            }
+        });
+    });
+
+    // Regex Markdown Compiler
+    function renderMarkdown(text) {
+        if (!text) return "";
+        
+        const lines = text.split('\n');
+        let insideList = false;
+        let processedLines = [];
+        
+        for (let i = 0; i < lines.length; i++) {
+            let line = lines[i].trim();
+            if (line.startsWith('# ')) {
+                if (insideList) { processedLines.push('</ul>'); insideList = false; }
+                processedLines.push('<h1>' + escapeHTML(line.substring(2)) + '</h1>');
+            } else if (line.startsWith('## ')) {
+                if (insideList) { processedLines.push('</ul>'); insideList = false; }
+                processedLines.push('<h2>' + escapeHTML(line.substring(3)) + '</h2>');
+            } else if (line.startsWith('### ')) {
+                if (insideList) { processedLines.push('</ul>'); insideList = false; }
+                processedLines.push('<h3>' + escapeHTML(line.substring(4)) + '</h3>');
+            } else if (line.startsWith('- ') || line.startsWith('* ')) {
+                if (!insideList) { processedLines.push('<ul>'); insideList = true; }
+                let itemText = escapeHTML(line.substring(2))
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/`(.*?)`/g, '<code>$1</code>');
+                processedLines.push('<li>' + itemText + '</li>');
+            } else {
+                if (insideList) { processedLines.push('</ul>'); insideList = false; }
+                if (line === '') {
+                    processedLines.push('<br>');
+                } else {
+                    let paragraphText = escapeHTML(lines[i])
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/`(.*?)`/g, '<code>$1</code>');
+                    processedLines.push('<p>' + paragraphText + '</p>');
+                }
+            }
+        }
+        if (insideList) processedLines.push('</ul>');
+        
+        return processedLines.join('\n');
+    }
+
+    // Markdown Wiki Fetching & Editing
+    async function loadProjectWiki(projectId) {
+        try {
+            const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/wiki`);
+            const data = await res.json();
+            const editor = document.getElementById("wiki-editor");
+            const preview = document.getElementById("wiki-preview");
+            if (editor && preview) {
+                editor.value = data.content || "";
+                preview.innerHTML = renderMarkdown(data.content || "");
+            }
+        } catch (err) {
+            console.error("Failed to load project wiki:", err);
+        }
+    }
+
+    // Live markdown preview updates on input
+    const wikiEditor = document.getElementById("wiki-editor");
+    if (wikiEditor) {
+        wikiEditor.addEventListener("input", () => {
+            const preview = document.getElementById("wiki-preview");
+            if (preview) {
+                preview.innerHTML = renderMarkdown(wikiEditor.value);
+            }
+        });
+    }
+
+    const btnSaveWiki = document.getElementById("btn-save-wiki");
+    if (btnSaveWiki) {
+        btnSaveWiki.addEventListener("click", async () => {
+            const projectId = projectIdInput ? projectIdInput.value.trim() : "";
+            const editor = document.getElementById("wiki-editor");
+            if (!projectId || !editor) return;
+            
+            btnSaveWiki.disabled = true;
+            const statusSpan = document.getElementById("wiki-save-status");
+            if (statusSpan) {
+                statusSpan.textContent = "Saving...";
+                statusSpan.classList.add("visible");
+            }
+            
+            try {
+                const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/wiki`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ content: editor.value })
+                });
+                const data = await res.json();
+                if (statusSpan) {
+                    statusSpan.textContent = "💾 Wiki Saved Successfully!";
+                }
+                const preview = document.getElementById("wiki-preview");
+                if (preview) {
+                    preview.innerHTML = renderMarkdown(editor.value);
+                }
+            } catch (err) {
+                console.error("Failed to save wiki:", err);
+                if (statusSpan) statusSpan.textContent = "❌ Save failed";
+            } finally {
+                btnSaveWiki.disabled = false;
+                setTimeout(() => {
+                    if (statusSpan) statusSpan.classList.remove("visible");
+                }, 3000);
+            }
+        });
+    }
+
+    // Logical Graphviz Fetching & Editing
+    async function loadProjectGraph(projectId) {
+        try {
+            const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/graph`);
+            const data = await res.json();
+            const editor = document.getElementById("graph-editor");
+            if (editor) {
+                editor.value = data.content || "";
+                renderLogicalGraph(data.content || "");
+            }
+        } catch (err) {
+            console.error("Failed to load project graph:", err);
+        }
+    }
+
+    function renderLogicalGraph(dotContent) {
+        const container = document.getElementById("logical-graph-svg-container");
+        if (!container || !dotContent) return;
+        
+        container.innerHTML = `<p class="loading-placeholder">Compiling dependency graph SVG...</p>`;
+        try {
+            const viz = new Viz();
+            viz.renderSVGElement(dotContent)
+                .then(element => {
+                    container.innerHTML = "";
+                    container.appendChild(element);
+                })
+                .catch(error => {
+                    container.innerHTML = `<pre class="text-danger" style="padding: 10px; font-size: 12px; text-align: left; overflow: auto; width: 100%; max-height: 100%;">Graphviz Render Error:\n${escapeHTML(error.message || error)}</pre>`;
+                    console.error("Graphviz Render Error:", error);
+                });
+        } catch (err) {
+            container.innerHTML = `<pre class="text-danger" style="padding: 10px; font-size: 12px; text-align: left; overflow: auto; width: 100%; max-height: 100%;">Viz.js Initialization Error:\n${escapeHTML(err.message || err)}</pre>`;
+            console.error("Viz.js Initialization Error:", err);
+        }
+    }
+
+    const btnSaveGraph = document.getElementById("btn-save-graph");
+    if (btnSaveGraph) {
+        btnSaveGraph.addEventListener("click", async () => {
+            const projectId = projectIdInput ? projectIdInput.value.trim() : "";
+            const editor = document.getElementById("graph-editor");
+            if (!projectId || !editor) return;
+            
+            btnSaveGraph.disabled = true;
+            const statusSpan = document.getElementById("graph-save-status");
+            if (statusSpan) {
+                statusSpan.textContent = "Saving...";
+                statusSpan.classList.add("visible");
+            }
+            
+            try {
+                const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/graph`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ content: editor.value })
+                });
+                const data = await res.json();
+                if (statusSpan) {
+                    statusSpan.textContent = "💾 Graph Saved Successfully!";
+                }
+                renderLogicalGraph(editor.value);
+            } catch (err) {
+                console.error("Failed to save graph:", err);
+                if (statusSpan) statusSpan.textContent = "❌ Save failed";
+            } finally {
+                btnSaveGraph.disabled = false;
+                setTimeout(() => {
+                    if (statusSpan) statusSpan.classList.remove("visible");
+                }, 3000);
+            }
+        });
+    }
+
+    // VPC Physical Network Graph Renderer
+    function renderNetworkGraph(projectId, resources) {
+        const container = document.getElementById("network-graph-svg-container");
+        if (!container) return;
+        
+        if (!resources || resources.length === 0) {
+            container.innerHTML = `<p class="loading-placeholder">No network resources to display.</p>`;
+            return;
+        }
+        
+        container.innerHTML = `<p class="loading-placeholder">Compiling network topology SVG...</p>`;
+        const dotContent = generateNetworkDotGraph(projectId, resources);
+        
+        try {
+            const viz = new Viz();
+            viz.renderSVGElement(dotContent)
+                .then(element => {
+                    container.innerHTML = "";
+                    container.appendChild(element);
+                })
+                .catch(error => {
+                    container.innerHTML = `<pre class="text-danger" style="padding: 10px; font-size: 12px; text-align: left; overflow: auto; width: 100%; max-height: 100%;">Graphviz Network Render Error:\n${escapeHTML(error.message || error)}</pre>`;
+                    console.error("Graphviz Network Render Error:", error);
+                });
+        } catch (err) {
+            container.innerHTML = `<pre class="text-danger" style="padding: 10px; font-size: 12px; text-align: left; overflow: auto; width: 100%; max-height: 100%;">Viz.js Network Initialization Error:\n${escapeHTML(err.message || err)}</pre>`;
+            console.error("Viz.js Network Initialization Error:", err);
+        }
+    }
+
+    // VPC Physical Network Graphviz DOT Auto-Generator
+    function generateNetworkDotGraph(projectId, resources) {
+        const vpcNetworks = resources.filter(r => r.type === "vpc_network");
+        const vms = resources.filter(r => r.type === "gce_vm");
+        const databases = resources.filter(r => r.type === "cloud_sql");
+        const clusters = resources.filter(r => r.type === "gke_cluster");
+        const buckets = resources.filter(r => r.type === "gcs_bucket");
+
+        let vpcDot = "";
+        vpcNetworks.forEach((vpc, vpcIdx) => {
+            const subnets = vpc.metadata.subnetworks || [];
+            const routingMode = vpc.metadata.routing_mode || "REGIONAL";
+            
+            vpcDot += `  subgraph cluster_vpc_${vpcIdx} {\n`;
+            vpcDot += `    label = "🌐 VPC: ${vpc.name} (${routingMode})";\n`;
+            vpcDot += `    style = "filled,dashed";\n`;
+            vpcDot += `    color = "#00ffff";\n`;
+            vpcDot += `    fillcolor = "rgba(0, 255, 255, 0.01)";\n`;
+            vpcDot += `    fontname = "Outfit";\n`;
+            vpcDot += `    fontcolor = "#00ffff";\n`;
+            vpcDot += `    fontsize = 12;\n`;
+            vpcDot += `    penwidth = 1.5;\n`;
+            
+            subnets.forEach((subnetName, subIdx) => {
+                vpcDot += `    subgraph cluster_subnet_${vpcIdx}_${subIdx} {\n`;
+                vpcDot += `      label = "Subnet: ${subnetName}";\n`;
+                vpcDot += `      style = "filled,rounded";\n`;
+                vpcDot += `      color = "rgba(255, 255, 255, 0.15)";\n`;
+                vpcDot += `      fillcolor = "rgba(255, 255, 255, 0.03)";\n`;
+                vpcDot += `      fontname = "Outfit";\n`;
+                vpcDot += `      fontcolor = "#cdd6f4";\n`;
+                vpcDot += `      fontsize = 10;\n`;
+                
+                const subnetVms = vms.filter(vm => {
+                    if (vpcNetworks.length === 1) return true;
+                    return vm.name.toLowerCase().includes(vpc.name.toLowerCase()) || 
+                           vm.name.toLowerCase().includes(subnetName.toLowerCase());
+                });
+                
+                subnetVms.forEach(vm => {
+                    const ipLabel = vm.metadata.internal_ip ? `\\nIP: ${vm.metadata.internal_ip}` : "";
+                    const vulnStyle = vm.vulnerable ? ', fillcolor="#3a1e26", color="#ff0055", fontcolor="#ff5588"' : '';
+                    vpcDot += `      "vm_${vm.name}" [label="🖥️ ${vm.name}${ipLabel}"${vulnStyle}];\n`;
+                });
+                
+                const subnetDbs = databases.filter(db => {
+                    const isPrivate = db.metadata.public_ip_enabled === false;
+                    if (!isPrivate) return false;
+                    if (vpcNetworks.length === 1) return true;
+                    return db.name.toLowerCase().includes(vpc.name.toLowerCase()) || 
+                           db.name.toLowerCase().includes(subnetName.toLowerCase());
+                });
+                
+                subnetDbs.forEach(db => {
+                    const vulnStyle = db.vulnerable ? ', fillcolor="#3a1e26", color="#ff0055", fontcolor="#ff5588"' : ', fillcolor="#1e2c24", color="#00ff66", fontcolor="#55ff88"';
+                    vpcDot += `      "db_${db.name}" [label="💾 Private SQL:\\n${db.name}"${vulnStyle}];\n`;
+                });
+                
+                vpcDot += `    }\n`;
+            });
+            
+            vpcDot += `  }\n`;
+        });
+
+        let unmappedDot = "";
+        if (vpcNetworks.length === 0) {
+            vms.forEach(vm => {
+                const ipLabel = vm.metadata.internal_ip ? `\\nIP: ${vm.metadata.internal_ip}` : "";
+                const vulnStyle = vm.vulnerable ? ', fillcolor="#3a1e26", color="#ff0055", fontcolor="#ff5588"' : '';
+                unmappedDot += `  "vm_${vm.name}" [label="🖥️ ${vm.name}${ipLabel}"${vulnStyle}];\n`;
+            });
+            databases.forEach(db => {
+                const vulnStyle = db.vulnerable ? ', fillcolor="#3a1e26", color="#ff0055", fontcolor="#ff5588"' : '';
+                unmappedDot += `  "db_${db.name}" [label="💾 ${db.name}\\n(Cloud SQL)"${vulnStyle}];\n`;
+            });
+        }
+
+        let globalDot = "";
+        if (buckets.length > 0) {
+            globalDot += `  subgraph cluster_gcs {\n`;
+            globalDot += `    label = "🪣 Global GCS Storage";\n`;
+            globalDot += `    style = "filled,rounded";\n`;
+            globalDot += `    color = "#fab387";\n`;
+            globalDot += `    fillcolor = "rgba(250, 179, 135, 0.02)";\n`;
+            globalDot += `    fontname = "Outfit";\n`;
+            globalDot += `    fontcolor = "#fab387";\n`;
+            globalDot += `    fontsize = 11;\n`;
+            
+            buckets.forEach(bucket => {
+                const vulnStyle = bucket.vulnerable ? ', fillcolor="#3a1e26", color="#ff0055", fontcolor="#ff5588"' : '';
+                globalDot += `    "bucket_${bucket.name}" [label="🪣 ${bucket.name}\\n[${bucket.location}]"${vulnStyle}];\n`;
+            });
+            globalDot += `  }\n`;
+        }
+
+        let publicZoneDot = "";
+        const publicDbs = databases.filter(db => db.metadata.public_ip_enabled === true);
+        if (publicDbs.length > 0) {
+            publicZoneDot += `  subgraph cluster_internet {\n`;
+            publicZoneDot += `    label = "🌐 Public Internet Boundary";\n`;
+            publicZoneDot += `    style = "filled,rounded";\n`;
+            publicZoneDot += `    color = "#f38ba8";\n`;
+            publicZoneDot += `    fillcolor = "rgba(243, 139, 168, 0.02)";\n`;
+            publicZoneDot += `    fontname = "Outfit";\n`;
+            publicZoneDot += `    fontcolor = "#f38ba8";\n`;
+            publicZoneDot += `    fontsize = 11;\n`;
+            
+            publicDbs.forEach(db => {
+                const vulnStyle = db.vulnerable ? ', fillcolor="#3a1e26", color="#ff0055", fontcolor="#ff5588"' : '';
+                publicZoneDot += `    "db_${db.name}" [label="💾 Public SQL Instance:\\n${db.name}"${vulnStyle}];\n`;
+            });
+            publicZoneDot += `  }\n`;
+        }
+
+        let gkeDot = "";
+        clusters.forEach(gke => {
+            const endpointLabel = gke.metadata.endpoint ? `\\nEndpoint: ${gke.metadata.endpoint}` : "";
+            const vulnStyle = gke.vulnerable ? ', fillcolor="#3a1e26", color="#ff0055", fontcolor="#ff5588"' : ', fillcolor="#1e1e2e", color="#89b4fa", fontcolor="#89b4fa"';
+            
+            gkeDot += `  "gke_${gke.name}" [label="☸️ GKE Control Plane:\\n${gke.name}${endpointLabel}"${vulnStyle}, shape=ellipse];\n`;
+            
+            vms.forEach(vm => {
+                if (vm.name.toLowerCase().includes(gke.name.toLowerCase()) || vm.name.toLowerCase().startsWith("gke-")) {
+                    gkeDot += `  "gke_${gke.name}" -> "vm_${vm.name}" [label="manages", style="dashed", color="#89b4fa"];\n`;
+                }
+            });
+        });
+
+        return `digraph G {\n  rankdir=LR;\n  bgcolor="transparent";\n  pad="0.3";\n  nodesep="0.4";\n  ranksep="0.5";\n  node [shape=box, fontname="Outfit", fontsize=11, style="filled,rounded", fillcolor="#16181d", color="#3a3f50", fontcolor="#ffffff", penwidth=1.5];\n  edge [color="#00ffff", fontname="Outfit", fontsize=9, fontcolor="#8892b0", penwidth=1.2, arrowsize=0.8];\n\n${vpcDot}${unmappedDot}${globalDot}${publicZoneDot}${gkeDot}}\n`;
     }
 });
