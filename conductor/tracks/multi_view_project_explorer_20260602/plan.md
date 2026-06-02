@@ -32,34 +32,34 @@
 ## Phase 2: Cloud Directory Landing Page and Routing Integration
 
 ### Task 4: Client-side URL Routing Engine
-- [ ] **Task: Implement History API Client Router**
-  - [ ] Create a client-side navigation handler in `src/static/index.js` using `history.pushState` and intercepting link clicks.
-  - [ ] Implement a `popstate` window event listener to render views correctly when the user clicks browser Back/Forward buttons.
+- [x] **Task: Implement History API Client Router** (5f6300c)
+  - [x] Create a client-side navigation handler in `src/static/index.js` using `history.pushState` and intercepting link clicks.
+  - [x] Implement a `popstate` window event listener to render views correctly when the user clicks browser Back/Forward buttons.
 
 ### Task 5: Clouds Directory landing view
-- [ ] **Task: Develop Clouds Main Page UI**
-  - [ ] Construct a glassmorphic dashboard in `src/static/index.html` and `src/static/index.js` displaying card panels for Google Cloud, AWS, Azure, and Vercel.
-  - [ ] Generate dynamic lists of discoverable projects dynamically loaded from cache.
-  - [ ] Make each project fully clickable, routing seamlessly to `/projects/<project_id>` with updated address URLs.
+- [x] **Task: Develop Clouds Main Page UI** (5f6300c)
+  - [x] Construct a glassmorphic dashboard in `src/static/index.html` and `src/static/index.js` displaying card panels for Google Cloud, AWS, Azure, and Vercel.
+  - [x] Generate dynamic lists of discoverable projects dynamically loaded from cache.
+  - [x] Make each project fully clickable, routing seamlessly to `/projects/<project_id>` with updated address URLs.
 
-- [ ] **Task: Conductor - User Manual Verification 'Phase 2: Clouds Directory' (Protocol in workflow.md)**
+- [x] **Task: Conductor - User Manual Verification 'Phase 2: Clouds Directory' (Protocol in workflow.md)** (5f6300c)
 
 ---
 
 ## Phase 3: Interactive Wiki and Graphviz DOT Views
 
 ### Task 6: Editable Project Wiki Markdown UI
-- [ ] **Task: Implement Wiki Markdown Tab View**
-  - [ ] Add a "Wiki Notes" tab to the project explorer panel in `src/static/index.js`.
-  - [ ] Load wiki markdown from `/api/projects/<project_id>/wiki`.
-  - [ ] Integrate a responsive text editor pane with a "Save Wiki" button to persist modifications to the backend cache directory.
+- [x] **Task: Implement Wiki Markdown Tab View** (5f6300c)
+  - [x] Add a "Wiki Notes" tab to the project explorer panel in `src/static/index.js`.
+  - [x] Load wiki markdown from `/api/projects/<project_id>/wiki`.
+  - [x] Integrate a responsive text editor pane with a "Save Wiki" button to persist modifications to the backend cache directory.
 
 ### Task 7: Graphviz DOT Render Engine and Network Graph Views
-- [ ] **Task: Integrate browser Viz.js compiler**
-  - [ ] Embed the standard Viz.js CDN library in `src/static/index.html` for interactive on-the-fly compiling of DOT notation into browser SVGs.
-- [ ] **Task: Build Logical Dependency and VPC Network Views**
-  - [ ] Design a "Logical Topology" view providing editing and drawing of dependency links, with interactive SVG node clicks.
-  - [ ] Design a "VPC Network attachment" view dynamically mapping discovered VMs and SQL instances inside their parent VPC networks as styled DOT subgraph clusters.
-  - [ ] Add storage syncing to persist operator-modified `.dot` network topologies.
+- [x] **Task: Integrate browser Viz.js compiler** (5f6300c)
+  - [x] Embed the standard Viz.js CDN library in `src/static/index.html` for interactive on-the-fly compiling of DOT notation into browser SVGs.
+- [x] **Task: Build Logical Dependency and VPC Network Views** (5f6300c)
+  - [x] Design a "Logical Topology" view providing editing and drawing of dependency links, with interactive SVG node clicks.
+  - [x] Design a "VPC Network attachment" view dynamically mapping discovered VMs and SQL instances inside their parent VPC networks as styled DOT subgraph clusters.
+  - [x] Add storage syncing to persist operator-modified `.dot` network topologies.
 
-- [ ] **Task: Conductor - User Manual Verification 'Phase 3: Interactive Views' (Protocol in workflow.md)**
+- [x] **Task: Conductor - User Manual Verification 'Phase 3: Interactive Views' (Protocol in workflow.md)** (5f6300c)
