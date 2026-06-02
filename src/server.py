@@ -162,6 +162,83 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
             return
             
+        # API: Get/Generate Custom Wiki for a Project
+        elif path.startswith("/api/projects/") and path.endswith("/wiki"):
+            try:
+                project_id = path.split("/")[3]
+                cache_dir = os.path.join("discover", "gcp-project")
+                md_path = os.path.join(cache_dir, f"{project_id}.md")
+                
+                os.makedirs(cache_dir, exist_ok=True)
+                if not os.path.exists(md_path):
+                    # Check if json cache exists to regenerate or bootstrap it
+                    json_path = os.path.join(cache_dir, f"{project_id}.json")
+                    if os.path.exists(json_path):
+                        from src.discovery import discover_project_resources
+                        discover_project_resources(project_id)
+                    else:
+                        default_wiki = f"# SRE Wiki: {project_id}\n\nNo custom SRE notes have been added yet for this project.\n"
+                        with open(md_path, "w") as f:
+                            f.write(default_wiki)
+                
+                with open(md_path, "r") as f:
+                    content = f.read()
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"project_id": project_id, "content": content}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
+        # API: Get/Generate Custom Graphviz DOT for a Project
+        elif path.startswith("/api/projects/") and path.endswith("/graph"):
+            try:
+                project_id = path.split("/")[3]
+                cache_dir = os.path.join("discover", "gcp-project")
+                dot_path = os.path.join(cache_dir, f"{project_id}.dot")
+                
+                os.makedirs(cache_dir, exist_ok=True)
+                if not os.path.exists(dot_path):
+                    default_graph = (
+                        f"digraph G {{\n"
+                        f"  rankdir=LR;\n"
+                        f'  node [style=filled, fillcolor="#1e1e2e", color="#f5c2e7", fontcolor="#cdd6f4", fontname="Outfit"];\n'
+                        f'  edge [color="#a6adc8"];\n'
+                        f'  subgraph cluster_vpc {{\n'
+                        f'    label="VPC Network: default";\n'
+                        f'    style=dashed;\n'
+                        f'    color="#89b4fa";\n'
+                        f'    fontcolor="#89b4fa";\n'
+                        f'    "frontend-vm" [label="🖥️ frontend-vm\\n(10.128.0.5)", fillcolor="#f38ba8", fontcolor="#11111b"];\n'
+                        f'    "checkout-vm" [label="🖥️ checkout-vm\\n(10.128.0.6)"];\n'
+                        f'    "db-sql" [label="💾 db-sql\\n(Cloud SQL)", fillcolor="#fab387", fontcolor="#11111b"];\n'
+                        f'  }}\n'
+                        f'  "frontend-vm" -> "checkout-vm" [label="HTTP 8080"];\n'
+                        f'  "checkout-vm" -> "db-sql" [label="SQL 3306"];\n'
+                        f"}}\n"
+                    )
+                    with open(dot_path, "w") as f:
+                        f.write(default_graph)
+                
+                with open(dot_path, "r") as f:
+                    content = f.read()
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"project_id": project_id, "content": content}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
         # 1. API: List Incidents
         elif path == "/api/incidents":
             self.send_response(200)
@@ -436,6 +513,59 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+        
+        # API: Save Custom Wiki for a Project
+        elif path.startswith("/api/projects/") and path.endswith("/wiki"):
+            try:
+                project_id = path.split("/")[3]
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                payload = json.loads(post_data.decode("utf-8"))
+                content = payload.get("content", "")
+                
+                cache_dir = os.path.join("discover", "gcp-project")
+                os.makedirs(cache_dir, exist_ok=True)
+                md_path = os.path.join(cache_dir, f"{project_id}.md")
+                with open(md_path, "w") as f:
+                    f.write(content)
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"project_id": project_id, "content": content}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
+        # API: Save Custom Graphviz DOT for a Project
+        elif path.startswith("/api/projects/") and path.endswith("/graph"):
+            try:
+                project_id = path.split("/")[3]
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                payload = json.loads(post_data.decode("utf-8"))
+                content = payload.get("content", "")
+                
+                cache_dir = os.path.join("discover", "gcp-project")
+                os.makedirs(cache_dir, exist_ok=True)
+                dot_path = os.path.join(cache_dir, f"{project_id}.dot")
+                with open(dot_path, "w") as f:
+                    f.write(content)
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"project_id": project_id, "content": content}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
         # 6. API: Contextual Chat Message Posting
         elif path.startswith("/api/incidents/") and path.endswith("/chat"):
             try:

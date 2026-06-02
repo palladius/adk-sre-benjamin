@@ -83,15 +83,35 @@ def test_discover_live_resources_mocked_subprocess():
         
     try:
         # Mock subprocess outputs to replicate exact live response parsing
-        mock_vm_out = json.dumps([{
-            "name": "live-vm",
-            "status": "RUNNING",
-            "zone": "projects/foo/zones/us-east1-b",
-            "networkInterfaces": [{
-                "networkIP": "10.0.0.4",
-                "accessConfigs": [{"natIP": "35.190.20.1"}]
-            }]
-        }])
+        mock_vm_out = json.dumps([
+            {
+                "name": "live-vm",
+                "status": "RUNNING",
+                "zone": "projects/foo/zones/us-east1-b",
+                "networkInterfaces": [{
+                    "networkIP": "10.0.0.4",
+                    "accessConfigs": [{"natIP": "35.190.20.1"}]
+                }]
+            },
+            {
+                "name": "gke-online-boutique-prod-main-pool-12345-abcd",
+                "status": "RUNNING",
+                "zone": "projects/foo/zones/us-east1-b",
+                "networkInterfaces": [{
+                    "networkIP": "10.0.0.10",
+                    "accessConfigs": []
+                }]
+            },
+            {
+                "name": "my-dataproc-w-0",
+                "status": "RUNNING",
+                "zone": "projects/foo/zones/us-east1-b",
+                "networkInterfaces": [{
+                    "networkIP": "10.0.0.11",
+                    "accessConfigs": []
+                }]
+            }
+        ])
         mock_run_out = json.dumps([{
             "metadata": {"name": "live-run-service", "labels": {"cloud.googleapis.com/location": "us-east1"}},
             "status": {"url": "https://live-run-service.a.run.app"}
@@ -157,9 +177,12 @@ def test_discover_live_resources_mocked_subprocess():
             with open(json_path, "r") as f:
                 resources = json.load(f)
                 
-            assert len(resources) == 6
+            assert len(resources) == 6  # VM crawler filtered out GKE system and Dataproc worker node VMs
             for r in resources:
                 assert r["vulnerable"] is True  # All mocked resources were set up vulnerable
+                if r["type"] == "gce_vm":
+                    assert not r["name"].startswith("gke-")
+                    assert "dataproc" not in r["name"]
     finally:
         if os.path.exists(json_path):
             os.remove(json_path)

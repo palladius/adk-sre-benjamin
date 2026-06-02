@@ -350,6 +350,11 @@ def discover_project_resources(project_id: str) -> str:
             vms_data = json.loads(res.stdout)
             for vm in vms_data:
                 name = vm.get("name")
+                if not name:
+                    continue
+                # Skip 'boring' helper VMs (GKE system node pools, Dataproc cluster nodes)
+                if name.startswith("gke-") or "dataproc" in name.lower():
+                    continue
                 status = vm.get("status")
                 zone = vm.get("zone", "").split("/")[-1]
                 
