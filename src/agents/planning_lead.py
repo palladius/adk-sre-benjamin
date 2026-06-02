@@ -2,7 +2,7 @@ try:
     from google.adk.agents import LlmAgent
 except ImportError:
     class LlmAgent:
-        def __init__(self, name, instruction, model="gemini-2.5-flash", **kwargs):
+        def __init__(self, name, instruction, model="gemini-1.5-flash", **kwargs):
             self.name = name
             self.instruction = instruction
             self.model = model
@@ -13,7 +13,7 @@ from src.prompt_loader import load_prompt
 import os
 
 class PlanningLead:
-    def __init__(self, model_name: str = "gemini-2.5-flash", loaded_skills: list[dict] = None):
+    def __init__(self, model_name: str = "gemini-1.5-flash", loaded_skills: list[dict] = None):
         planning_name = os.getenv("PLANNING_LEAD_NAME") or os.getenv("PLANNING_AGENT_NAME") or "PlanningAgent"
         system_instruction = load_prompt("planning_agent", prompt_key="system_instruction")
         

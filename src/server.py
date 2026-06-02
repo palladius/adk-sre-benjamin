@@ -562,7 +562,7 @@ def get_incidents_list() -> list[dict]:
     return incidents
 
 def transcribe_voice_bytes(audio_bytes: bytes) -> str:
-    """Helper to transcribe small voice notes/audio files using the live Gemini 2.5 API with zero dependencies."""
+    """Helper to transcribe small voice notes/audio files using the live Gemini API with zero dependencies."""
     import os
     import json
     import base64
@@ -572,7 +572,7 @@ def transcribe_voice_bytes(audio_bytes: bytes) -> str:
     if not api_key:
         return "Error: GEMINI_API_KEY environment variable is not configured."
         
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
     encoded_audio = base64.b64encode(audio_bytes).decode("utf-8")
     
     payload = {

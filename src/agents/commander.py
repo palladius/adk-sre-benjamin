@@ -8,7 +8,7 @@ except ImportError:
 
     # Dynamic fallback to support local execution with authentic Gemini API queries
     class LlmAgent:
-        def __init__(self, name, instruction, model="gemini-2.5-flash", **kwargs):
+        def __init__(self, name, instruction, model="gemini-1.5-flash", **kwargs):
             self.name = name
             self.instruction = instruction
             self.model = model
@@ -26,10 +26,10 @@ except ImportError:
                 else:
                     return f"[{name}] Operational command noted: '{prompt}'. Ready to guide SRE leads to resolution. (Mock Mode)"
             
-            # Map model names gracefully if needed (e.g. gemini-2.5-flash or gemini-2.0-flash)
+            # Map model names gracefully if needed (e.g. gemini-1.5-flash or gemini-2.0-flash)
             model_target = self.model
-            if "2.5" in model_target:
-                model_target = "gemini-2.5-flash"
+            if "2.5" in model_target or "1.5" in model_target:
+                model_target = "gemini-1.5-flash"
             
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_target}:generateContent?key={api_key}"
             
@@ -71,7 +71,7 @@ from src.prompt_loader import load_prompt
 import os
 
 class IncidentCommander:
-    def __init__(self, model_name: str = "gemini-2.5-flash"):
+    def __init__(self, model_name: str = "gemini-1.5-flash"):
         commander_name = os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
         # Load system instruction template from YAML
         system_instruction = load_prompt("benjamin", prompt_key="system_instruction")
