@@ -28,3 +28,8 @@ clean:
     @rm -rf .pytest_cache .coverage htmlcov src/__pycache__ tests/__pycache__ src/agents/__pycache__
     @rm -rf discover/gcp-project/*.json discover/gcp-project/*.md
     @rm -rf cloud
+
+
+telegram-send-test-message:
+  PYTHONPATH=. uv run python3 src/cli.py telegram send "Hello Operator! Testing the new CLI telegram send command from Justfile! 🏰🚀"
+
