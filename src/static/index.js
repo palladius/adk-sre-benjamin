@@ -232,6 +232,36 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function formatMarkdown(text) {
+        if (!text) return "";
+        let escaped = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+            
+        escaped = escaped.replace(/```([\s\S]*?)```/g, (match, code) => {
+            return `<pre class="chat-code-block"><code>${code.trim()}</code></pre>`;
+        });
+
+        escaped = escaped.replace(/`([^`\n]+)`/g, '<code class="chat-inline-code">$1</code>');
+        escaped = escaped.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
+        escaped = escaped.replace(/^## (.*?)$/gm, '<h4>$1</h4>');
+        escaped = escaped.replace(/^# (.*?)$/gm, '<h5>$1</h5>');
+        escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+        escaped = escaped.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+        escaped = escaped.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+        escaped = escaped.replace(/_([^_]+)_/g, '<em>$1</em>');
+        escaped = escaped.replace(/^\s*[\*\-]\s+(.*?)$/gm, '<li class="chat-bullet">$1</li>');
+
+        const parts = escaped.split(/(<pre[\s\S]*?<\/pre>)/g);
+        for (let i = 0; i < parts.length; i++) {
+            if (!parts[i].startsWith('<pre')) {
+                parts[i] = parts[i].replace(/\n/g, '<br>');
+            }
+        }
+        return parts.join('');
+    }
+
     // Fetch and render contextual chat log
     async function loadChatMessages(incidentId) {
         if (!chatMessagesContainer) return;
@@ -258,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <span>${msg.sender}</span>
                         <span>${timeStr}</span>
                     </div>
-                    <div class="chat-text">${msg.message}</div>
+                    <div class="chat-text">${formatMarkdown(msg.message)}</div>
                 `;
                 chatMessagesContainer.appendChild(bubble);
             });
