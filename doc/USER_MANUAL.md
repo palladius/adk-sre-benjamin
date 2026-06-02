@@ -68,7 +68,7 @@ PYTHONPATH=. uv run python3 src/cli.py telegram send "Hello, SRE! Live alert tes
 
 *Example:*
 ```bash
-PYTHONPATH=. uv run python3 src/cli.py telegram set "605724096" "8936005425:AAEjkDi0r25p2vKpTkkopAgLpXSwESFilLI"
+PYTHONPATH=. uv run python3 src/cli.py telegram set "605724096" "8936005425:AAEjkDi0rXXXXXXX..."
 PYTHONPATH=. uv run python3 src/cli.py telegram send "Castle Security Breach Simulated!"
 ```
 
