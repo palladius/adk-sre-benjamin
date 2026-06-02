@@ -34,7 +34,8 @@ Each proposed mutation in the queue must contain:
   * `POST /api/incidents/<id>/pending/<cmd_id>/reject`: Rejects the mutation, logging it as blocked, and removing it from the queue. Supports a non-mandatory JSON body parameter `"comment": "operator feedback string"` to redirect model strategies.
 
 ### 2.3 Telegram `/pending` Commands & Inline Keyboards
-* Introduce a Telegram bot command: `/pending`.
+* Introduce a Telegram bot command: `/pending` (or `/pending_mutations`).
+* **Persistent Custom Navigation Button**: When the SRE state is consolidated (i.e. an active incident ID is selected), update the Telegram bot's reply keyboard (at the bottom of the user screen) to dynamically include a persistent **`📥 Pending Approvals`** button alongside `🚨 Status Check` and `📋 List Incidents`. Tapping it instantly dispatches `/pending` to check the queue.
 * It lists all active pending approvals in the current incident formatted with their risk emojis, justifications, and risk reasons.
 * It displays dynamic inline keyboard buttons for each item (e.g., `💥 Approve cmd-01` | `❌ Reject cmd-01`), enabling operators to clear selections directly from mobile!
 * Supports adding optional text comments by simply typing a message right after clicking a button or typing it inline.

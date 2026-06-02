@@ -27,10 +27,12 @@ This document maps out the implementation phases, atomic tasks, and test-driven 
 - [ ] Task: TDD - Write Tests for Telegram Bot Mutation Queue Integration
     - [ ] Assert `/pending` bot action returns structured text with risk emojis
     - [ ] Assert callback button dispatches execute approval API calls with feedback routing
+    - [ ] Assert `📥 Pending Approvals` is present in the reply keyboard when incident state is active
 - [ ] Task: Implement `/pending` bot command and inline keyboards in `src/server.py`
     - [ ] Handle `/pending` command to query `/api/incidents/<id>/pending` and render a formatted text response with 🟢, 🟡, 🟠, 🔴 indicators
     - [ ] Attach interactive inline keyboard markup for quick approvals/rejections of each item
     - [ ] Wire callback update listeners to approve or reject items in real-time, supporting reply-to-comment inputs
+    - [ ] Update the `send_telegram_menu` keyboard layout to dynamically include the **`📥 Pending Approvals`** reply button once the incident context/state is active/consolidated
     - [ ] Verify test suite passes (`uv run pytest`)
 - [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
