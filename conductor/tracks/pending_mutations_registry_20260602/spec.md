@@ -30,18 +30,20 @@ Each proposed mutation in the queue must contain:
 * **API Endpoints**:
   * `GET /api/incidents/<id>/pending`: Returns the active pending mutation queue.
   * `POST /api/incidents/<id>/pending`: Adds a new mutation to the queue.
-  * `POST /api/incidents/<id>/pending/<cmd_id>/approve`: Approves the specific mutation by executing it, logging in timeline/chat, and removing it from the queue.
-  * `POST /api/incidents/<id>/pending/<cmd_id>/reject`: Rejects the mutation, logging it as blocked, and removing it from the queue.
+  * `POST /api/incidents/<id>/pending/<cmd_id>/approve`: Approves the specific mutation by executing it, logging in timeline/chat, and removing it from the queue. Supports a non-mandatory JSON body parameter `"comment": "operator feedback string"` which is logged and piggybacked to the LLM agent prompt.
+  * `POST /api/incidents/<id>/pending/<cmd_id>/reject`: Rejects the mutation, logging it as blocked, and removing it from the queue. Supports a non-mandatory JSON body parameter `"comment": "operator feedback string"` to redirect model strategies.
 
 ### 2.3 Telegram `/pending` Commands & Inline Keyboards
 * Introduce a Telegram bot command: `/pending`.
 * It lists all active pending approvals in the current incident formatted with their risk emojis, justifications, and risk reasons.
 * It displays dynamic inline keyboard buttons for each item (e.g., `💥 Approve cmd-01` | `❌ Reject cmd-01`), enabling operators to clear selections directly from mobile!
+* Supports adding optional text comments by simply typing a message right after clicking a button or typing it inline.
 
 ### 2.4 Web Dashboard "Pending Actions Queue" Widget
 * Implement a styled card widget in the SRE dashboard workspace showing the list of proposed commands.
 * Display each item's command, risk badge with color emoji, justification, and independent clickable approval/rejection button panel controls.
-* Clicking **Approve** immediately executes the command, records the operation in the central tailing audit, and removes the item from the queue.
+* **Non-Mandatory Operator Comment Input**: Provide a text input field next to the action buttons for each command, allowing the operator to type feedback (e.g. `"go with it bro"` or `"I think youre draining the wrong service for reason XXXX"`).
+* Clicking **Approve** or **Reject** immediately executes/rejects the command with the accompanying feedback comment, records the operation in the central tailing audit, routes the comment back to the SRE Incident Commander agent loop, and removes the item from the queue.
 
 ---
 
