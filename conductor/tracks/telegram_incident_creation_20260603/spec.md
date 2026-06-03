@@ -22,7 +22,7 @@ This feature enables SRE operators to dynamically declare and initialize new inc
 - Tapping or typing `/newincident` prompts the user: "Please describe the incident (e.g. 'GKE cluster down in us-central1')".
 
 ### 2.3 Project ID Resolution Menu (Strict Prerequisite)
-- **Mandatory Project Context**: An incident MUST ALWAYS have a valid `project_id` associated with it. Scaffolding, timelines, and alert routing cannot be initialized without a resolved project context.
+- **Mandatory Project Context**: An incident MUST ALWAYS have a valid, resolved `project_id` associated with it. Scaffolding, timelines, and alert routing cannot be initialized without a resolved project context. This requirement applies universally to all incidents, including mock incidents and simulation runs.
 - **Unresolved/Fuzzy Project Handling**: If the parsed `project_id` does not match any project returned by `get_discovered_projects()`, or is missing/fuzzy:
   - The bot suspends incident initialization.
   - The bot sends a message: "🔍 I could not resolve the target project. Please select from the active project registry below to proceed:"
