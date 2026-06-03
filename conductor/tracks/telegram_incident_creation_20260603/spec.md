@@ -21,15 +21,17 @@ This feature enables SRE operators to dynamically declare and initialize new inc
 - Supports `/newincident` command to start a guided interactive wizard.
 - Tapping or typing `/newincident` prompts the user: "Please describe the incident (e.g. 'GKE cluster down in us-central1')".
 
-### 2.3 Project ID Resolution Menu
-- If the parsed `project_id` does not match any project returned by `get_discovered_projects()`, or is missing/fuzzy:
-  - The bot sends a message: "🔍 I could not resolve the target project. Please select from the active project registry below:"
+### 2.3 Project ID Resolution Menu (Strict Prerequisite)
+- **Mandatory Project Context**: An incident MUST ALWAYS have a valid `project_id` associated with it. Scaffolding, timelines, and alert routing cannot be initialized without a resolved project context.
+- **Unresolved/Fuzzy Project Handling**: If the parsed `project_id` does not match any project returned by `get_discovered_projects()`, or is missing/fuzzy:
+  - The bot suspends incident initialization.
+  - The bot sends a message: "🔍 I could not resolve the target project. Please select from the active project registry below to proceed:"
   - Includes an inline keyboard displaying all discovered projects (loaded dynamically via `get_discovered_projects()`).
-  - Tapping a project completes the resolution step.
+  - Tapping a project completes the resolution step, allowing initialization to resume.
 
 ### 2.4 Incident Scaffolding & Launch Pipeline
 - Once the project ID is resolved and event details are confirmed:
-  - Scaffolds a new incident folder under `investigations/INC-YYYYMMDD-<random>` using `scaffold_incident` scaffolding.
+  - Scaffolds a new incident folder under `investigations/INC-YYYYMMDD-<random>` using `scaffold_incident` scaffolding with the resolved `project_id` explicitly attached.
   - Automatically initializes Scribe files `state.md` and `timeline.md`.
   - Triggers the SRE orchestrator pipeline (`run_incident_flow`).
   - Sends a Telegram confirmation card:
