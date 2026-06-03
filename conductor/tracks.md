@@ -52,4 +52,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [ ] **Track: Interactive Telegram Incident Creation**
 *Link: [./tracks/telegram_incident_creation_20260603/](./tracks/telegram_incident_creation_20260603/)*
 
+---
+
+- [ ] **Track: Better Copilot Sidebar Panel**
+*Link: [./tracks/better_copilot_sidebar_20260603/](./tracks/better_copilot_sidebar_20260603/)*
+
 

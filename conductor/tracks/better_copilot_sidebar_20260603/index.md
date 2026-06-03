@@ -1,0 +1,5 @@
+# Track better_copilot_sidebar_20260603 Context
+
+- [Specification](./spec.md)
+- [Implementation Plan](./plan.md)
+- [Metadata](./metadata.json)
