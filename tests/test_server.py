@@ -233,3 +233,45 @@ def test_get_discovered_projects_env_var():
          patch("os.path.exists", return_value=False):
         projs = get_discovered_projects()
         assert projs == ["env-proj-1", "env-proj-2"]
+
+def test_api_transcribe():
+    # Start the server on a free port
+    server = HTTPServer(('localhost', 0), SREHttpRequestHandler)
+    port = server.server_port
+    
+    server_thread = threading.Thread(target=server.serve_forever)
+    server_thread.daemon = True
+    server_thread.start()
+    
+    try:
+        with patch("src.server.transcribe_voice_bytes") as mock_transcribe:
+            mock_transcribe.return_value = "This is a test transcription from Gemini."
+            url = f"http://localhost:{port}/api/transcribe"
+            audio_data = b"fake-audio-bytes"
+            req = urllib.request.Request(url, data=audio_data, method="POST", headers={"Content-Type": "audio/webm"})
+            with urllib.request.urlopen(req) as response:
+                assert response.status == 200
+                data = json.loads(response.read().decode('utf-8'))
+                assert data["transcription"] == "This is a test transcription from Gemini."
+                mock_transcribe.assert_called_once_with(audio_data)
+    finally:
+        server.shutdown()
+        server.server_close()
+        server_thread.join()
+
+def test_static_html_elements():
+    html_path = "src/static/index.html"
+    assert os.path.exists(html_path)
+    with open(html_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    
+    # Verify the sidebar is renamed
+    assert "SRE SECONDARY ONCALL" in content
+    # Verify resizer element is present
+    assert 'id="sidebar-resizer"' in content
+    # Verify mic button is present
+    assert 'id="btn-chat-mic"' in content
+    # Verify chat column has ID
+    assert 'id="chat-column"' in content
+
+

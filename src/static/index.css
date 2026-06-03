@@ -1762,6 +1762,7 @@ body {
 
 /* Dedicated Chat Column Sidebar */
 .chat-column {
+    position: relative;
     background: rgba(13, 17, 23, 0.85);
     border-left: 1px solid var(--panel-border);
     backdrop-filter: blur(20px);
@@ -1771,6 +1772,61 @@ body {
     height: 100vh;
     overflow: hidden;
     z-index: 10;
+}
+
+#sidebar-resizer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 100;
+    background: transparent;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+#sidebar-resizer:hover, #sidebar-resizer.dragging {
+    background: var(--neon-blue);
+    box-shadow: 0 0 10px var(--neon-blue);
+}
+
+.btn-mic {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text-muted);
+    border-radius: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.btn-mic:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-color);
+}
+
+.btn-mic.recording {
+    background: rgba(255, 49, 49, 0.2);
+    border-color: var(--neon-red);
+    color: #ff3131;
+    animation: mic-pulse 1.5s infinite;
+}
+
+@keyframes mic-pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 49, 49, 0.4);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 49, 49, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 49, 49, 0);
+    }
 }
 
 .chat-column .chat-panel {

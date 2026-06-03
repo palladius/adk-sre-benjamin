@@ -1,8 +1,8 @@
 {
   "track_id": "better_copilot_sidebar_20260603",
   "type": "feature",
-  "status": "new",
+  "status": "completed",
   "created_at": "2026-06-03T17:57:00Z",
-  "updated_at": "2026-06-03T17:57:00Z",
+  "updated_at": "2026-06-03T18:02:00Z",
   "description": "Refactor right-hand panel: rename to SRE Secondary Oncall, draggable resize, microphone dictation, autofocus, and shortcut."
 }

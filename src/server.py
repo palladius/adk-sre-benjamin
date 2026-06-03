@@ -30,9 +30,9 @@ def parse_incident_folder(folder_path: str) -> dict:
             if status_match:
                 status = status_match.group(1).strip()
                 
-            project_match = re.search(r'\-\s+\*\*Target Project:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+            project_match = re.search(r'\-\s+\*\*(Target Project|GCP Project):\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
             if project_match:
-                project_id = project_match.group(1).strip()
+                project_id = project_match.group(2).strip()
                 
             trigger_match = re.search(r'\-\s+\*\*Trigger Event:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
             if trigger_match:
@@ -89,6 +89,9 @@ def parse_incident_folder(folder_path: str) -> dict:
         except Exception as e:
             print(f"Error loading artifacts_registry.json in {folder_path}: {e}")
             
+    if not project_id or project_id == "UNKNOWN":
+        project_id = os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next"
+
     return {
         "incident_id": incident_id,
         "status": status,
@@ -436,6 +439,23 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
             return
             
+        # API: Transcribe Voice Notes
+        elif path == "/api/transcribe":
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                audio_bytes = self.rfile.read(content_length)
+                transcription = transcribe_voice_bytes(audio_bytes)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"transcription": transcription}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
         # 4. API: Trigger Incident Simulation
         elif path == "/api/simulate":
             try:

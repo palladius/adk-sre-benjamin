@@ -520,6 +520,9 @@ document.addEventListener("DOMContentLoaded", () => {
         // Load Contextual Chat
         loadChatMessages(inc.incident_id);
 
+        // Focus Chat Input
+        focusChatInput();
+
         // Show/hide HITL buttons based on status
         if (hitlActionsContainer) {
             if (status === "AWAITING_APPROVAL") {
@@ -1731,4 +1734,162 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return `digraph G {\n  rankdir=LR;\n  bgcolor="transparent";\n  pad="0.3";\n  nodesep="0.4";\n  ranksep="0.5";\n  node [shape=box, fontname="Outfit", fontsize=11, style="filled,rounded", fillcolor="#16181d", color="#3a3f50", fontcolor="#ffffff", penwidth=1.5];\n  edge [color="#00ffff", fontname="Outfit", fontsize=9, fontcolor="#8892b0", penwidth=1.2, arrowsize=0.8];\n\n${vpcDot}${unmappedDot}${globalDot}${publicZoneDot}${gkeDot}}\n`;
     }
+
+    function focusChatInput() {
+        if (chatUserInput) {
+            chatUserInput.focus();
+        }
+    }
+
+    // Global shortcut to focus the chat input when '/' is pressed
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "/" && document.activeElement !== chatUserInput && 
+            document.activeElement.tagName !== "INPUT" && 
+            document.activeElement.tagName !== "TEXTAREA") {
+            e.preventDefault();
+            focusChatInput();
+        }
+    });
+
+    // Sidebar Resizing Interaction
+    const sidebarResizer = document.getElementById("sidebar-resizer");
+    const appContainer = document.querySelector(".app-container");
+    const chatColumn = document.getElementById("chat-column");
+    
+    if (sidebarResizer && appContainer && chatColumn) {
+        let isDragging = false;
+        
+        // Restore saved width from localStorage
+        const storedWidth = localStorage.getItem("sre-sidebar-width");
+        if (storedWidth) {
+            const width = Math.max(320, Math.min(800, parseInt(storedWidth)));
+            appContainer.style.gridTemplateColumns = `280px 1fr ${width}px`;
+        }
+        
+        const startDrag = (e) => {
+            isDragging = true;
+            sidebarResizer.classList.add("dragging");
+            document.body.style.cursor = "col-resize";
+            e.preventDefault();
+        };
+
+        sidebarResizer.addEventListener("mousedown", startDrag);
+        sidebarResizer.addEventListener("touchstart", startDrag);
+        
+        document.addEventListener("mousemove", (e) => {
+            if (!isDragging) return;
+            const newWidth = window.innerWidth - e.clientX;
+            const boundedWidth = Math.max(320, Math.min(800, newWidth));
+            appContainer.style.gridTemplateColumns = `280px 1fr ${boundedWidth}px`;
+            localStorage.setItem("sre-sidebar-width", boundedWidth);
+        });
+        
+        document.addEventListener("touchmove", (e) => {
+            if (!isDragging) return;
+            if (e.touches.length === 0) return;
+            const newWidth = window.innerWidth - e.touches[0].clientX;
+            const boundedWidth = Math.max(320, Math.min(800, newWidth));
+            appContainer.style.gridTemplateColumns = `280px 1fr ${boundedWidth}px`;
+            localStorage.setItem("sre-sidebar-width", boundedWidth);
+        });
+        
+        const stopDrag = () => {
+            if (isDragging) {
+                isDragging = false;
+                sidebarResizer.classList.remove("dragging");
+                document.body.style.cursor = "";
+            }
+        };
+
+        document.addEventListener("mouseup", stopDrag);
+        document.addEventListener("touchend", stopDrag);
+    }
+
+    // Voice Dictation (Microphone dictation button)
+    const btnChatMic = document.getElementById("btn-chat-mic");
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+    
+    if (btnChatMic && chatUserInput) {
+        btnChatMic.addEventListener("click", async () => {
+            if (!isRecording) {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    audioChunks = [];
+                    let options = {};
+                    if (MediaRecorder.isTypeSupported("audio/webm")) {
+                        options = { mimeType: "audio/webm" };
+                    } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+                        options = { mimeType: "audio/ogg" };
+                    }
+                    
+                    mediaRecorder = new MediaRecorder(stream, options);
+                    mediaRecorder.addEventListener("dataavailable", (event) => {
+                        if (event.data.size > 0) {
+                            audioChunks.push(event.data);
+                        }
+                    });
+                    
+                    mediaRecorder.addEventListener("stop", async () => {
+                        stream.getTracks().forEach(track => track.stop());
+                        
+                        const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType });
+                        btnChatMic.disabled = true;
+                        const originalText = btnChatMic.textContent;
+                        btnChatMic.textContent = "⏳";
+                        
+                        try {
+                            const res = await fetch("/api/transcribe", {
+                                method: "POST",
+                                body: audioBlob,
+                                headers: {
+                                    "Content-Type": mediaRecorder.mimeType
+                                }
+                            });
+                            
+                            if (res.ok) {
+                                const data = await res.json();
+                                if (data && data.transcription) {
+                                    const currentVal = chatUserInput.value;
+                                    chatUserInput.value = currentVal ? `${currentVal} ${data.transcription}` : data.transcription;
+                                    chatUserInput.focus();
+                                } else if (data && data.error) {
+                                    console.error("Transcription error:", data.error);
+                                    alert(`Transcription failed: ${data.error}`);
+                                }
+                            } else {
+                                console.error("Transcription API error:", res.status);
+                                alert("Transcription request failed.");
+                            }
+                        } catch (err) {
+                            console.error("Failed to fetch transcription:", err);
+                            alert("Failed to transcribe audio.");
+                        } finally {
+                            btnChatMic.disabled = false;
+                            btnChatMic.textContent = originalText;
+                        }
+                    });
+                    
+                    mediaRecorder.start();
+                    isRecording = true;
+                    btnChatMic.classList.add("recording");
+                    btnChatMic.title = "Stop Recording";
+                } catch (err) {
+                    console.error("Failed to access microphone:", err);
+                    alert("Could not access microphone: " + err.message);
+                }
+            } else {
+                if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                    mediaRecorder.stop();
+                }
+                isRecording = false;
+                btnChatMic.classList.remove("recording");
+                btnChatMic.title = "Voice Dictation";
+            }
+        });
+    }
+
+    // Call focus on load
+    focusChatInput();
 });

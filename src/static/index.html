@@ -487,10 +487,11 @@
         </main>
 
         <!-- Dedicated SRE AI Incident Co-pilot Chat Column (Always Visible) -->
-        <aside class="chat-column">
+        <aside class="chat-column" id="chat-column">
+            <div id="sidebar-resizer"></div>
             <section class="panel chat-panel" id="incident-chat-card">
                 <div class="panel-header">
-                    <h3>💬 SRE AI INCIDENT COMMAND CO-PILOT</h3>
+                    <h3>📟 SRE SECONDARY ONCALL</h3>
                     <span class="panel-subtitle" id="chat-agent-status">Online | Active Incident Assistant</span>
                 </div>
                 <div class="panel-body flex-column">
@@ -499,6 +500,7 @@
                     </div>
                     <div class="chat-input-bar">
                         <input type="text" id="chat-user-input" placeholder="Ask sth about this incident..." class="glass-input-chat">
+                        <button class="btn-mic" id="btn-chat-mic" title="Voice Dictation">🎙️</button>
                         <button class="btn-chat-send" id="btn-chat-send">Send</button>
                     </div>
                 </div>
