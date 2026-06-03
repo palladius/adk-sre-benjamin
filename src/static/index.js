@@ -967,6 +967,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (pane.id === "tab-content-audit") pane.style.display = "flex";
             else pane.style.display = "none";
         });
+        resetEditModes();
         
         // Show placeholders
         if (assetsListVm) assetsListVm.innerHTML = `<p class="loading-placeholder">Discovering VM instances on '${projectId}'...</p>`;
@@ -1378,6 +1379,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const activePane = document.getElementById(`tab-content-${tabName}`);
             if (activePane) activePane.style.display = "flex";
             
+            resetEditModes();
+            
             const projectId = projectIdInput ? projectIdInput.value.trim() : "";
             if (projectId) {
                 if (tabName === "wiki") {
@@ -1390,6 +1393,37 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     });
+
+    // Edit/View Toggles Reset Function
+    const btnEditWiki = document.getElementById("btn-edit-wiki");
+    const wikiPanel = document.querySelector(".wiki-panel");
+    const btnEditGraph = document.getElementById("btn-edit-graph");
+    const graphPanel = document.querySelector(".graph-panel");
+
+    function resetEditModes() {
+        if (wikiPanel) {
+            wikiPanel.classList.remove("edit-mode");
+            if (btnEditWiki) btnEditWiki.textContent = "✍️ Edit Wiki";
+        }
+        if (graphPanel) {
+            graphPanel.classList.remove("edit-mode");
+            if (btnEditGraph) btnEditGraph.textContent = "✍️ Edit Graph";
+        }
+    }
+
+    if (btnEditWiki && wikiPanel) {
+        btnEditWiki.addEventListener("click", () => {
+            const isEditing = wikiPanel.classList.toggle("edit-mode");
+            btnEditWiki.textContent = isEditing ? "👁️ View Wiki" : "✍️ Edit Wiki";
+        });
+    }
+
+    if (btnEditGraph && graphPanel) {
+        btnEditGraph.addEventListener("click", () => {
+            const isEditing = graphPanel.classList.toggle("edit-mode");
+            btnEditGraph.textContent = isEditing ? "👁️ View Graph" : "✍️ Edit Graph";
+        });
+    }
 
     // Regex Markdown Compiler
     function renderMarkdown(text) {
@@ -1515,6 +1549,79 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Interactive SVG zoom/pan helper
+    function makeSvgInteractive(svg) {
+        if (!svg) return;
+        
+        // Create viewport group to wrap all existing children of the SVG
+        const viewport = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        viewport.setAttribute("class", "svg-viewport");
+        while (svg.firstChild) {
+            viewport.appendChild(svg.firstChild);
+        }
+        svg.appendChild(viewport);
+        
+        let isPanning = false;
+        let startX = 0;
+        let startY = 0;
+        let translateX = 0;
+        let translateY = 0;
+        let scale = 1.0;
+        
+        svg.style.cursor = "grab";
+        svg.style.userSelect = "none";
+        
+        viewport.style.transformOrigin = "0 0";
+        viewport.style.transition = "transform 0.05s ease-out";
+        
+        function applyTransform() {
+            viewport.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        }
+        
+        svg.addEventListener("mousedown", (e) => {
+            if (e.button !== 0) return;
+            isPanning = true;
+            svg.style.cursor = "grabbing";
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+        });
+        
+        window.addEventListener("mousemove", (e) => {
+            if (!isPanning) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            applyTransform();
+        });
+        
+        window.addEventListener("mouseup", () => {
+            if (isPanning) {
+                isPanning = false;
+                svg.style.cursor = "grab";
+            }
+        });
+        
+        svg.addEventListener("wheel", (e) => {
+            e.preventDefault();
+            
+            const zoomIntensity = 0.1;
+            const rect = svg.getBoundingClientRect();
+            
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            const wheel = e.deltaY < 0 ? 1 : -1;
+            const zoomFactor = Math.exp(wheel * zoomIntensity);
+            
+            const nextScale = Math.min(Math.max(scale * zoomFactor, 0.15), 15.0);
+            
+            translateX = mouseX - (mouseX - translateX) * (nextScale / scale);
+            translateY = mouseY - (mouseY - translateY) * (nextScale / scale);
+            scale = nextScale;
+            
+            applyTransform();
+        }, { passive: false });
+    }
+
     function renderLogicalGraph(dotContent) {
         const container = document.getElementById("logical-graph-svg-container");
         if (!container || !dotContent) return;
@@ -1526,6 +1633,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 .then(element => {
                     container.innerHTML = "";
                     container.appendChild(element);
+                    makeSvgInteractive(element);
                 })
                 .catch(error => {
                     container.innerHTML = `<pre class="text-danger" style="padding: 10px; font-size: 12px; text-align: left; overflow: auto; width: 100%; max-height: 100%;">Graphviz Render Error:\n${escapeHTML(error.message || error)}</pre>`;
@@ -1593,6 +1701,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 .then(element => {
                     container.innerHTML = "";
                     container.appendChild(element);
+                    makeSvgInteractive(element);
                 })
                 .catch(error => {
                     container.innerHTML = `<pre class="text-danger" style="padding: 10px; font-size: 12px; text-align: left; overflow: auto; width: 100%; max-height: 100%;">Graphviz Network Render Error:\n${escapeHTML(error.message || error)}</pre>`;

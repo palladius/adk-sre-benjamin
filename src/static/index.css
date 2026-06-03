@@ -1242,16 +1242,21 @@ body {
     overflow-y: auto;
     padding-bottom: 30px;
     animation: fadeInUp 0.4s ease-out;
+    position: relative;
 }
 
 .project-header {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(13, 17, 23, 0.85);
     border: 1px solid var(--panel-border);
     border-radius: 12px;
-    padding: 20px 24px;
+    padding: 16px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    backdrop-filter: blur(15px);
 }
 
 .project-header-left {
@@ -1344,7 +1349,7 @@ body {
 /* Statistics Metrics Row */
 .project-stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 16px;
 }
 
@@ -1847,7 +1852,7 @@ body {
     display: flex;
     gap: 12px;
     padding: 4px;
-    margin: 16px 0;
+    margin: 0;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--panel-border);
     border-radius: 8px;
@@ -2033,7 +2038,7 @@ body {
     border: 1px solid var(--panel-border);
     border-radius: 12px;
     padding: 16px;
-    overflow: auto;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2041,6 +2046,25 @@ body {
     min-height: 400px;
     position: relative;
     backdrop-filter: blur(10px);
+}
+
+/* Wiki Edit Mode Toggles */
+.wiki-panel:not(.edit-mode) .wiki-editor-pane {
+    display: none;
+}
+.wiki-panel:not(.edit-mode) .panel-actions-row {
+    display: none;
+}
+.wiki-panel:not(.edit-mode) .wiki-editor-layout {
+    grid-template-columns: 1fr;
+}
+
+/* Graph Edit Mode Toggles */
+.graph-panel:not(.edit-mode) .graph-editor-pane {
+    display: none;
+}
+.graph-panel:not(.edit-mode) .graph-layout {
+    grid-template-columns: 1fr;
 }
 
 .network-preview-pane {

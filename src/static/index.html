@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="/index.css">
 </head>
 <body>
     <div class="glass-bg"></div>
@@ -145,39 +145,40 @@
                         <h2 id="project-view-title">GCP PROJECT ASSETS: Loading...</h2>
                         <p id="project-view-meta">Deterministic Cache: <strong id="project-cache-path" class="code-font">discover/gcp-project/...</strong></p>
                     </div>
+                    
+                    <!-- Project Navigation Tabs -->
+                    <div class="project-tabs-nav">
+                        <button class="project-tab-btn active" data-tab="audit">🔍 Discovery Audit</button>
+                        <button class="project-tab-btn" data-tab="wiki">📝 Project Wiki</button>
+                        <button class="project-tab-btn" data-tab="graph">☸️ Logical Graph</button>
+                        <button class="project-tab-btn" data-tab="network">🌐 Network Graph</button>
+                    </div>
+
                     <div class="project-header-right">
                         <span id="project-compliance-badge" class="compliance-badge badge-safe">COMPLIANT</span>
                     </div>
                 </header>
-
-                <!-- Project Navigation Tabs -->
-                <div class="project-tabs-nav">
-                    <button class="project-tab-btn active" data-tab="audit">🔍 Discovery Audit</button>
-                    <button class="project-tab-btn" data-tab="wiki">📝 Project Wiki</button>
-                    <button class="project-tab-btn" data-tab="graph">☸️ Logical Graph</button>
-                    <button class="project-tab-btn" data-tab="network">🌐 Network Graph</button>
-                </div>
 
                 <!-- Live vs Mock Telemetry Banner -->
                 <div id="project-status-banner" class="project-status-banner" style="display: none;"></div>
 
                 <!-- Statistics Metrics Row -->
                 <div class="project-stats-grid">
-                    <div class="stat-box">
+                    <div class="stat-box" style="display: none;">
                         <span class="stat-icon">☁️</span>
                         <div class="stat-info">
                             <h4 id="stat-total-resources">0</h4>
                             <p>Analyzed Assets</p>
                         </div>
                     </div>
-                    <div class="stat-box warning-state">
+                    <div class="stat-box warning-state" style="display: none;">
                         <span class="stat-icon">🚨</span>
                         <div class="stat-info">
                             <h4 id="stat-exposed-resources" class="text-danger">0</h4>
                             <p>Exposed/Vulnerable</p>
                         </div>
                     </div>
-                    <div class="stat-box success-state">
+                    <div class="stat-box success-state" style="display: none;">
                         <span class="stat-icon">✅</span>
                         <div class="stat-info">
                             <h4 id="stat-safe-resources" class="text-success">0</h4>
@@ -295,8 +296,11 @@
                 <div id="tab-content-wiki" class="tab-content-pane" style="display: none;">
                     <section class="panel wiki-panel">
                         <div class="panel-header">
-                            <h3>📝 PROJECT WIKI NOTES</h3>
-                            <span class="panel-subtitle">Editable Markdown documentation for this project</span>
+                            <div>
+                                <h3>📝 PROJECT WIKI NOTES</h3>
+                                <span class="panel-subtitle">Editable Markdown documentation for this project</span>
+                            </div>
+                            <button id="btn-edit-wiki" class="btn-chat-send" style="margin: 0; font-size: 12px; padding: 6px 12px;">✍️ Edit Wiki</button>
                         </div>
                         <div class="panel-body flex-column">
                             <div class="wiki-editor-layout">
@@ -319,8 +323,11 @@
                 <div id="tab-content-graph" class="tab-content-pane" style="display: none;">
                     <section class="panel graph-panel">
                         <div class="panel-header">
-                            <h3>☸️ LOGICAL DEPENDENCY TOPOLOGY</h3>
-                            <span class="panel-subtitle">Customizable Graphviz DOT system dependencies</span>
+                            <div>
+                                <h3>☸️ LOGICAL DEPENDENCY TOPOLOGY</h3>
+                                <span class="panel-subtitle">Customizable Graphviz DOT system dependencies</span>
+                            </div>
+                            <button id="btn-edit-graph" class="btn-chat-send" style="margin: 0; font-size: 12px; padding: 6px 12px;">✍️ Edit Graph</button>
                         </div>
                         <div class="panel-body flex-column">
                             <div class="graph-layout">
@@ -523,6 +530,6 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js"></script>
-    <script src="index.js"></script>
+    <script src="/index.js"></script>
 </body>
 </html>

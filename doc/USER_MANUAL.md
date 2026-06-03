@@ -125,19 +125,21 @@ Project Benjamin provides an interactive, highly visual project exploration work
 
 ### 2. 📝 Project Wiki (Editable Markdown)
 * **Purpose**: An interactive Markdown documentation notebook. 
-* **Editing & Preview**: Features a dual-pane editor (left) and live-rendered HTML preview (right) for recording project structure, custom runbooks, or structural highlights.
+* **Editing & Preview**: Defaults to a clean, read-only view mode. Click the **✍️ Edit Wiki** toggle button at the top-right to reveal the side-by-side Markdown editor textarea and live HTML preview pane. Click **👁️ View Wiki** to toggle back to read-only rendering.
 * **Regex Compiler**: Ingests basic markdown syntax (`#`, `##`, `- bullet points`, `**bold**`, `` `inline code` ``) with zero external library dependencies.
 * **Saving & Syncing**: Click **💾 Save Wiki** to post the notes back to the server. The document is automatically persisted inside `discover/gcp-project/<project-id>.md`.
 
 ### 3. ☸️ Logical Graph (Graphviz DOT)
 * **Purpose**: A logical dependency mapping tool.
-* **Editing**: Edit custom Graphviz DOT dependency scripts inside a clean text editor.
+* **Editing**: Defaults to rendering mode. Click **✍️ Edit Graph** at the top-right to reveal the DOT text editor side-by-side with the compiled SVG. Click **👁️ View Graph** to return to rendering-only view.
 * **Compiling**: Instantly compiles your Graphviz scripts to premium interactive SVGs client-side using Viz.js CDN modules.
+* **Interactive Zoom & Pan**: Scroll the mouse wheel (or pinch) inside the preview container to zoom in/out smoothly. Click and drag to pan across large layouts. The mouse cursor changes to `grab` and `grabbing` dynamically.
 * **Saving & Syncing**: Click **💾 Save Logical Graph** to persist the DOT file inside `discover/gcp-project/<project-id>.dot`.
 
 ### 4. 🌐 Physical Network Graph (Auto-Generated VPC Topology)
 * **Purpose**: An interactive, dynamic topology map displaying VPC networks, subnets, and active resource attachments.
 * **Automated Map Generation**: Dynamically maps VM instances, GKE control planes, GCS buckets, and SQL databases, grouping them inside beautifully styled VPC cluster subgraphs.
+* **Interactive Zoom & Pan**: Scroll the mouse wheel (or pinch) inside the preview container to zoom in/out smoothly. Click and drag to pan across large layouts. The mouse cursor changes to `grab` and `grabbing` dynamically.
 * **Visual Annotations**: Exposed resources are colored red and styled with alert metrics, allowing you to instantly pinpoint security breaches at a glance.
 
 ### 🧭 Global Router & Clouds Directory Page

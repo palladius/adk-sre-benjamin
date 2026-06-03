@@ -59,6 +59,12 @@ Integrates a fully interactive SRE terminal console directly via Telegram (`@SRE
 - **Gemini STT Voice Commands**: Send audio or voice notes to auto-transcribe and dispatch complex SRE commands on-the-fly.
 - **Human-in-the-Loop Safety Gate Approvals**: Safeguard mutations with interactive validation buttons (`✅ Yes, I am sure` and `❌ No, abort mutation`). It automatically synchronizes states across mobile and web platforms, maintaining flawless audit logging within `chat.json` and Scribe's Git version-controlled history.
 
+### 5. 🌐 Premium Project Explorer Workspace
+Provides a high-fidelity visual workspace for auditing discovered GCP project assets:
+- **Sticky Inline Navigation**: Navigation tabs (`Discovery Audit`, `Project Wiki`, `Logical Graph`, `Network Graph`) are integrated directly inline inside the sticky top header for seamless view switching.
+- **Toggleable Edit/View Modes**: Project Wiki notes and Graphviz DOT dependency configurations default to read-only rendering, with top-right `Edit` buttons to toggle side-by-side editing textareas.
+- **Interactive SVG Pan & Zoom**: Graphviz topology diagrams (Logical and VPC Physical networks) support scroll-wheel zooming and click-and-drag panning, complete with visual grab/grabbing cursor states.
+
 ---
 
 ## 🧪 TDD Validation (Behavior-Driven Development)

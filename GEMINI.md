@@ -24,3 +24,5 @@ Occasionally keep an eye on https://github.com/palladius/adk-sre-benjamin/issues
 * ALWAYS Sign yourself with your harness name and the github user you use, (eg `-- from agy CLI on behalf of Riccardo"`.
   This is important since you're using a logged in account which is probably the SAME person who reads you!
   Also use plenty of emojis (ie, roughly one per line of text), which the user usually doesn't do.
+* Add a bit of explaination of what you do/did. its always good to have a compact explaination of the problem to solve,
+  and how you solved it, for posterity.

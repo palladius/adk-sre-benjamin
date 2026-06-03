@@ -273,5 +273,9 @@ def test_static_html_elements():
     assert 'id="btn-chat-mic"' in content
     # Verify chat column has ID
     assert 'id="chat-column"' in content
+    # Verify edit toggle buttons are present
+    assert 'id="btn-edit-wiki"' in content
+    assert 'id="btn-edit-graph"' in content
+
 
 
