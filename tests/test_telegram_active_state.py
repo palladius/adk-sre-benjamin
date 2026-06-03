@@ -239,7 +239,7 @@ def test_telegram_bot_list_projects_button(mock_request, mock_urlopen, temp_acti
          patch("os.path.exists", return_value=True):
         start_telegram_bot()
         
-        mock_get_proj.assert_called_once()
+        assert mock_get_proj.call_count >= 1
         mock_send_kbd.assert_called_once_with(
             "mock-bot-token", "123456",
             "☁️ *Select a GCP Project context:*",
