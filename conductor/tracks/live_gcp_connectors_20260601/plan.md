@@ -1,10 +1,10 @@
 # Plan: live_gcp_connectors_20260601
 
-## Phase 1: Real-Time SRE Diagnostics (R/O)
-- [ ] Task: Integrate live GCP Cloud Logging subprocess query routing in `src/diagnostics.py`
-- [ ] Task: Integrate live GCP Cloud Monitoring metric timeseries retrieval in `src/diagnostics.py`
-- [ ] Task: Write unit tests verifying dynamic `SRE_MODE=LIVE` environment switching for diagnostics
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+## Phase 1: Real-Time SRE Diagnostics (R/O) [checkpoint: ec385a9]
+- [x] Task: Integrate live GCP Cloud Logging subprocess query routing in `src/diagnostics.py`
+- [x] Task: Integrate live GCP Cloud Monitoring metric timeseries retrieval in `src/diagnostics.py`
+- [x] Task: Write unit tests verifying dynamic `SRE_MODE=LIVE` environment switching for diagnostics
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ## Phase 2: Whitelisted Mutations via Compute SSH (R/W)
 - [ ] Task: Configure the SRE Mutation Agent to execute whitelisted Compute commands via `gcloud compute ssh`
