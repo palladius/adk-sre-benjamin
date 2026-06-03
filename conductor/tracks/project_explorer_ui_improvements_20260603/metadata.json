@@ -1,0 +1,8 @@
+{
+  "track_id": "project_explorer_ui_improvements_20260603",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-06-03T18:10:00Z",
+  "updated_at": "2026-06-03T18:10:00Z",
+  "description": "Improve Project Explorer UI by moving tabs to header, defaulting Wiki/Graphs to Render mode with Edit toggles, and enabling SVG panning and zooming."
+}

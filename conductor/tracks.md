@@ -57,4 +57,10 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Better Copilot Sidebar Panel**
 *Link: [./tracks/better_copilot_sidebar_20260603/](./tracks/better_copilot_sidebar_20260603/)*
 
+---
+
+- [ ] **Track: Project Explorer UI Improvements**
+*Link: [./tracks/project_explorer_ui_improvements_20260603/](./tracks/project_explorer_ui_improvements_20260603/)*
+
+
 
