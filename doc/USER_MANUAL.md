@@ -90,7 +90,7 @@ Once your credentials are connected, `@SREBenjaminBot` functions as a fully inte
 1. **Structured Quick Navigation Menu**:
     * **`🚨 Status Check`**: Instantly prints the live status, target project, alert trigger event, and timeline logs count for the active selected incident.
     * **`📋 List Incidents`** (or command `/incidents`): Displays the 5 latest incidents as clickable inline keyboard buttons, prefixed with `🟢` (open/active) or `⚪` (closed/resolved) status emojis for rapid context switching.
-    * **`☁️ Set Project`** (or command `/projects`): Displays discovered GCP projects as clickable inline keyboard buttons for rapid project context switching.
+    * **`☁️ List Projects`** (or command `/projects`): Displays discovered GCP projects as clickable inline keyboard buttons for rapid project context switching.
     * **`🆔 Select Incident`**: Displays a helpful guide explaining how to target a specific incident ID.
 2. **Context-Switching Control Commands (4 Primitives)**:
     * **`/incidents`**: Lists the 5 latest incidents as clickable inline buttons.

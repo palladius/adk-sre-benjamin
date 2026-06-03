@@ -862,12 +862,19 @@ def send_raw_telegram_message(bot_token: str, chat_id: str, message: str):
 def get_discovered_projects() -> list[str]:
     """Helper to query all discovered projects under discover/gcp-project/ directory."""
     projects = []
+    env_projects = os.getenv("SAMPLE_PROJECT_IDS")
+    if env_projects:
+        for p in env_projects.split(","):
+            p = p.strip()
+            if p and p not in projects:
+                projects.append(p)
     projects_dir = os.path.join("discover", "gcp-project")
     if os.path.exists(projects_dir):
         for item in sorted(os.listdir(projects_dir)):
             item_path = os.path.join(projects_dir, item)
             if os.path.isdir(item_path):
-                projects.append(item)
+                if item not in projects:
+                    projects.append(item)
     if not projects:
         projects = ["sre-next"]
     return projects
@@ -959,7 +966,7 @@ def send_telegram_menu(bot_token: str, chat_id: str, message: str):
         keyboard = {
             "keyboard": [
                 [{"text": "🚨 Status Check"}, {"text": "📋 List Incidents"}],
-                [{"text": "☁️ Set Project"}, {"text": "🆔 Select Incident"}]
+                [{"text": "☁️ List Projects"}, {"text": "🆔 Select Incident"}]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": False
@@ -1174,6 +1181,21 @@ def start_telegram_bot():
                             continue
                             
                         # 2. Check for menu selections and command shortcuts
+                        # Clean and check if it is a shortcut format for mobile forgiveness
+                        clean_text = msg_text.lstrip("#").strip()
+                        projects = get_discovered_projects()
+                        is_project_match = False
+                        for proj in projects:
+                            if clean_text.lower() == proj.lower():
+                                clean_text = proj
+                                is_project_match = True
+                                break
+                                
+                        if clean_text.isdigit() or clean_text.lower().startswith("inc-"):
+                            msg_text = f"/incident {clean_text}"
+                        elif is_project_match:
+                            msg_text = f"/project {clean_text}"
+
                         lower_text = msg_text.lower()
                         if lower_text.startswith("/start") or lower_text == "/help" or lower_text == "help":
                             welcome_msg = (
@@ -1182,7 +1204,7 @@ def start_telegram_bot():
                                 f"• *Target GCP Project ID:* `{os.getenv('PROJECT_ID', 'sre-next')}`\n\n"
                                 "*Available Commands:*\n"
                                 "• `/incidents` (or `📋 List Incidents`): List 5 latest incidents with status indicators.\n"
-                                "• `/projects` (or `☁️ Set Project`): List discovered GCP projects.\n"
+                                "• `/projects` (or `☁️ List Projects`): List discovered GCP projects.\n"
                                 "• `/incident <id>`: Set target SRE incident context.\n"
                                 "• `/project <id>`: Set target GCP project context.\n\n"
                                 "Use the menu buttons below to quickly monitor status, or send any "
@@ -1258,7 +1280,7 @@ def start_telegram_bot():
                             )
                             continue
                             
-                        elif msg_text == "☁️ Set Project" or msg_text == "☁️ Target Project" or msg_text.startswith("/projects"):
+                        elif msg_text == "☁️ List Projects" or msg_text == "☁️ Set Project" or msg_text == "☁️ Target Project" or msg_text.startswith("/projects"):
                             projects = get_discovered_projects()
                             buttons = []
                             for proj in projects:
@@ -1288,9 +1310,25 @@ def start_telegram_bot():
                             parts = msg_text.split(" ", 1)
                             if len(parts) < 2:
                                 cmd = parts[0]
-                                send_raw_telegram_message(bot_token, chat_id, f"❌ Usage: `{cmd} <Incident_ID>`")
+                                send_raw_telegram_message(bot_token, chat_id, f"❌ Usage: `{cmd} <Incident_ID or Index>`")
                                 continue
                             target_inc = parts[1].strip()
+                            
+                            # Resolve target_inc using case-insensitive ID or list index lookup
+                            all_incidents = get_incidents_list()
+                            matched_id = None
+                            if target_inc.isdigit():
+                                idx = int(target_inc) - 1
+                                if 0 <= idx < len(all_incidents):
+                                    matched_id = all_incidents[idx]["id"]
+                            else:
+                                for inc in all_incidents:
+                                    if inc["id"].lower() == target_inc.lower():
+                                        matched_id = inc["id"]
+                                        break
+                            if matched_id:
+                                target_inc = matched_id
+                                
                             target_inc_path = os.path.join("investigations", target_inc)
                             if os.path.exists(target_inc_path):
                                 selected_incident_id = target_inc

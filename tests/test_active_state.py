@@ -20,8 +20,9 @@ def test_active_state_api(tmp_path):
     server_thread = threading.Thread(target=server.serve_forever)
     server_thread.daemon = True
     
-    # We patch ACTIVE_STATE_FILE inside src.server to point to our temp file
-    with patch("src.server.ACTIVE_STATE_FILE", str(temp_active_state_file)):
+    # We patch ACTIVE_STATE_FILE inside src.server and clear/set os.environ to avoid test pollution
+    with patch("src.server.ACTIVE_STATE_FILE", str(temp_active_state_file)), \
+         patch.dict(os.environ, {"PROJECT_ID": "sre-next"}):
         server_thread.start()
         
         try:

@@ -226,3 +226,10 @@ def test_server_integration():
         server.shutdown()
         server.server_close()
         server_thread.join()
+
+def test_get_discovered_projects_env_var():
+    from src.server import get_discovered_projects
+    with patch.dict(os.environ, {"SAMPLE_PROJECT_IDS": "env-proj-1,env-proj-2"}), \
+         patch("os.path.exists", return_value=False):
+        projs = get_discovered_projects()
+        assert projs == ["env-proj-1", "env-proj-2"]
