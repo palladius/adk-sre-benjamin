@@ -47,4 +47,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Multi-View Project Explorer**
 *Link: [./tracks/multi_view_project_explorer_20260602/](./tracks/multi_view_project_explorer_20260602/)*
 
+---
+
+- [ ] **Track: Interactive Telegram Incident Creation**
+*Link: [./tracks/telegram_incident_creation_20260603/](./tracks/telegram_incident_creation_20260603/)*
+
 
