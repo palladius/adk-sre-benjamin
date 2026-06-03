@@ -90,13 +90,19 @@ Ensure you have [uv](https://github.com/astral-sh/uv) installed, then execute th
 just install
 ```
 
-### 2. Launch the Web Dashboard
+### 2. Verify Your Configuration and Environment
+Verify that your dependencies, `.env` file, credentials, and active gcloud profiles are set up correctly:
+```bash
+just check
+```
+
+### 3. Launch the Web Dashboard
 ```bash
 uv run python3 src/server.py
 ```
 Open your browser and navigate to: [http://localhost:8080/](http://localhost:8080/)
 
-### 3. Run E2E Incident Simulation
+### 4. Run E2E Incident Simulation
 Click the **Trigger Live Simulation** button in the dashboard, or run it directly via the terminal:
 ```bash
 just simulate

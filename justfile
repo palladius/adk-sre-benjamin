@@ -3,6 +3,18 @@
 default:
     @just --list
 
+# Verify local installation, dependencies, and configuration
+check:
+    @uv run python3 bin/check_env.py
+
+# Run a live test query against GCP Cloud Logging
+test-logging:
+    @SRE_MODE=LIVE PYTHONPATH=. uv run python3 -c "from src.diagnostics import query_logs; print(query_logs('sre-next', 'severity>=WARNING'))"
+
+# Run a live test query against GCP Cloud Monitoring metrics
+test-metrics:
+    @SRE_MODE=LIVE PYTHONPATH=. uv run python3 -c "from src.diagnostics import query_metrics; print(query_metrics('sre-next', 'cpu'))"
+
 # Run the complete E2E SRE incident simulation
 simulate:
     @uv run python3 run_simulation.py
@@ -39,3 +51,6 @@ clean:
 telegram-send-test-message:
   PYTHONPATH=. uv run python3 src/cli.py telegram send "Hello Operator! Testing the new CLI telegram send command from *$(hostname)*! 🏰🚀"
 
+# Setup just for Riccardo
+ricc-setup:
+  git-privatize sync
