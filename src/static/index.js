@@ -76,9 +76,84 @@ document.addEventListener("DOMContentLoaded", () => {
     let activeIncidentId = null;
     let currentProjectResources = []; // Dynamic cache of loaded resources for modal display
     
+    let lastActiveProject = null;
+    let lastActiveIncident = null;
+
+    async function pollActiveState() {
+        try {
+            const res = await fetch("/api/active-state");
+            if (!res.ok) return;
+            const state = await res.json();
+            
+            // Update active coordinates bar UI
+            const coordProject = document.getElementById("active-coord-project");
+            const coordIncident = document.getElementById("active-coord-incident");
+            const coordStatus = document.getElementById("active-coord-status");
+            
+            if (coordProject) coordProject.textContent = state.project_id;
+            if (coordIncident) coordIncident.textContent = state.incident_id;
+            if (coordStatus) {
+                coordStatus.textContent = state.incident_status;
+                if (state.incident_status === "RESOLVED" || state.incident_status === "CLOSED") {
+                    coordStatus.className = "coordinate-status-badge status-resolved";
+                } else {
+                    coordStatus.className = "coordinate-status-badge";
+                }
+            }
+            
+            // Align viewports on change
+            let projectChanged = false;
+            let incidentChanged = false;
+            
+            if (lastActiveProject !== null && lastActiveProject !== state.project_id) {
+                projectChanged = true;
+            }
+            if (lastActiveIncident !== null && lastActiveIncident !== state.incident_id) {
+                incidentChanged = true;
+            }
+            
+            // Save current state for next comparison
+            const isInitial = (lastActiveProject === null && lastActiveIncident === null);
+            lastActiveProject = state.project_id;
+            lastActiveIncident = state.incident_id;
+            
+            if (!isInitial) {
+                // Apply changes on detect
+                if (projectChanged) {
+                    if (projectIdInput) {
+                        projectIdInput.value = state.project_id;
+                    }
+                    if (window.location.pathname.startsWith("/projects/")) {
+                        navigateTo(`/projects/${encodeURIComponent(state.project_id)}`);
+                    }
+                }
+                
+                if (incidentChanged && state.incident_id !== "None") {
+                    activeIncidentId = state.incident_id;
+                    
+                    document.querySelectorAll(".incident-item").forEach(item => {
+                        if (item.dataset.id === state.incident_id) {
+                            item.classList.add("active");
+                        } else {
+                            item.classList.remove("active");
+                        }
+                    });
+                    
+                    fetchIncidentDetails(state.incident_id);
+                }
+            }
+        } catch (err) {
+            console.error("[Poll Active State] Error:", err);
+        }
+    }
+
     // Initialize
     loadConfig();
     loadIncidentRepository();
+    
+    // Start active state poll loop (every 2 seconds)
+    pollActiveState();
+    setInterval(pollActiveState, 2000);
     
     // Event Listeners
     btnTrigger.addEventListener("click", triggerLiveSimulation);

@@ -99,6 +99,45 @@ def parse_incident_folder(folder_path: str) -> dict:
         "folder_path": folder_path
     }
 
+ACTIVE_STATE_FILE = "investigations/active_state.json"
+
+def get_active_state() -> dict:
+    """Loads active state coordinates from the state file, falling back to defaults."""
+    default_state = {
+        "project_id": os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next",
+        "incident_id": "None",
+        "incident_status": "UNKNOWN"
+    }
+    
+    if os.path.exists(ACTIVE_STATE_FILE):
+        try:
+            with open(ACTIVE_STATE_FILE, "r") as f:
+                data = json.load(f)
+                # Ensure all required keys exist
+                for key, val in default_state.items():
+                    if key not in data:
+                        data[key] = val
+                return data
+        except Exception as e:
+            print(f"[Active State] Failed to read active state file: {e}")
+            
+    return default_state
+
+def save_active_state(state: dict):
+    """Saves updated active state coordinates to the active state json file."""
+    dir_name = os.path.dirname(ACTIVE_STATE_FILE)
+    if dir_name and not os.path.exists(dir_name):
+        try:
+            os.makedirs(dir_name, exist_ok=True)
+        except Exception:
+            pass
+            
+    try:
+        with open(ACTIVE_STATE_FILE, "w") as f:
+            json.dump(state, f, indent=2)
+    except Exception as e:
+        print(f"[Active State] Failed to write active state file: {e}")
+
 class SREHttpRequestHandler(BaseHTTPRequestHandler):
     
     def end_headers(self):
@@ -116,8 +155,16 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         
+        # API: Get Active State Coordinates
+        if path == "/api/active-state":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(get_active_state()).encode("utf-8"))
+            return
+            
         # API: Get Server Configuration
-        if path == "/api/config":
+        elif path == "/api/config":
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -360,8 +407,37 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         
+        # API: Update Active State Coordinates
+        if path == "/api/active-state":
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                post_data = self.rfile.read(content_length)
+                payload = json.loads(post_data.decode("utf-8"))
+                
+                state = get_active_state()
+                if "project_id" in payload:
+                    state["project_id"] = payload["project_id"]
+                    os.environ["PROJECT_ID"] = payload["project_id"]
+                if "incident_id" in payload:
+                    state["incident_id"] = payload["incident_id"]
+                if "incident_status" in payload:
+                    state["incident_status"] = payload["incident_status"]
+                
+                save_active_state(state)
+                
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(state).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+            
         # 4. API: Trigger Incident Simulation
-        if path == "/api/simulate":
+        elif path == "/api/simulate":
             try:
                 # Parse optional post body
                 content_length = int(self.headers.get('Content-Length', 0))
@@ -783,6 +859,96 @@ def send_raw_telegram_message(bot_token: str, chat_id: str, message: str):
     except Exception as e:
         print(f"[Telegram Bot] Message dispatch error: {e}")
 
+def get_discovered_projects() -> list[str]:
+    """Helper to query all discovered projects under discover/gcp-project/ directory."""
+    projects = []
+    projects_dir = os.path.join("discover", "gcp-project")
+    if os.path.exists(projects_dir):
+        for item in sorted(os.listdir(projects_dir)):
+            item_path = os.path.join(projects_dir, item)
+            if os.path.isdir(item_path):
+                projects.append(item)
+    if not projects:
+        projects = ["sre-next"]
+    return projects
+
+def get_top_5_incidents() -> list[dict]:
+    """Helper to query the 5 most recent incidents inside investigations/ directory."""
+    incidents = []
+    incidents_dir = "investigations"
+    if os.path.exists(incidents_dir):
+        folders = [f for f in os.listdir(incidents_dir) if f.startswith("INC-")]
+        folders.sort(reverse=True)
+        for folder in folders[:5]:
+            folder_path = os.path.join(incidents_dir, folder)
+            if os.path.isdir(folder_path):
+                details = parse_incident_folder(folder_path)
+                incidents.append({
+                    "id": folder,
+                    "status": details.get("status", "UNKNOWN").upper()
+                })
+    return incidents
+
+def send_telegram_inline_keyboard(bot_token: str, chat_id: str, text: str, buttons: list[list[dict]]):
+    """Dispatches a Telegram message containing inline keyboard buttons."""
+    import urllib.request
+    import urllib.parse
+    import json
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        payload = {
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "Markdown",
+            "reply_markup": json.dumps({
+                "inline_keyboard": buttons
+            })
+        }
+        data = urllib.parse.urlencode(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[Telegram Bot] Inline keyboard dispatch error: {e}")
+
+def answer_telegram_callback_query(bot_token: str, callback_query_id: str, text: str = None):
+    """Acknowledge Telegram callback query to stop loading spinner on the button."""
+    import urllib.request
+    import urllib.parse
+    import json
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/answerCallbackQuery"
+        payload = {
+            "callback_query_id": callback_query_id
+        }
+        if text:
+            payload["text"] = text
+        data = urllib.parse.urlencode(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[Telegram Bot] answerCallbackQuery error: {e}")
+
+def edit_telegram_message_text(bot_token: str, chat_id: str, message_id: int, text: str, reply_markup: dict = None):
+    """Edits an existing Telegram message's text (and optionally keyboard)."""
+    import urllib.request
+    import urllib.parse
+    import json
+    try:
+        url = f"https://api.telegram.org/bot{bot_token}/editMessageText"
+        payload = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "parse_mode": "Markdown"
+        }
+        if reply_markup is not None:
+            payload["reply_markup"] = json.dumps(reply_markup)
+        data = urllib.parse.urlencode(payload).encode("utf-8")
+        req = urllib.request.Request(url, data=data, method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"[Telegram Bot] editMessageText error: {e}")
+
 def send_telegram_menu(bot_token: str, chat_id: str, message: str):
     """Dispatches a Telegram message with structured interactive SRE SRE navigation menu buttons."""
     import urllib.request
@@ -793,7 +959,7 @@ def send_telegram_menu(bot_token: str, chat_id: str, message: str):
         keyboard = {
             "keyboard": [
                 [{"text": "🚨 Status Check"}, {"text": "📋 List Incidents"}],
-                [{"text": "☁️ Target Project"}, {"text": "🆔 Select Incident"}]
+                [{"text": "☁️ Set Project"}, {"text": "🆔 Select Incident"}]
             ],
             "resize_keyboard": True,
             "one_time_keyboard": False
@@ -878,14 +1044,23 @@ def start_telegram_bot():
             
         if not bot_token or not chat_id or "ENTER_BOT" in bot_token or "ENTER_CHAT" in chat_id:
             # Poll config changes every 5 seconds
+            if os.environ.get("TESTING_BOT") == "true":
+                break
             time.sleep(5)
             continue
             
-        # Select latest active incident if none selected
-        if not selected_incident_id:
+        # Synchronize coordinates from active state store
+        state = get_active_state()
+        selected_incident_id = state.get("incident_id")
+        if selected_incident_id == "None" or not selected_incident_id:
             incidents = get_incidents_list()
             if incidents:
                 selected_incident_id = incidents[-1]["id"]
+                state["incident_id"] = selected_incident_id
+                state["incident_status"] = incidents[-1].get("status", "UNKNOWN")
+                save_active_state(state)
+            else:
+                selected_incident_id = None
                 
         try:
             url = f"https://api.telegram.org/bot{bot_token}/getUpdates?offset={last_update_id + 1}&timeout=5"
@@ -896,6 +1071,61 @@ def start_telegram_bot():
                     updates = data.get("result", [])
                     for update in updates:
                         last_update_id = max(last_update_id, update.get("update_id", 0))
+                        
+                        # Handle Callback Query
+                        callback_query = update.get("callback_query")
+                        if callback_query:
+                            callback_id = callback_query.get("id")
+                            cb_message = callback_query.get("message", {})
+                            cb_chat_id = str(cb_message.get("chat", {}).get("id", ""))
+                            cb_message_id = cb_message.get("message_id")
+                            cb_data = callback_query.get("data", "").strip()
+                            
+                            if cb_chat_id == chat_id:
+                                if cb_data.startswith("select_incident:"):
+                                    inc_id = cb_data.replace("select_incident:", "").strip()
+                                    state = get_active_state()
+                                    state["incident_id"] = inc_id
+                                    
+                                    # Fetch status
+                                    incident_path = os.path.join("investigations", inc_id)
+                                    if os.path.exists(incident_path):
+                                        details = parse_incident_folder(incident_path)
+                                        state["incident_status"] = details.get("status", "UNKNOWN")
+                                    else:
+                                        state["incident_status"] = "UNKNOWN"
+                                    
+                                    save_active_state(state)
+                                    answer_telegram_callback_query(bot_token, callback_id, f"Incident set to {inc_id}")
+                                    edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to incident:* `{inc_id}`")
+                                    
+                                elif cb_data.startswith("select_project:"):
+                                    proj_id = cb_data.replace("select_project:", "").strip()
+                                    state = get_active_state()
+                                    state["project_id"] = proj_id
+                                    os.environ["PROJECT_ID"] = proj_id
+                                    save_active_state(state)
+                                    
+                                    # Update .env
+                                    env_path = ".env"
+                                    if os.path.exists(env_path):
+                                        try:
+                                            with open(env_path, "r") as f:
+                                                content = f.read()
+                                            import re
+                                            if "PROJECT_ID=" in content:
+                                                content = re.sub(r"PROJECT_ID=.*", f"PROJECT_ID='{proj_id}'", content)
+                                            else:
+                                                content += f"\nPROJECT_ID='{proj_id}'\n"
+                                            with open(env_path, "w") as f:
+                                                f.write(content.strip() + "\n")
+                                        except Exception:
+                                            pass
+                                            
+                                    answer_telegram_callback_query(bot_token, callback_id, f"Project set to {proj_id}")
+                                    edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to project:* `{proj_id}`")
+                            continue
+                        
                         message = update.get("message")
                         if not message:
                             continue
@@ -950,6 +1180,11 @@ def start_telegram_bot():
                                 "🏰 *Project Benjamin SRE Command Hub*\n\n"
                                 f"• *Active Incident Context:* `{selected_incident_id}`\n"
                                 f"• *Target GCP Project ID:* `{os.getenv('PROJECT_ID', 'sre-next')}`\n\n"
+                                "*Available Commands:*\n"
+                                "• `/incidents` (or `📋 List Incidents`): List 5 latest incidents with status indicators.\n"
+                                "• `/projects` (or `☁️ Set Project`): List discovered GCP projects.\n"
+                                "• `/incident <id>`: Set target SRE incident context.\n"
+                                "• `/project <id>`: Set target GCP project context.\n\n"
                                 "Use the menu buttons below to quickly monitor status, or send any "
                                 "text or audio note to direct SRE Commander Benjamin!"
                             )
@@ -1001,40 +1236,59 @@ def start_telegram_bot():
                                 send_raw_telegram_message(bot_token, chat_id, status_msg)
                             continue
                             
-                        elif msg_text == "📋 List Incidents":
-                            inc_list = get_incidents_list()
+                        elif msg_text == "📋 List Incidents" or msg_text.startswith("/incidents"):
+                            inc_list = get_top_5_incidents()
                             if not inc_list:
                                 send_raw_telegram_message(bot_token, chat_id, "📋 No SRE incidents recorded in repository.")
                                 continue
-                            list_msg = "📋 *Historical SRE Incidents:*\n\n"
-                            for idx, inc in enumerate(inc_list, 1):
-                                list_msg += f"{idx}. `{inc['id']}` ({inc['status']}) | Project: `{inc['project_id']}`\n"
-                            list_msg += "\n💡 *Reply `/select <Incident_ID>` to switch incident context.*"
-                            send_raw_telegram_message(bot_token, chat_id, list_msg)
+                            
+                            buttons = []
+                            for inc in inc_list:
+                                status = inc["status"]
+                                emoji = "⚪" if status in ["RESOLVED", "CLOSED", "ABORTED"] else "🟢"
+                                buttons.append([{
+                                    "text": f"{emoji} {inc['id']} ({status})",
+                                    "callback_data": f"select_incident:{inc['id']}"
+                                }])
+                            
+                            send_telegram_inline_keyboard(
+                                bot_token, chat_id,
+                                "📋 *Select an incident context from the 5 latest incidents:*",
+                                buttons
+                            )
                             continue
                             
-                        elif msg_text == "☁️ Target Project":
-                            curr_proj = os.getenv("PROJECT_ID", "sre-next")
-                            send_raw_telegram_message(
+                        elif msg_text == "☁️ Set Project" or msg_text == "☁️ Target Project" or msg_text.startswith("/projects"):
+                            projects = get_discovered_projects()
+                            buttons = []
+                            for proj in projects:
+                                buttons.append([{
+                                    "text": f"☁️ {proj}",
+                                    "callback_data": f"select_project:{proj}"
+                                }])
+                            
+                            send_telegram_inline_keyboard(
                                 bot_token, chat_id,
-                                f"☁️ *Active GCP Project context:* `{curr_proj}`\n\n"
-                                f"💡 *To change this project, reply:* `/setproject <Project_ID>`"
+                                "☁️ *Select a GCP Project context:*",
+                                buttons
                             )
                             continue
                             
                         elif msg_text == "🆔 Select Incident":
                             send_raw_telegram_message(
                                 bot_token, chat_id,
-                                "🆔 *Switch Incident Context*\n\n"
-                                "Please reply with this format:\n`/select <Incident_ID>`\n\n"
-                                "Example: `/select INC-PLAYGROUND`"
+                                "🆔 *Select Incident Context*\n\n"
+                                "To set a specific incident directly, use the `/incident` command followed by the Incident ID.\n\n"
+                                "Format: `/incident <Incident_ID>`\n"
+                                "Example: `/incident INC-20260603-abcd`"
                             )
                             continue
                             
-                        elif msg_text.startswith("/select"):
+                        elif msg_text.startswith("/incident") or msg_text.startswith("/select"):
                             parts = msg_text.split(" ", 1)
                             if len(parts) < 2:
-                                send_raw_telegram_message(bot_token, chat_id, "❌ Usage: `/select <Incident_ID>`")
+                                cmd = parts[0]
+                                send_raw_telegram_message(bot_token, chat_id, f"❌ Usage: `{cmd} <Incident_ID>`")
                                 continue
                             target_inc = parts[1].strip()
                             target_inc_path = os.path.join("investigations", target_inc)
@@ -1042,6 +1296,11 @@ def start_telegram_bot():
                                 selected_incident_id = target_inc
                                 details = parse_incident_folder(target_inc_path)
                                 status_val = details.get('status', 'UNKNOWN')
+                                
+                                state = get_active_state()
+                                state["incident_id"] = target_inc
+                                state["incident_status"] = status_val
+                                save_active_state(state)
                                 
                                 if status_val == "AWAITING_APPROVAL":
                                     # Extract proposed mutation & safety level dynamically
@@ -1077,27 +1336,34 @@ def start_telegram_bot():
                                 send_raw_telegram_message(bot_token, chat_id, f"❌ Incident `{target_inc}` not found in repository.")
                             continue
                             
-                        elif msg_text.startswith("/setproject"):
+                        elif msg_text.startswith("/project") or msg_text.startswith("/setproject"):
                             parts = msg_text.split(" ", 1)
                             if len(parts) < 2:
-                                send_raw_telegram_message(bot_token, chat_id, "❌ Usage: `/setproject <Project_ID>`")
+                                cmd = parts[0]
+                                send_raw_telegram_message(bot_token, chat_id, f"❌ Usage: `{cmd} <Project_ID>`")
                                 continue
                             target_proj = parts[1].strip()
                             
-                            # Update .env
+                            state = get_active_state()
+                            state["project_id"] = target_proj
+                            os.environ["PROJECT_ID"] = target_proj
+                            save_active_state(state)
+                            
                             env_path = ".env"
                             if os.path.exists(env_path):
-                                with open(env_path, "r") as f:
-                                    content = f.read()
-                                import re
-                                if "PROJECT_ID=" in content:
-                                    content = re.sub(r"PROJECT_ID=.*", f"PROJECT_ID='{target_proj}'", content)
-                                else:
-                                    content += f"\nPROJECT_ID='{target_proj}'\n"
-                                with open(env_path, "w") as f:
-                                    f.write(content.strip() + "\n")
+                                try:
+                                    with open(env_path, "r") as f:
+                                        content = f.read()
+                                    import re
+                                    if "PROJECT_ID=" in content:
+                                        content = re.sub(r"PROJECT_ID=.*", f"PROJECT_ID='{target_proj}'", content)
+                                    else:
+                                        content += f"\nPROJECT_ID='{target_proj}'\n"
+                                    with open(env_path, "w") as f:
+                                        f.write(content.strip() + "\n")
+                                except Exception:
+                                    pass
                                     
-                            os.environ["PROJECT_ID"] = target_proj
                             send_raw_telegram_message(bot_token, chat_id, f"✅ GCP Project ID set to: `{target_proj}`")
                             continue
                             
@@ -1277,6 +1543,8 @@ def start_telegram_bot():
         except Exception as e:
             print(f"[Telegram Bot Loop] Error: {e}")
             
+        if os.environ.get("TESTING_BOT") == "true":
+            break
         time.sleep(1)
 
 def run_server(port=8080):

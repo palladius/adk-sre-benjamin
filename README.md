@@ -55,6 +55,7 @@ You can interact, prompt, and query specific ADK agents directly via the termina
 ### 4. 📢 Interactive SRE Telegram Bot & Safety Gates
 Integrates a fully interactive SRE terminal console directly via Telegram (`@SREBenjaminBot`):
 - **Structured Keyboard Menus**: Triage active incident status, projects, and incidents list instantly using mobile-friendly navigation menus.
+- **Interactive Inline Selectors**: Features 4 core context-switching primitives (`/incidents`, `/projects`, `/incident <id>`, `/project <id>`) with dynamic inline keyboard buttons displaying incident status emojis (`🟢` active vs `⚪` resolved).
 - **Gemini STT Voice Commands**: Send audio or voice notes to auto-transcribe and dispatch complex SRE commands on-the-fly.
 - **Human-in-the-Loop Safety Gate Approvals**: Safeguard mutations with interactive validation buttons (`✅ Yes, I am sure` and `❌ No, abort mutation`). It automatically synchronizes states across mobile and web platforms, maintaining flawless audit logging within `chat.json` and Scribe's Git version-controlled history.
 

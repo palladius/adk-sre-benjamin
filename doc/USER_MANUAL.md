@@ -88,13 +88,15 @@ TELEGRAM_CHAT_ID="your_telegram_chat_id"
 Once your credentials are connected, `@SREBenjaminBot` functions as a fully interactive two-way SRE Command Console directly inside Telegram. Message the bot `/start` or `help` to initialize the control hub interface:
 
 1. **Structured Quick Navigation Menu**:
-   * **`🚨 Status Check`**: Instantly prints the live status, target project, alert trigger event, and timeline logs count for the active selected incident.
-   * **`📋 List Incidents`**: Lists all active and historical incidents recorded inside the SRE repository.
-   * **`☁️ Target Project`**: Displays the active GCP Project context.
-   * **`🆔 Select Incident`**: Instructs how to safely swap active incident coordinates.
-2. **Context-Switching Control Commands**:
-   * **`/select <Incident_ID>`**: Dynamically switches the active incident chat and status context (e.g. `/select INC-PLAYGROUND`).
-   * **`/setproject <Project_ID>`**: Updates the core GCP Project ID config inside `.env` on-the-fly and syncs active environment states.
+    * **`🚨 Status Check`**: Instantly prints the live status, target project, alert trigger event, and timeline logs count for the active selected incident.
+    * **`📋 List Incidents`** (or command `/incidents`): Displays the 5 latest incidents as clickable inline keyboard buttons, prefixed with `🟢` (open/active) or `⚪` (closed/resolved) status emojis for rapid context switching.
+    * **`☁️ Set Project`** (or command `/projects`): Displays discovered GCP projects as clickable inline keyboard buttons for rapid project context switching.
+    * **`🆔 Select Incident`**: Displays a helpful guide explaining how to target a specific incident ID.
+2. **Context-Switching Control Commands (4 Primitives)**:
+    * **`/incidents`**: Lists the 5 latest incidents as clickable inline buttons.
+    * **`/projects`**: Lists discovered GCP projects as clickable inline buttons.
+    * **`/incident <id>`** (legacy support for `/select <id>`): Directly sets the active SRE incident context.
+    * **`/project <id>`** (legacy support for `/setproject <id>`): Directly sets the active GCP project context.
 3. **🎙️ Voice Note Transcription & SRE Actioning (On-The-Fly STT)**:
    * **Send Voice Notes**: You can record and send standard Telegram **voice messages** or audio notes directly to the bot.
    * **Auto-Transcription**: The bot immediately downloads the audio file, processes it through Google's dynamically resolved Gemini API with zero local dependencies, and replies back with a clean text transcription.
