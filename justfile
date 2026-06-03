@@ -94,7 +94,7 @@ setup:
 # Clean temporary files, pytest caches, and cached project discoveries
 clean:
     @rm -rf .pytest_cache .coverage htmlcov src/__pycache__ tests/__pycache__ src/agents/__pycache__
-    @rm -rf discover/gcp-project/*.json discover/gcp-project/*.md
+    @rm -rf discover/gcp-project/*/*.json discover/gcp-project/*/*.md
     @rm -rf cloud
 
 

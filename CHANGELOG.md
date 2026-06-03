@@ -87,6 +87,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Floating Collapse-ready Widget**: Transformed the SRE chat panel from a static column layout to a floating glassmorphic collapsible chat widget.
 - **Compact Footer Layout**: Consolidated the footer to a single line display version and source repository link.
 - **Adaptive Screen Grids**: Dynamically adjustments of the main dashboard grid-template-columns to span full available width when the chat is minimized.
+- **Standard SRE Runbooks & Remediation Templates**: Integrated automated, high-quality SRE runbooks directly into the Wiki markdown (`wiki.md`) output of the SRE Discovery Engine. Covers GKE control plane authorized networks/private cluster conversion, GCS public bucket disclosure blocks, and auto-mode VPC network ingress audit actions.
+
+### Changed
+- **Recursive Clean Target**: Updated the `just clean` target command inside the `justfile` to recursively target files matching `discover/gcp-project/*/*.json` and `discover/gcp-project/*/*.md` to correctly purge discoveries nested inside project subdirectories.
 
 ## [1.2.3] - 2026-06-02
 ### Changed
