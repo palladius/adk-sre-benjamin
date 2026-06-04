@@ -457,9 +457,22 @@ body {
     border-color: var(--neon-cyan);
     box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
 }
-
 .lead-emoji {
     font-size: 20px;
+}
+
+.lead-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    transition: var(--transition-smooth);
+}
+
+.lead-card.active .lead-avatar {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
 }
 
 .lead-name {
@@ -580,10 +593,56 @@ body {
     font-family: var(--font-mono);
 }
 
+.timeline-avatar-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.timeline-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: zoom-in;
+    transition: transform 0.2s ease;
+}
+
+.timeline-avatar:hover {
+    transform: scale(1.15);
+}
+
+.timeline-avatar-hover {
+    position: absolute;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.8);
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--neon-cyan);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), 0 0 15px rgba(0, 255, 255, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 100;
+}
+
+.timeline-avatar-wrapper:hover .timeline-avatar-hover {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
 .timeline-agent {
     font-size: 12px;
     font-weight: 700;
     color: var(--neon-cyan);
+}
+
+.timeline-agent .timeline-name {
+    color: var(--neon-yellow);
 }
 
 .timeline-message {
@@ -2381,37 +2440,32 @@ body {
 
 /* App Footer Styling */
 .app-footer {
-    padding: 10px 20px;
-    background: var(--panel-bg);
-    border: 1px solid var(--panel-border);
-    border-radius: 10px;
-    backdrop-filter: blur(12px);
+    padding: 12px 0 0 0;
+    background: transparent;
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.05); /* very subtle top line divider */
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     color: var(--text-secondary);
-    font-size: 12px;
-    margin-top: 16px;
+    font-size: 11px;
+    margin-top: auto; /* push to bottom statically */
     flex-shrink: 0;
+    width: 100%;
 }
 
 .app-footer p {
     margin: 0;
+    text-align: center;
 }
 
-.app-footer-links {
-    display: flex;
-    gap: 16px;
-    align-items: center;
-}
-
-.app-footer-links a {
+.app-footer a {
     color: var(--neon-cyan);
     text-decoration: none;
     transition: var(--transition-smooth);
 }
 
-.app-footer-links a:hover {
+.app-footer a:hover {
     color: var(--neon-green);
     text-decoration: underline;
 }

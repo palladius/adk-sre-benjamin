@@ -267,8 +267,9 @@ def test_static_html_elements():
     
     # Verify the sidebar is renamed
     assert "SRE SECONDARY ONCALL" in content
-    # Verify resizer element is present
-    assert 'id="sidebar-resizer"' in content
+    # Verify minimize/maximize chat buttons are present
+    assert 'id="btn-minimize-chat"' in content
+    assert 'id="btn-maximize-chat"' in content
     # Verify mic button is present
     assert 'id="btn-chat-mic"' in content
     # Verify chat column has ID

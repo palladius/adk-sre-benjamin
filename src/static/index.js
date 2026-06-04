@@ -575,15 +575,67 @@ document.addEventListener("DOMContentLoaded", () => {
             item.className = "timeline-event";
             item.style.animationDelay = `${idx * 0.1}s`;
             
-            // Format timestamp nicely
+            // Format timestamp nicely (24h format, no AM/PM)
             const tDate = new Date(event.timestamp);
-            const timeStr = isNaN(tDate.getTime()) ? event.timestamp : tDate.toLocaleTimeString();
+            const timeStr = isNaN(tDate.getTime()) ? event.timestamp : tDate.toLocaleTimeString([], { hour12: false });
+            
+            // Split agent string into Role and Name based on known roles
+            const agentStr = event.agent || "";
+            let role = agentStr;
+            let name = "";
+            
+            const knownRoles = [
+                "Incident Commander",
+                "Operations Lead",
+                "Logistics Lead",
+                "Planning Lead",
+                "Communications Lead",
+                "Mutation Agent"
+            ];
+            
+            let matchedRole = "";
+            for (const r of knownRoles) {
+                if (agentStr.startsWith(r)) {
+                    matchedRole = r;
+                    break;
+                }
+            }
+            
+            if (matchedRole) {
+                role = matchedRole;
+                name = agentStr.substring(matchedRole.length).trim();
+            }
+            
+            // Map agent to avatar image
+            let avatarSrc = "";
+            const lowerAgent = agentStr.toLowerCase();
+            if (lowerAgent.includes("commander") || lowerAgent.includes("benjamin")) {
+                avatarSrc = "/static/avatar_commander.png";
+            } else if (lowerAgent.includes("ops") || lowerAgent.includes("operations")) {
+                avatarSrc = "/static/avatar_ops.png";
+            } else if (lowerAgent.includes("logistics")) {
+                avatarSrc = "/static/avatar_logistics.png";
+            } else if (lowerAgent.includes("planning")) {
+                avatarSrc = "/static/avatar_planning.png";
+            } else if (lowerAgent.includes("communications") || lowerAgent.includes("comms") || lowerAgent.includes("madhavi")) {
+                avatarSrc = "/static/avatar_comms.png";
+            }
+            
+            const agentHtml = name 
+                ? `${role} <span class="timeline-name">${name}</span>`
+                : role;
             
             item.innerHTML = `
                 <div class="timeline-dot active"></div>
                 <div class="timeline-event-header">
                     <span class="timeline-time">${timeStr}</span>
-                    <span class="timeline-agent">${event.agent}</span>
+                    ${avatarSrc ? `
+                        <div class="timeline-avatar-wrapper">
+                            <img src="${avatarSrc}" class="timeline-avatar" alt="${event.agent}">
+                            <img src="${avatarSrc}" class="timeline-avatar-hover" alt="${event.agent} large">
+                        </div>
+                    ` : ''}
+                    <span class="timeline-agent">${agentHtml}</span>
                 </div>
                 <p class="timeline-message">${event.message}</p>
             `;
