@@ -27,6 +27,17 @@ test:
 web:
     @PYTHONPATH=. uv run python3 src/server.py
 
+# Kill any process listening on port 8080 and restart the web server (FE and BE)
+restart-services:
+    @echo "🔄 Restarting Project Benjamin web services..."
+    @pid=$(lsof -t -i :8080 2>/dev/null) || true; \
+    if [ -n "$pid" ]; then \
+        echo "💀 Killing existing process $pid on port 8080..."; \
+        kill -9 $pid || true; \
+        sleep 1; \
+    fi
+    @PYTHONPATH=. uv run python3 src/server.py
+
 # Deploy the SRE dashboard to Google Cloud Run using gcloud source build
 deploy:
     @echo "🚀 Containerizing and deploying SRE Dashboard to Cloud Run..."
