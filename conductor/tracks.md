@@ -62,5 +62,26 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Project Explorer UI Improvements**
 *Link: [./tracks/project_explorer_ui_improvements_20260603/](./tracks/project_explorer_ui_improvements_20260603/)*
 
+---
+
+- [ ] **Track: ADK Observability + Cloud Run** (Issue #1)
+*Link: [./tracks/adk_observability_cloud_run_20260603/](./tracks/adk_observability_cloud_run_20260603/)*
+
+---
+
+- [ ] **Track: Incident Status Taxonomy** (Issue #5)
+*Link: [./tracks/incident_status_taxonomy_20260603/](./tracks/incident_status_taxonomy_20260603/)*
+
+---
+
+- [ ] **Track: Incident Archival & Deletion** (Issue #6)
+*Link: [./tracks/incident_delete_archive_20260603/](./tracks/incident_delete_archive_20260603/)*
+
+---
+
+- [ ] **Track: Wiki Project Cross-Linking** (Issue #7)
+*Link: [./tracks/wiki_cross_linking_20260603/](./tracks/wiki_cross_linking_20260603/)*
+
+
 
 

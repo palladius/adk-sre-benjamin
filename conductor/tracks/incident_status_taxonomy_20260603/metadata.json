@@ -1,0 +1,8 @@
+{
+  "track_id": "incident_status_taxonomy_20260603",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-06-03T16:39:52Z",
+  "updated_at": "2026-06-03T16:39:52Z",
+  "description": "Define a strong deterministic taxonomy of status for incidents (NEW, ONGOING, CLOSED), support substatus tracking, and log all transitions."
+}

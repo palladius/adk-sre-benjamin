@@ -1,0 +1,8 @@
+{
+  "track_id": "adk_observability_cloud_run_20260603",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-06-03T16:39:52Z",
+  "updated_at": "2026-06-03T16:39:52Z",
+  "description": "Deploy SRE dashboard to Cloud Run via just deploy protected by password/IAP, and add full OTEL observability tracking for inter-agent communications."
+}

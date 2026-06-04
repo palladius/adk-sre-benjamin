@@ -1,0 +1,8 @@
+{
+  "track_id": "incident_delete_archive_20260603",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-06-03T16:39:52Z",
+  "updated_at": "2026-06-03T16:39:52Z",
+  "description": "Add Archive capability (direct, hides incidents) and Delete capability (requires confirmation modal) for incidents, including auto-archival for closed incidents older than 3 days."
+}
