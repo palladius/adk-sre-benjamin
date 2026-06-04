@@ -19,13 +19,15 @@
     <div class="app-container">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
-            <div class="sidebar-header clickable-header" id="sidebar-header-btn">
-                <div class="logo-icon">🏰</div>
-                <div class="logo-text">
+            <div class="sidebar-header clickable-header" id="sidebar-header-btn" style="position: relative; overflow: hidden;">
+                <img src="/avatar.png" alt="Watermark" style="position: absolute; right: -5px; top: -5px; width: 70px; height: 70px; opacity: 0.08; pointer-events: none; border-radius: 50%; z-index: 0;">
+                <div class="logo-icon" style="position: relative; z-index: 1;">🏰</div>
+                <div class="logo-text" style="position: relative; z-index: 1;">
                     <h1>BENJAMIN <span class="header-version" id="header-version-info">v1.2.4</span></h1>
                     <span>SRE ICS Framework</span>
                 </div>
             </div>
+
             
             <!-- SRE Config Overrides -->
             <div class="sidebar-config">
