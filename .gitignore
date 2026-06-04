@@ -21,3 +21,4 @@ CONTINUE_TOMORROW.md
 
 # Generated SRE discovery cache and assets
 discover/gcp-project/
+tmp-bugs/
