@@ -1793,6 +1793,14 @@ body {
     overflow: hidden;
 }
 
+/* Maximized State (90% height, 20-30% wider) */
+.chat-column.maximized {
+    width: 480px; /* ~26% wider than 380px */
+    height: 90vh; /* 90% of verticality */
+    bottom: 24px;
+    right: 24px;
+}
+
 /* Collapsed Golden Post-it Preview State */
 .chat-column.collapsed {
     width: 290px;
@@ -1825,8 +1833,9 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.chat-column.collapsed #btn-minimize-chat {
-    display: none;
+.chat-column.collapsed #btn-minimize-chat,
+.chat-column.collapsed #btn-maximize-chat {
+    display: none; /* Hide sizing controls when collapsed */
 }
 
 .chat-column.collapsed .chat-messages-container {
@@ -1889,7 +1898,7 @@ body {
     100% { transform: scale(1); }
 }
 
-.chat-close-btn {
+.chat-close-btn, .chat-size-btn {
     background: transparent;
     border: none;
     color: var(--text-secondary);
@@ -1906,6 +1915,11 @@ body {
 .chat-close-btn:hover {
     background: rgba(255, 255, 255, 0.08);
     color: var(--neon-red);
+}
+
+.chat-size-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--neon-cyan);
 }
 
 .btn-mic {

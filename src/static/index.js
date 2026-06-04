@@ -1878,6 +1878,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // SRE Floating Chat Widget Interaction (Collapsible Post-it Preview)
     const chatColumn = document.getElementById("chat-column");
     const btnMinimizeChat = document.getElementById("btn-minimize-chat");
+    const btnMaximizeChat = document.getElementById("btn-maximize-chat");
     const chatHeader = document.getElementById("chat-panel-header");
     
     if (chatColumn) {
@@ -1909,13 +1910,39 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         }
+
+        // Toggle maximize size (90% height, +25% width)
+        if (btnMaximizeChat) {
+            btnMaximizeChat.addEventListener("click", (e) => {
+                e.stopPropagation();
+                chatColumn.classList.toggle("maximized");
+                const isMax = chatColumn.classList.contains("maximized");
+                btnMaximizeChat.innerHTML = isMax ? "🗗" : "🗖";
+                btnMaximizeChat.title = isMax ? "Restore Normal Size" : "Toggle Large Size";
+                localStorage.setItem("sre-chat-maximized", isMax);
+                
+                // Clear inline style size overrides to snap back
+                chatColumn.style.width = "";
+                chatColumn.style.height = "";
+            });
+        }
         
-        // Restore saved state from localStorage (default to collapsed)
+        // Restore saved collapsed state from localStorage (default to collapsed)
         const isCollapsed = localStorage.getItem("sre-chat-collapsed") !== "false";
         if (isCollapsed) {
             chatColumn.classList.add("collapsed");
         } else {
             chatColumn.classList.remove("collapsed");
+        }
+
+        // Restore saved maximized state from localStorage
+        const isMaximized = localStorage.getItem("sre-chat-maximized") === "true";
+        if (isMaximized) {
+            chatColumn.classList.add("maximized");
+            if (btnMaximizeChat) {
+                btnMaximizeChat.innerHTML = "🗗";
+                btnMaximizeChat.title = "Restore Normal Size";
+            }
         }
     }
 
