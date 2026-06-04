@@ -32,7 +32,9 @@ The SRE Dashboard is designed as a three-column command console, giving you unif
    * Dynamically switches between the **Incident Playbook & Diagnostic Metrics View** and the **GCP Project Asset Discovery panels** (GKE, GCS, VPC, GCE VMs, SQL, Cloud Run).
    * Features interactive telemetry graphs, safety gate clearance controls, and live broadcast dispatch logs.
 3. **Right Panel (SRE AI Co-Pilot Chat Console)**:
-   * An **always-visible SRE chat assistant** powered by the dynamically resolved Gemini API.
+   * A floating, collapsible SRE chat assistant powered by the dynamically resolved Gemini API.
+   * **Collapsible & Compact**: Folds down to an ultra-compact ~32px header bar (1cm / 10-12px panel padding compensation) that stays completely out of the way when minimized. Clicking anywhere on the bar expands it instantly.
+   * **Size Toggle**: Includes controls to maximize the chat height to 90vh and 20-30% wider to easily read extensive texts.
    * Automatically ingests active screen metadata, status changes, and target project parameters on every message, providing genuine context-aware SRE troubleshooting guidance.
 
 ---
@@ -126,7 +128,7 @@ Project Benjamin provides an interactive, highly visual project exploration work
 ### 2. 📝 Project Wiki (Editable Markdown)
 * **Purpose**: An interactive Markdown documentation notebook. 
 * **Editing & Preview**: Defaults to a clean, read-only view mode. Click the **✍️ Edit Wiki** toggle button at the top-right to reveal the side-by-side Markdown editor textarea and live HTML preview pane. Click **👁️ View Wiki** to toggle back to read-only rendering.
-* **Regex Compiler**: Ingests basic markdown syntax (`#`, `##`, `- bullet points`, `**bold**`, `` `inline code` ``) with zero external library dependencies.
+* **Regex & Table Compiler**: Ingests basic markdown syntax (`#`, `##`, `- bullet points`, `**bold**`, `` `inline code` ``) and full table structures (`|` pipes), rendering them into beautiful glassmorphic, responsive HTML tables with zero external library dependencies.
 * **Saving & Syncing**: Click **💾 Save Wiki** to post the notes back to the server. The document is automatically persisted inside `discover/gcp-project/<project-id>.md`.
 
 ### 3. ☸️ Logical Graph (Graphviz DOT)

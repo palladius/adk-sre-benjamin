@@ -64,6 +64,11 @@ Provides a high-fidelity visual workspace for auditing discovered GCP project as
 - **Sticky Inline Navigation**: Navigation tabs (`Discovery Audit`, `Project Wiki`, `Logical Graph`, `Network Graph`) are integrated directly inline inside the sticky top header for seamless view switching.
 - **Toggleable Edit/View Modes**: Project Wiki notes and Graphviz DOT dependency configurations default to read-only rendering, with top-right `Edit` buttons to toggle side-by-side editing textareas.
 - **Interactive SVG Pan & Zoom**: Graphviz topology diagrams (Logical and VPC Physical networks) support scroll-wheel zooming and click-and-drag panning, complete with visual grab/grabbing cursor states.
+- **Markdown Tables Compiler**: Compiles tabular layouts (`|` pipes) in Project Wiki pages into beautiful glassmorphic, responsive HTML tables.
+
+### 6. 📟 Collapsible SRE Chat Widget
+- **Ultra-Compact Minimized State**: The floating SRE chat widget collapses into a tiny ~32px header bar (approx. 1cm) to maximize dashboard real estate, and expands instantly on click.
+- **Flexible Resizing**: Includes maximize button to expand viewport to 90vh height and 20-30% wider to easily scroll through long diagnostic lists.
 
 ---
 
