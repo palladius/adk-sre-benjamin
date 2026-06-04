@@ -228,10 +228,18 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             except Exception:
                 commit_sha = "unknown"
                 
+            # Read version from root VERSION file
+            try:
+                version_path = os.path.join(os.path.dirname(__file__), "..", "VERSION")
+                with open(version_path, "r") as vf:
+                    version = vf.read().strip()
+            except Exception:
+                version = "1.2.4"
+                
             project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("PROJECT_ID") or "prod-db-999"
             config_data = {
                 "project_id": project_id,
-                "version": "1.2.4",
+                "version": version,
                 "commit": commit_sha,
                 "author": "Riccardo"
             }
