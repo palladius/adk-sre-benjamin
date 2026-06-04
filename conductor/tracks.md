@@ -82,6 +82,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [ ] **Track: Wiki Project Cross-Linking** (Issue #7)
 *Link: [./tracks/wiki_cross_linking_20260603/](./tracks/wiki_cross_linking_20260603/)*
 
+---
+
+- [x] **Track: UI Navigation Deep Reload Bug** (Issue #4)
+*Link: [./tracks/ui_navigation_deep_reload_20260604/](./tracks/ui_navigation_deep_reload_20260604/)*
+
+
 
 
 
