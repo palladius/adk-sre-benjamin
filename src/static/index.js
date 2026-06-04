@@ -1501,38 +1501,89 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const lines = text.split('\n');
         let insideList = false;
+        let insideTable = false;
+        let tableHeaderProcessed = false;
         let processedLines = [];
+        
+        function formatInlineMarkdown(cellText) {
+            return escapeHTML(cellText)
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/`(.*?)`/g, '<code>$1</code>');
+        }
         
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].trim();
-            if (line.startsWith('# ')) {
+            
+            // Check for table row
+            if (line.startsWith('|') && line.endsWith('|')) {
                 if (insideList) { processedLines.push('</ul>'); insideList = false; }
-                processedLines.push('<h1>' + escapeHTML(line.substring(2)) + '</h1>');
-            } else if (line.startsWith('## ')) {
-                if (insideList) { processedLines.push('</ul>'); insideList = false; }
-                processedLines.push('<h2>' + escapeHTML(line.substring(3)) + '</h2>');
-            } else if (line.startsWith('### ')) {
-                if (insideList) { processedLines.push('</ul>'); insideList = false; }
-                processedLines.push('<h3>' + escapeHTML(line.substring(4)) + '</h3>');
-            } else if (line.startsWith('- ') || line.startsWith('* ')) {
-                if (!insideList) { processedLines.push('<ul>'); insideList = true; }
-                let itemText = escapeHTML(line.substring(2))
-                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                    .replace(/`(.*?)`/g, '<code>$1</code>');
-                processedLines.push('<li>' + itemText + '</li>');
-            } else {
-                if (insideList) { processedLines.push('</ul>'); insideList = false; }
-                if (line === '') {
-                    processedLines.push('<br>');
+                
+                if (!insideTable) {
+                    processedLines.push('<div class="table-responsive"><table class="wiki-table">');
+                    insideTable = true;
+                    tableHeaderProcessed = false;
+                }
+                
+                // Split cells by '|', remove empty first/last elements
+                const cells = line.split('|').slice(1, -1).map(c => c.trim());
+                
+                // Check if it is a separator row (contains only dashes, colons, spaces)
+                const isSeparator = cells.every(c => /^[:\-\s]+$/.test(c));
+                
+                if (isSeparator) {
+                    continue;
+                }
+                
+                if (!tableHeaderProcessed) {
+                    processedLines.push('<thead><tr>');
+                    cells.forEach(cell => {
+                        processedLines.push('<th>' + formatInlineMarkdown(cell) + '</th>');
+                    });
+                    processedLines.push('</tr></thead><tbody>');
+                    tableHeaderProcessed = true;
                 } else {
-                    let paragraphText = escapeHTML(lines[i])
+                    processedLines.push('<tr>');
+                    cells.forEach(cell => {
+                        processedLines.push('<td>' + formatInlineMarkdown(cell) + '</td>');
+                    });
+                    processedLines.push('</tr>');
+                }
+            } else {
+                if (insideTable) {
+                    processedLines.push('</tbody></table></div>');
+                    insideTable = false;
+                }
+                
+                if (line.startsWith('# ')) {
+                    if (insideList) { processedLines.push('</ul>'); insideList = false; }
+                    processedLines.push('<h1>' + escapeHTML(line.substring(2)) + '</h1>');
+                } else if (line.startsWith('## ')) {
+                    if (insideList) { processedLines.push('</ul>'); insideList = false; }
+                    processedLines.push('<h2>' + escapeHTML(line.substring(3)) + '</h2>');
+                } else if (line.startsWith('### ')) {
+                    if (insideList) { processedLines.push('</ul>'); insideList = false; }
+                    processedLines.push('<h3>' + escapeHTML(line.substring(4)) + '</h3>');
+                } else if (line.startsWith('- ') || line.startsWith('* ')) {
+                    if (!insideList) { processedLines.push('<ul>'); insideList = true; }
+                    let itemText = escapeHTML(line.substring(2))
                         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
                         .replace(/`(.*?)`/g, '<code>$1</code>');
-                    processedLines.push('<p>' + paragraphText + '</p>');
+                    processedLines.push('<li>' + itemText + '</li>');
+                } else {
+                    if (insideList) { processedLines.push('</ul>'); insideList = false; }
+                    if (line === '') {
+                        processedLines.push('<br>');
+                    } else {
+                        let paragraphText = escapeHTML(lines[i])
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/`(.*?)`/g, '<code>$1</code>');
+                        processedLines.push('<p>' + paragraphText + '</p>');
+                    }
                 }
             }
         }
         if (insideList) processedLines.push('</ul>');
+        if (insideTable) processedLines.push('</tbody></table></div>');
         
         return processedLines.join('\n');
     }
