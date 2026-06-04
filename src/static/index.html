@@ -507,24 +507,19 @@
 
             <!-- App Footer -->
             <footer class="app-footer">
-                <p>© 2026 Project Benjamin. Made with 💛 by <span id="footer-author">Riccardo</span>.</p>
-                <div class="app-footer-links">
-                    <span class="code-font" id="footer-version-info">Version: 1.2.4 (code: unknown)</span>
-                    <span>|</span>
-                    <a href="https://github.com/palladius/adk-sre-benjamin" target="_blank">GitHub</a>
-                    <span>|</span>
-                    <a href="/doc/USER_MANUAL.md" target="_blank">User Manual</a>
-                </div>
+                <p>© 2026 Project Benjamin. Made with 💛 by <span id="footer-author">Riccardo</span>. <span id="footer-version-info">v1.2.5</span> | <a href="https://github.com/palladius/adk-sre-benjamin" target="_blank">GitHub</a></p>
             </footer>
         </main>
 
-        <!-- Dedicated SRE AI Incident Co-pilot Chat Column (Always Visible) -->
-        <aside class="chat-column" id="chat-column">
-            <div id="sidebar-resizer"></div>
+        <!-- Dedicated SRE AI Incident Co-pilot Floating Chat Widget -->
+        <aside class="chat-column collapsed" id="chat-column">
             <section class="panel chat-panel" id="incident-chat-card">
-                <div class="panel-header">
-                    <h3>📟 SRE SECONDARY ONCALL</h3>
-                    <span class="panel-subtitle" id="chat-agent-status">Online | Active Incident Assistant</span>
+                <div class="panel-header" id="chat-panel-header" style="cursor: pointer;">
+                    <div style="display: flex; flex-direction: column; gap: 2px;">
+                        <h3 style="margin: 0; font-size: 14px; display: flex; align-items: center; gap: 6px;">📟 SRE SECONDARY ONCALL</h3>
+                        <span class="panel-subtitle" id="chat-agent-status" style="margin: 0;">Online | Active Incident Assistant</span>
+                    </div>
+                    <button class="chat-close-btn" id="btn-minimize-chat" title="Minimize Chat">➖</button>
                 </div>
                 <div class="panel-body flex-column">
                     <div class="chat-messages-container" id="chat-messages-container">
@@ -538,6 +533,13 @@
                 </div>
             </section>
         </aside>
+
+        <!-- Floating SRE Chat Toggle Button -->
+        <button id="btn-chat-toggle-floating" class="btn-chat-toggle-floating">
+            <span class="chat-toggle-icon">📟</span>
+            <span class="chat-toggle-text">SRE Oncall Chat</span>
+            <span id="chat-unread-badge" class="chat-unread-badge" style="display: none;">!</span>
+        </button>
     </div>
 
     <!-- Verbose Vulnerabilities Report Modal Overlay -->

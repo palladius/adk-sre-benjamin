@@ -1875,58 +1875,51 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Sidebar Resizing Interaction
-    const sidebarResizer = document.getElementById("sidebar-resizer");
-    const appContainer = document.querySelector(".app-container");
-    const chatColumn = document.getElementById("chat-column");
+    // SRE Floating Chat Widget Interaction
+    const btnChatToggleFloating = document.getElementById("btn-chat-toggle-floating");
+    const btnMinimizeChat = document.getElementById("btn-minimize-chat");
+    const chatHeader = document.getElementById("chat-panel-header");
     
-    if (sidebarResizer && appContainer && chatColumn) {
-        let isDragging = false;
+    if (chatColumn && btnChatToggleFloating) {
+        // Toggle expand
+        btnChatToggleFloating.addEventListener("click", () => {
+            chatColumn.classList.remove("collapsed");
+            btnChatToggleFloating.classList.add("hidden");
+            localStorage.setItem("sre-chat-collapsed", "false");
+            // Clear unread badge if any
+            const unreadBadge = document.getElementById("chat-unread-badge");
+            if (unreadBadge) unreadBadge.style.display = "none";
+            focusChatInput();
+        });
         
-        // Restore saved width from localStorage
-        const storedWidth = localStorage.getItem("sre-sidebar-width");
-        if (storedWidth) {
-            const width = Math.max(360, Math.min(800, parseInt(storedWidth)));
-            appContainer.style.gridTemplateColumns = `280px 1fr ${width}px`;
+        // Toggle collapse via minimize button
+        if (btnMinimizeChat) {
+            btnMinimizeChat.addEventListener("click", (e) => {
+                e.stopPropagation();
+                chatColumn.classList.add("collapsed");
+                btnChatToggleFloating.classList.remove("hidden");
+                localStorage.setItem("sre-chat-collapsed", "true");
+            });
         }
         
-        const startDrag = (e) => {
-            isDragging = true;
-            sidebarResizer.classList.add("dragging");
-            document.body.style.cursor = "col-resize";
-            e.preventDefault();
-        };
-
-        sidebarResizer.addEventListener("mousedown", startDrag);
-        sidebarResizer.addEventListener("touchstart", startDrag);
+        // Toggle collapse via header click
+        if (chatHeader) {
+            chatHeader.addEventListener("click", () => {
+                chatColumn.classList.add("collapsed");
+                btnChatToggleFloating.classList.remove("hidden");
+                localStorage.setItem("sre-chat-collapsed", "true");
+            });
+        }
         
-        document.addEventListener("mousemove", (e) => {
-            if (!isDragging) return;
-            const newWidth = window.innerWidth - e.clientX;
-            const boundedWidth = Math.max(360, Math.min(800, newWidth));
-            appContainer.style.gridTemplateColumns = `280px 1fr ${boundedWidth}px`;
-            localStorage.setItem("sre-sidebar-width", boundedWidth);
-        });
-        
-        document.addEventListener("touchmove", (e) => {
-            if (!isDragging) return;
-            if (e.touches.length === 0) return;
-            const newWidth = window.innerWidth - e.touches[0].clientX;
-            const boundedWidth = Math.max(360, Math.min(800, newWidth));
-            appContainer.style.gridTemplateColumns = `280px 1fr ${boundedWidth}px`;
-            localStorage.setItem("sre-sidebar-width", boundedWidth);
-        });
-        
-        const stopDrag = () => {
-            if (isDragging) {
-                isDragging = false;
-                sidebarResizer.classList.remove("dragging");
-                document.body.style.cursor = "";
-            }
-        };
-
-        document.addEventListener("mouseup", stopDrag);
-        document.addEventListener("touchend", stopDrag);
+        // Restore saved state from localStorage (default to collapsed)
+        const isCollapsed = localStorage.getItem("sre-chat-collapsed") !== "false";
+        if (isCollapsed) {
+            chatColumn.classList.add("collapsed");
+            btnChatToggleFloating.classList.remove("hidden");
+        } else {
+            chatColumn.classList.remove("collapsed");
+            btnChatToggleFloating.classList.add("hidden");
+        }
     }
 
     // Voice Dictation (Microphone dictation button)
