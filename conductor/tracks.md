@@ -87,7 +87,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: UI Navigation Deep Reload Bug** (Issue #4)
 *Link: [./tracks/ui_navigation_deep_reload_20260604/](./tracks/ui_navigation_deep_reload_20260604/)*
 
+---
 
+- [ ] **Track: Graduate local state to work in the Cloud** (Issue #9)
+*Link: [./tracks/graduate_local_state_cloud_20260604/](./tracks/graduate_local_state_cloud_20260604/)*
 
+---
 
-
+- [ ] **Track: Edit wiki should visualize better** (Issue #10)
+*Link: [./tracks/better_wiki_edit_ui_20260604/](./tracks/better_wiki_edit_ui_20260604/)*

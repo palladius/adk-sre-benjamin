@@ -1,0 +1,13 @@
+.git
+.venv
+__pycache__
+**/*.pyc
+tests/
+.pytest_cache
+.env
+.env.dist
+.env.example
+.antigravitycli
+.coverage
+htmlcov
+*/*.log

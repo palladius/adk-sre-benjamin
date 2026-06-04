@@ -1,0 +1,8 @@
+{
+  "track_id": "graduate_local_state_cloud_20260604",
+  "type": "feature",
+  "status": "pending",
+  "created_at": "2026-06-04T10:16:00Z",
+  "updated_at": "2026-06-04T10:16:00Z",
+  "description": "Graduate Project Benjamin local state (incidents, chat logs, and active state) to Google Cloud SQL PostgreSQL database."
+}

@@ -278,4 +278,134 @@ def test_static_html_elements():
     assert 'id="btn-edit-graph"' in content
 
 
+def test_server_basic_auth():
+    import socket
+    import threading
+    import time
+    import urllib.request
+    import urllib.error
+    import base64
+    from src.server import run_server
+
+    # Clean env just in case
+    old_user = os.environ.pop("WEB_USERNAME", None)
+    old_pwd = os.environ.pop("WEB_PASSWORD", None)
+
+    # Find free port
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    # Start server in thread
+    server_thread = threading.Thread(target=run_server, args=(port,), daemon=True)
+    server_thread.start()
+    time.sleep(0.5) # Wait for startup
+
+    try:
+        # 1. Request should succeed with 200 without auth (when env vars are unset)
+        url = f"http://localhost:{port}/api/config"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req) as resp:
+            assert resp.status == 200
+
+        # 2. Test when basic auth IS enabled
+        os.environ["WEB_USERNAME"] = "testuser"
+        os.environ["WEB_PASSWORD"] = "testpass"
+
+        # Request without headers should fail with 401
+        req = urllib.request.Request(url)
+        try:
+            urllib.request.urlopen(req)
+            assert False, "Should have failed with HTTP 401"
+        except urllib.error.HTTPError as e:
+            assert e.code == 401
+            assert "Basic" in e.headers.get("WWW-Authenticate", "")
+
+        # Request with correct headers should succeed
+        req = urllib.request.Request(url)
+        auth_bytes = b"testuser:testpass"
+        auth_str = base64.b64encode(auth_bytes).decode("utf-8")
+        req.add_header("Authorization", f"Basic {auth_str}")
+        with urllib.request.urlopen(req) as resp:
+            assert resp.status == 200
+
+    finally:
+        # Restore environment variables
+        if old_user:
+            os.environ["WEB_USERNAME"] = old_user
+        else:
+            os.environ.pop("WEB_USERNAME", None)
+
+        if old_pwd:
+            os.environ["WEB_PASSWORD"] = old_pwd
+        else:
+            os.environ.pop("WEB_PASSWORD", None)
+
+
+def test_server_iap_auth():
+    import socket
+    import threading
+    import time
+    import urllib.request
+    import urllib.error
+    from src.server import run_server
+
+    # Setup environment
+    old_identity = os.environ.pop("GCLOUD_IDENTITY", None)
+    os.environ["GCLOUD_IDENTITY"] = "operator@google.com"
+
+    # Find free port
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(('', 0))
+    port = s.getsockname()[1]
+    s.close()
+
+    # Start server
+    server_thread = threading.Thread(target=run_server, args=(port,), daemon=True)
+    server_thread.start()
+    time.sleep(0.5)
+
+    try:
+        url = f"http://localhost:{port}/api/config"
+
+        # 1. Request without x-goog-authenticated-user-email header should fail with 403
+        req = urllib.request.Request(url)
+        try:
+            urllib.request.urlopen(req)
+            assert False, "Should have failed with HTTP 403"
+        except urllib.error.HTTPError as e:
+            assert e.code == 403
+
+        # 2. Request with incorrect email header should fail with 403
+        req = urllib.request.Request(url)
+        req.add_header("x-goog-authenticated-user-email", "accounts.google.com:attacker@google.com")
+        try:
+            urllib.request.urlopen(req)
+            assert False, "Should have failed with HTTP 403"
+        except urllib.error.HTTPError as e:
+            assert e.code == 403
+
+        # 3. Request with correct email header (with prefix) should succeed
+        req = urllib.request.Request(url)
+        req.add_header("x-goog-authenticated-user-email", "accounts.google.com:operator@google.com")
+        with urllib.request.urlopen(req) as resp:
+            assert resp.status == 200
+
+        # 4. Request with correct email header (no prefix) should succeed
+        req = urllib.request.Request(url)
+        req.add_header("x-goog-authenticated-user-email", "operator@google.com")
+        with urllib.request.urlopen(req) as resp:
+            assert resp.status == 200
+
+    finally:
+        # Restore environment
+        if old_identity:
+            os.environ["GCLOUD_IDENTITY"] = old_identity
+        else:
+            os.environ.pop("GCLOUD_IDENTITY", None)
+
+
+
+
 

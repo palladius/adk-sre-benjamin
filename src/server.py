@@ -154,7 +154,57 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.end_headers()
 
+    def check_auth(self):
+        # 1. Check Identity-Aware Proxy (IAP) authorization
+        gcloud_identity = os.environ.get("GCLOUD_IDENTITY")
+        if gcloud_identity:
+            iap_email = self.headers.get("x-goog-authenticated-user-email")
+            if iap_email:
+                email = iap_email
+                if ":" in iap_email:
+                    email = iap_email.split(":", 1)[1]
+                if email.strip().lower() == gcloud_identity.strip().lower():
+                    return True
+            
+            # If IAP check failed and Basic Auth is not configured, block access immediately
+            username = os.environ.get("WEB_USERNAME")
+            password = os.environ.get("WEB_PASSWORD")
+            if not username or not password:
+                self.send_response(403)
+                self.send_header("Content-Type", "text/plain")
+                self.end_headers()
+                self.wfile.write(b"403 Forbidden: Invalid or missing IAP identity.")
+                return False
+
+        # 2. Check Basic Authentication (Username/Password)
+        username = os.environ.get("WEB_USERNAME")
+        password = os.environ.get("WEB_PASSWORD")
+        if username and password:
+            auth_header = self.headers.get("Authorization")
+            if auth_header and auth_header.startswith("Basic "):
+                try:
+                    import base64
+                    encoded = auth_header.split(" ", 1)[1]
+                    decoded = base64.b64decode(encoded).decode("utf-8")
+                    user, pwd = decoded.split(":", 1)
+                    if user == username and pwd == password:
+                        return True
+                except Exception:
+                    pass
+                
+            self.send_response(401)
+            self.send_header("WWW-Authenticate", 'Basic realm="SRE Dashboard"')
+            self.send_header("Content-Type", "text/plain")
+            self.end_headers()
+            self.wfile.write(b"401 Unauthorized")
+            return False
+
+        return True
+
     def do_GET(self):
+        if not self.check_auth():
+            return
+            
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         
@@ -407,6 +457,9 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.wfile.write(b"404 Not Found")
                     
     def do_POST(self):
+        if not self.check_auth():
+            return
+            
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path
         
@@ -1606,6 +1659,12 @@ def start_telegram_bot():
         time.sleep(1)
 
 def run_server(port=8080):
+    try:
+        from src.observability import instrument_agents
+        instrument_agents()
+    except Exception as e:
+        print(f"[Observability Startup] Failed to initialize tracing: {e}")
+        
     server_address = ('', port)
     httpd = HTTPServer(server_address, SREHttpRequestHandler)
     print(f"Starting Project Benjamin SRE Dashboard Server on port {port}...")
@@ -1624,7 +1683,7 @@ def run_server(port=8080):
 
 if __name__ == "__main__":
     import sys
-    port = 8080
+    port = int(os.environ.get("PORT", 8080))
     if len(sys.argv) > 1:
         try:
             port = int(sys.argv[1])

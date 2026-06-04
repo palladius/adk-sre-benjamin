@@ -27,6 +27,31 @@ test:
 web:
     @PYTHONPATH=. uv run python3 src/server.py
 
+# Deploy the SRE dashboard to Google Cloud Run using gcloud source build
+deploy:
+    @echo "🚀 Containerizing and deploying SRE Dashboard to Cloud Run..."
+    gcloud beta run deploy sre-agent-service \
+        --source . \
+        --port 8080 \
+        --no-allow-unauthenticated \
+        --iap \
+        --set-env-vars "WEB_USERNAME=${WEB_USERNAME},WEB_PASSWORD=${WEB_PASSWORD},GEMINI_API_KEY=${GEMINI_API_KEY},DEFAULT_GEMINI_MODEL=${DEFAULT_GEMINI_MODEL},GCLOUD_IDENTITY=${GCLOUD_IDENTITY}" \
+        --region us-central1
+
+# Initialize Terraform configuration
+tf-init:
+    cd terraform && terraform init
+
+# Plan Terraform infrastructure deployment
+tf-plan:
+    cd terraform && terraform plan -var="project_id=$(gcloud config get-value project)" -var="image=us-central1-docker.pkg.dev/$(gcloud config get-value project)/cloud-run-source-deploy/sre-agent-service:latest" -var="gcloud_identity=${GCLOUD_IDENTITY}"
+
+# Apply Terraform infrastructure deployment
+tf-apply:
+    cd terraform && terraform apply -auto-approve -var="project_id=$(gcloud config get-value project)" -var="image=us-central1-docker.pkg.dev/$(gcloud config get-value project)/cloud-run-source-deploy/sre-agent-service:latest" -var="gcloud_identity=${GCLOUD_IDENTITY}"
+
+
+
 # Run test suite with code coverage reports inside a resource-limited cage (max 4GB RAM)
 coverage:
     @nice -n 19 systemd-run --user --scope -p MemoryMax=4G -p CPUQuota=80% uv run pytest --cov=src
