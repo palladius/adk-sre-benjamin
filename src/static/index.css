@@ -479,7 +479,7 @@ body {
     gap: 20px;
     flex: 1;
     overflow: hidden;
-    height: calc(100vh - 170px);
+    height: calc(100vh - 230px);
 }
 
 .panel {
@@ -2255,17 +2255,18 @@ body {
 
 /* App Footer Styling */
 .app-footer {
-    padding: 16px 24px;
+    padding: 10px 20px;
     background: var(--panel-bg);
     border: 1px solid var(--panel-border);
-    border-radius: 12px;
+    border-radius: 10px;
     backdrop-filter: blur(12px);
     display: flex;
     justify-content: space-between;
     align-items: center;
     color: var(--text-secondary);
-    font-size: 13px;
-    margin-top: 24px;
+    font-size: 12px;
+    margin-top: 16px;
+    flex-shrink: 0;
 }
 
 .app-footer p {
