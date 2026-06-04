@@ -265,7 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     footerAuthor.textContent = data.author;
                 }
                 if (footerVersionInfo && data.version) {
-                    footerVersionInfo.textContent = `Version: ${data.version} (code: ${data.commit || 'unknown'})`;
+                    footerVersionInfo.innerHTML = `Version: <strong>${data.version}</strong> (code: ${data.commit || 'unknown'})`;
                 }
                 const headerVersion = document.getElementById("header-version-info");
                 if (headerVersion && data.version) {
@@ -1875,39 +1875,38 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // SRE Floating Chat Widget Interaction
-    const btnChatToggleFloating = document.getElementById("btn-chat-toggle-floating");
+    // SRE Floating Chat Widget Interaction (Collapsible Post-it Preview)
+    const chatColumn = document.getElementById("chat-column");
     const btnMinimizeChat = document.getElementById("btn-minimize-chat");
     const chatHeader = document.getElementById("chat-panel-header");
     
-    if (chatColumn && btnChatToggleFloating) {
-        // Toggle expand
-        btnChatToggleFloating.addEventListener("click", () => {
-            chatColumn.classList.remove("collapsed");
-            btnChatToggleFloating.classList.add("hidden");
-            localStorage.setItem("sre-chat-collapsed", "false");
-            // Clear unread badge if any
-            const unreadBadge = document.getElementById("chat-unread-badge");
-            if (unreadBadge) unreadBadge.style.display = "none";
-            focusChatInput();
+    if (chatColumn) {
+        // Expand when clicking the collapsed widget
+        chatColumn.addEventListener("click", (e) => {
+            if (chatColumn.classList.contains("collapsed")) {
+                chatColumn.classList.remove("collapsed");
+                localStorage.setItem("sre-chat-collapsed", "false");
+                focusChatInput();
+            }
         });
         
         // Toggle collapse via minimize button
         if (btnMinimizeChat) {
             btnMinimizeChat.addEventListener("click", (e) => {
-                e.stopPropagation();
+                e.stopPropagation(); // prevent the chatColumn click event from firing (which would re-expand it!)
                 chatColumn.classList.add("collapsed");
-                btnChatToggleFloating.classList.remove("hidden");
                 localStorage.setItem("sre-chat-collapsed", "true");
             });
         }
         
-        // Toggle collapse via header click
+        // Toggle collapse via header click when expanded
         if (chatHeader) {
-            chatHeader.addEventListener("click", () => {
-                chatColumn.classList.add("collapsed");
-                btnChatToggleFloating.classList.remove("hidden");
-                localStorage.setItem("sre-chat-collapsed", "true");
+            chatHeader.addEventListener("click", (e) => {
+                if (!chatColumn.classList.contains("collapsed")) {
+                    e.stopPropagation();
+                    chatColumn.classList.add("collapsed");
+                    localStorage.setItem("sre-chat-collapsed", "true");
+                }
             });
         }
         
@@ -1915,10 +1914,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const isCollapsed = localStorage.getItem("sre-chat-collapsed") !== "false";
         if (isCollapsed) {
             chatColumn.classList.add("collapsed");
-            btnChatToggleFloating.classList.remove("hidden");
         } else {
             chatColumn.classList.remove("collapsed");
-            btnChatToggleFloating.classList.add("hidden");
         }
     }
 
