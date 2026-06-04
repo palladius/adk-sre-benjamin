@@ -96,3 +96,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: Edit wiki should visualize better** (Issue #10)
 *Link: [./tracks/better_wiki_edit_ui_20260604/](./tracks/better_wiki_edit_ui_20260604/)*
+
+---
+
+- [ ] **Track: Create a SRE Demo domain under discover/domains/sre-demo/ and add a main file (README.md / index.md)** (Issue #12)
+*Link: [./tracks/sre_demo_domain_20260604/](./tracks/sre_demo_domain_20260604/)*
