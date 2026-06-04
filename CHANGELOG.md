@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.5] - 2026-06-04
+### Added
+- **Maximize Chat Widget Sizing**: Added size toggle button (🗖 / 🗗) to expand the chat panel height to 90vh and width to 480px.
+- **Maximized State Persistence**: Persists maximized state dynamically across user sessions in localStorage.
+- **Collapsible Post-it Preview**: Redesigned collapsed chat widget as a golden bordered post-it preview box displaying the latest message snippet.
+- **Vulnerability Diagnostics & Audit Tracking**: Checkpoint resolution states and diagnostic logs automatically recorded for incident `INC-20260604-e0dc`.
+- **Bolding Version Tag**: Configured JavaScript to dynamically bold the application version tag in the footer.
+
+## [1.2.4] - 2026-06-04
+### Added
+- **Floating Collapse-ready Widget**: Transformed the SRE chat panel from a static column layout to a floating glassmorphic collapsible chat widget.
+- **Compact Footer Layout**: Consolidated the footer to a single line display version and source repository link.
+- **Adaptive Screen Grids**: Dynamically adjustments of the main dashboard grid-template-columns to span full available width when the chat is minimized.
+
 ## [1.2.3] - 2026-06-02
 ### Changed
 - **Project Folder Grouping**: Transitioned the flat cache file storage inside `discover/gcp-project/` to clean project-specific subdirectories (`discover/gcp-project/<project_id>/`), structuring resource discoveries in `discover.json`, Markdown indices in `wiki.md`, and dependency diagrams in `graph.dot`.
