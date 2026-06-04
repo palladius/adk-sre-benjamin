@@ -2253,3 +2253,38 @@ body {
     border: 1px solid rgba(57, 255, 20, 0.3);
 }
 
+/* App Footer Styling */
+.app-footer {
+    padding: 16px 24px;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: var(--text-secondary);
+    font-size: 13px;
+    margin-top: 24px;
+}
+
+.app-footer p {
+    margin: 0;
+}
+
+.app-footer-links {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.app-footer-links a {
+    color: var(--neon-cyan);
+    text-decoration: none;
+    transition: var(--transition-smooth);
+}
+
+.app-footer-links a:hover {
+    color: var(--neon-green);
+    text-decoration: underline;
+}
