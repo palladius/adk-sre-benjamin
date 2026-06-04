@@ -172,6 +172,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (btnDiscoverProject) btnDiscoverProject.addEventListener("click", triggerSearch);
     
+    const btnRecrawlProject = document.getElementById("btn-recrawl-project");
+    if (btnRecrawlProject) {
+        btnRecrawlProject.addEventListener("click", () => {
+            const projectId = projectIdInput ? projectIdInput.value.trim() : "";
+            if (projectId) {
+                handleProjectDiscovery(projectId, true);
+            }
+        });
+    }
+    
     // Close modal action
     if (btnCloseModal && vulnerabilitiesModal) {
         btnCloseModal.addEventListener("click", () => {
@@ -1013,7 +1023,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 500); // 500ms delay per agent execution block
     }
 
-    async function handleProjectDiscovery(specifiedProjectId) {
+    async function handleProjectDiscovery(specifiedProjectId, forceRefresh = false) {
         const projectId = (typeof specifiedProjectId === "string" ? specifiedProjectId : (projectIdInput ? projectIdInput.value.trim() : "")).trim();
         if (!projectId) {
             alert("Please provide a valid GCP Project ID.");
@@ -1046,7 +1056,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (assetsListSql) assetsListSql.innerHTML = `<p class="loading-placeholder">Discovering Cloud SQL instances on '${projectId}'...</p>`;
         
         try {
-            const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/discover`);
+            const url = `/api/projects/${encodeURIComponent(projectId)}/discover${forceRefresh ? "?refresh=true" : ""}`;
+            const res = await fetch(url);
             const data = await res.json();
             
             if (data.error) {
@@ -1143,7 +1154,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         
         if (projectViewTitle) projectViewTitle.textContent = `GCP PROJECT ASSETS: ${projectId}`;
-        if (projectCachePath) projectCachePath.textContent = `discover/gcp-project/${projectId}/discover.json`;
+        if (projectCachePath) {
+            const lastCrawlInfo = data.last_crawled ? ` <span style="color: var(--neon-green); font-size: 11px; margin-left: 8px; font-weight: normal;">(Last Crawl: ${data.last_crawled})</span>` : "";
+            projectCachePath.innerHTML = `discover/gcp-project/${projectId}/discover.json` + lastCrawlInfo;
+        }
         
         const resources = data.resources || [];
         currentProjectResources = resources; // Cache globally for the interactive modal
@@ -1156,7 +1170,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (statExposedResources) statExposedResources.textContent = exposed;
         if (statSafeResources) statSafeResources.textContent = safe;
         if (statLastAudit) {
-            statLastAudit.textContent = new Date().toLocaleTimeString();
+            statLastAudit.textContent = data.last_crawled ? data.last_crawled.split(" ")[1] || data.last_crawled : new Date().toLocaleTimeString();
         }
         
         if (projectComplianceBadge) {

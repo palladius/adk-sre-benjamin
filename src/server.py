@@ -253,8 +253,20 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 cache_dir = os.path.join("discover", "gcp-project", project_id)
                 json_path = os.path.join(cache_dir, "discover.json")
                 
-                # Check cache: if it exists, read it
+                # Check for refresh parameter in query string
+                query_params = urllib.parse.parse_qs(parsed_url.query)
+                force_refresh = "true" in query_params.get("refresh", [])
+                
+                # Check cache expiration (1 hour TTL)
+                import time
+                cache_expired = False
                 if os.path.exists(json_path):
+                    mtime = os.path.getmtime(json_path)
+                    if (time.time() - mtime) > 3600:
+                        cache_expired = True
+                
+                # Check cache: if it exists and is fresh, read it
+                if os.path.exists(json_path) and not force_refresh and not cache_expired:
                     with open(json_path, "r") as f:
                         resources = json.load(f)
                 else:
@@ -264,6 +276,10 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     with open(json_path, "r") as f:
                         resources = json.load(f)
                 
+                # Fetch last crawled time from file mtime
+                mtime = os.path.getmtime(json_path) if os.path.exists(json_path) else time.time()
+                last_crawled = time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime(mtime))
+                
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
@@ -272,6 +288,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     "project_id": project_id,
                     "resources": resources,
                     "cache_path": json_path,
+                    "last_crawled": last_crawled,
                     "wiki_path": os.path.join(cache_dir, "wiki.md")
                 }
                 self.wfile.write(json.dumps(response_data).encode("utf-8"))

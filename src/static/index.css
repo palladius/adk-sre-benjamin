@@ -2525,3 +2525,26 @@ body {
     vertical-align: middle;
     display: inline-block;
 }
+
+/* Recrawl Button Style */
+.btn-recrawl {
+    background: rgba(0, 255, 255, 0.08) !important;
+    border: 1px solid rgba(0, 255, 255, 0.3) !important;
+    color: var(--neon-cyan) !important;
+    padding: 2px 8px !important;
+    border-radius: 4px !important;
+    font-size: 11px !important;
+    cursor: pointer !important;
+    font-family: var(--font-primary) !important;
+    margin-left: 8px !important;
+    transition: all 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+}
+
+.btn-recrawl:hover {
+    background: rgba(0, 255, 255, 0.2) !important;
+    border-color: rgba(0, 255, 255, 0.6) !important;
+    box-shadow: 0 0 8px rgba(0, 255, 255, 0.3) !important;
+}
