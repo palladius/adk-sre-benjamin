@@ -222,8 +222,20 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             
+            import subprocess
+            try:
+                commit_sha = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
+            except Exception:
+                commit_sha = "unknown"
+                
             project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("PROJECT_ID") or "prod-db-999"
-            self.wfile.write(json.dumps({"project_id": project_id}).encode("utf-8"))
+            config_data = {
+                "project_id": project_id,
+                "version": "1.2.4",
+                "commit": commit_sha,
+                "author": "Riccardo"
+            }
+            self.wfile.write(json.dumps(config_data).encode("utf-8"))
             return
             
         # API: Discover GCP Resources for a Project

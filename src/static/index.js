@@ -253,15 +253,31 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
     
-    // 0. Fetch Server Configurations
+     // 0. Fetch Server Configurations
     async function loadConfig() {
         try {
             const res = await fetch("/api/config");
             const data = await res.json();
-            if (data && data.project_id && projectIdInput) {
-                projectIdInput.value = data.project_id;
-                projectIdInput.placeholder = data.project_id;
+            if (data) {
+                const footerAuthor = document.getElementById("footer-author");
+                const footerVersionInfo = document.getElementById("footer-version-info");
+                if (footerAuthor && data.author) {
+                    footerAuthor.textContent = data.author;
+                }
+                if (footerVersionInfo && data.version) {
+                    footerVersionInfo.textContent = `Version: ${data.version} (code: ${data.commit || 'unknown'})`;
+                }
+                const headerVersion = document.getElementById("header-version-info");
+                if (headerVersion && data.version) {
+                    headerVersion.textContent = `v${data.version}`;
+                }
                 
+                if (data.project_id && projectIdInput) {
+                    projectIdInput.value = data.project_id;
+                    projectIdInput.placeholder = data.project_id;
+                }
+            }
+        
                 // Load cached project history from local storage
                 const cachedHistory = localStorage.getItem("benjamin_project_history");
                 if (cachedHistory) {
