@@ -300,8 +300,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Keep the .env default project ID always at the top of the history list
                 if (!projectHistory.includes(data.project_id)) {
                     projectHistory.unshift(data.project_id);
-                    localStorage.setItem("benjamin_project_history", JSON.stringify(projectHistory));
                 }
+                
+                // Ensure the "sre-demo" and "sre-demo-prod" domains are always available in the UI
+                if (!projectHistory.includes("sre-demo")) {
+                    projectHistory.push("sre-demo");
+                }
+                if (!projectHistory.includes("sre-demo-prod")) {
+                    projectHistory.push("sre-demo-prod");
+                }
+                
+                localStorage.setItem("benjamin_project_history", JSON.stringify(projectHistory));
                 
                 updateProjectHistoryList();
                 

@@ -250,6 +250,108 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/projects/") and path.endswith("/discover"):
             try:
                 project_id = path.split("/")[3]
+                if project_id in ("sre-demo", "sre-demo-prod"):
+                    import time
+                    resources = [
+                        {
+                            "name": "lab-setup",
+                            "type": "gce_vm",
+                            "location": "us-central1-a",
+                            "status": "RUNNING",
+                            "vulnerable": True,
+                            "warning": "⚠️ EXPOSED: Bound to public IP 35.232.121.228",
+                            "console_url": "https://console.cloud.google.com/compute/instancesDetail/zones/us-central1-a/instances/lab-setup?project=sre-next",
+                            "is_mock": True,
+                            "metadata": {
+                                "internal_ip": "10.0.0.9",
+                                "external_ip": "35.232.121.228"
+                            }
+                        },
+                        {
+                            "name": "sre-agent-service",
+                            "type": "cloud_run",
+                            "location": "us-central1",
+                            "status": "READY",
+                            "vulnerable": False,
+                            "warning": None,
+                            "console_url": "https://console.cloud.google.com/run/detail/us-central1/sre-agent-service/metrics?project=sre-next",
+                            "is_mock": True,
+                            "metadata": {
+                                "url": "https://sre-agent-service-ha5bfv5noa-uc.a.run.app",
+                                "all_users_invoker": False
+                            }
+                        },
+                        {
+                            "name": "online-boutique",
+                            "type": "gke_cluster",
+                            "location": "us-central1",
+                            "status": "RUNNING",
+                            "vulnerable": True,
+                            "warning": "⚠️ EXPOSED: Public GKE control plane endpoint access enabled",
+                            "console_url": "https://console.cloud.google.com/kubernetes/clusters/details/us-central1/online-boutique/overview?project=sre-next",
+                            "is_mock": True,
+                            "metadata": {
+                                "endpoint": "34.9.73.164",
+                                "private_cluster": False
+                            }
+                        },
+                        {
+                            "name": "online-boutique-standard",
+                            "type": "gke_cluster",
+                            "location": "us-central1",
+                            "status": "RUNNING",
+                            "vulnerable": True,
+                            "warning": "⚠️ EXPOSED: Public GKE control plane endpoint access enabled",
+                            "console_url": "https://console.cloud.google.com/kubernetes/clusters/details/us-central1/online-boutique-standard/overview?project=sre-next",
+                            "is_mock": True,
+                            "metadata": {
+                                "endpoint": "136.119.135.4",
+                                "private_cluster": False
+                            }
+                        },
+                        {
+                            "name": "sre-postgres",
+                            "type": "cloud_sql",
+                            "location": "us-central1",
+                            "status": "RUNNABLE",
+                            "vulnerable": False,
+                            "warning": None,
+                            "console_url": "https://console.cloud.google.com/sql/instances/sre-postgres/overview?project=sre-next",
+                            "is_mock": True,
+                            "metadata": {
+                                "public_ip_enabled": False,
+                                "authorized_networks": []
+                            }
+                        },
+                        {
+                            "name": "agent-staging-bucket-sre-next",
+                            "type": "gcs_bucket",
+                            "location": "US-CENTRAL1",
+                            "status": "ACTIVE",
+                            "vulnerable": True,
+                            "warning": "⚠️ EXPOSED: Uniform bucket public access prevention is not enforced",
+                            "console_url": "https://console.cloud.google.com/storage/browser/agent-staging-bucket-sre-next?project=sre-next",
+                            "is_mock": True,
+                            "metadata": {
+                                "public_access_prevention": "inherited",
+                                "storage_class": "STANDARD",
+                                "uniform_bucket_level_access": True
+                            }
+                        }
+                    ]
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    response_data = {
+                        "project_id": project_id,
+                        "resources": resources,
+                        "cache_path": "discover/domains/sre-demo/README.md",
+                        "last_crawled": time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()),
+                        "wiki_path": "discover/domains/sre-demo/README.md"
+                    }
+                    self.wfile.write(json.dumps(response_data).encode("utf-8"))
+                    return
+
                 cache_dir = os.path.join("discover", "gcp-project", project_id)
                 json_path = os.path.join(cache_dir, "discover.json")
                 
@@ -303,6 +405,19 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/projects/") and path.endswith("/wiki"):
             try:
                 project_id = path.split("/")[3]
+                if project_id in ("sre-demo", "sre-demo-prod"):
+                    md_path = "discover/domains/sre-demo/README.md"
+                    if os.path.exists(md_path):
+                        with open(md_path, "r") as f:
+                            content = f.read()
+                    else:
+                        content = f"# SRE Demo Domain ({project_id})\n\nNo custom SRE notes have been added yet for this domain.\n"
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"project_id": project_id, "content": content}).encode("utf-8"))
+                    return
+
                 cache_dir = os.path.join("discover", "gcp-project", project_id)
                 md_path = os.path.join(cache_dir, "wiki.md")
                 
@@ -336,6 +451,38 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/projects/") and path.endswith("/graph"):
             try:
                 project_id = path.split("/")[3]
+                if project_id in ("sre-demo", "sre-demo-prod"):
+                    dot_path = "discover/domains/sre-demo/graph.dot"
+                    if not os.path.exists(dot_path):
+                        default_graph = (
+                            "digraph G {\n"
+                            "  rankdir=LR;\n"
+                            '  node [style=filled, fillcolor="#1e1e2e", color="#f5c2e7", fontcolor="#cdd6f4", fontname="Outfit"];\n'
+                            '  edge [color="#a6adc8"];\n'
+                            '  subgraph cluster_sre_next {\n'
+                            f'    label="Project: {project_id} (SRE Demo)";\n'
+                            '    style=dashed;\n'
+                            '    color="#89b4fa";\n'
+                            '    fontcolor="#89b4fa";\n'
+                            '    "lab-setup" [label="🖥️ lab-setup\\n(10.0.0.9)", fillcolor="#f38ba8", fontcolor="#11111b"];\n'
+                            '    "sre-agent-service" [label="🏃 sre-agent-service\\n(Cloud Run)", fillcolor="#a6e3a1", fontcolor="#11111b"];\n'
+                            '    "sre-postgres" [label="💾 sre-postgres\\n(Cloud SQL)", fillcolor="#fab387", fontcolor="#11111b"];\n'
+                            '  }}\n'
+                            '  "lab-setup" -> "sre-agent-service" [label="queries"];\n'
+                            '  "sre-agent-service" -> "sre-postgres" [label="reads/writes"];\n'
+                            "}\n"
+                        )
+                        os.makedirs(os.path.dirname(dot_path), exist_ok=True)
+                        with open(dot_path, "w") as f:
+                            f.write(default_graph)
+                    with open(dot_path, "r") as f:
+                        content = f.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"project_id": project_id, "graph": content}).encode("utf-8"))
+                    return
+
                 cache_dir = os.path.join("discover", "gcp-project", project_id)
                 dot_path = os.path.join(cache_dir, "graph.dot")
                 
@@ -709,11 +856,17 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 payload = json.loads(post_data.decode("utf-8"))
                 content = payload.get("content", "")
                 
-                cache_dir = os.path.join("discover", "gcp-project", project_id)
-                os.makedirs(cache_dir, exist_ok=True)
-                md_path = os.path.join(cache_dir, "wiki.md")
-                with open(md_path, "w") as f:
-                    f.write(content)
+                if project_id in ("sre-demo", "sre-demo-prod"):
+                    md_path = "discover/domains/sre-demo/README.md"
+                    os.makedirs(os.path.dirname(md_path), exist_ok=True)
+                    with open(md_path, "w") as f:
+                        f.write(content)
+                else:
+                    cache_dir = os.path.join("discover", "gcp-project", project_id)
+                    os.makedirs(cache_dir, exist_ok=True)
+                    md_path = os.path.join(cache_dir, "wiki.md")
+                    with open(md_path, "w") as f:
+                        f.write(content)
                 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -735,11 +888,17 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 payload = json.loads(post_data.decode("utf-8"))
                 content = payload.get("content", "")
                 
-                cache_dir = os.path.join("discover", "gcp-project", project_id)
-                os.makedirs(cache_dir, exist_ok=True)
-                dot_path = os.path.join(cache_dir, "graph.dot")
-                with open(dot_path, "w") as f:
-                    f.write(content)
+                if project_id in ("sre-demo", "sre-demo-prod"):
+                    dot_path = "discover/domains/sre-demo/graph.dot"
+                    os.makedirs(os.path.dirname(dot_path), exist_ok=True)
+                    with open(dot_path, "w") as f:
+                        f.write(content)
+                else:
+                    cache_dir = os.path.join("discover", "gcp-project", project_id)
+                    os.makedirs(cache_dir, exist_ok=True)
+                    dot_path = os.path.join(cache_dir, "graph.dot")
+                    with open(dot_path, "w") as f:
+                        f.write(content)
                 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -987,6 +1146,10 @@ def get_discovered_projects() -> list[str]:
                     projects.append(item)
     if not projects:
         projects = ["sre-next"]
+    if "sre-demo" not in projects and "PYTEST_CURRENT_TEST" not in os.environ:
+        projects.append("sre-demo")
+    if "sre-demo-prod" not in projects and "PYTEST_CURRENT_TEST" not in os.environ:
+        projects.append("sre-demo-prod")
     return projects
 
 def get_top_5_incidents() -> list[dict]:
