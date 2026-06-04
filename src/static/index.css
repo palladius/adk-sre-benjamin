@@ -1854,23 +1854,23 @@ body {
 
 /* Maximized State (90% height, 20-30% wider) */
 .chat-column.maximized {
-    width: 480px; /* ~26% wider than 380px */
-    height: 90vh; /* 90% of verticality */
+    width: 480px !important; /* ~26% wider than 380px */
+    height: 90vh !important; /* 90% of verticality */
     bottom: 24px;
     right: 24px;
 }
 
 /* Collapsed Golden Post-it Preview State */
 .chat-column.collapsed {
-    width: 250px;
-    height: 32px;
+    width: 250px !important;
+    height: 32px !important;
     border: 1px solid rgba(255, 193, 7, 0.4); /* warm SRE golden accent border */
     background: rgba(18, 22, 30, 0.95);
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5), 0 0 10px rgba(255, 193, 7, 0.15);
     cursor: pointer;
     border-radius: 8px;
-    resize: none;
-    padding: 0 12px;
+    resize: none !important;
+    padding: 0 12px !important;
     transform: none;
     opacity: 0.95;
     pointer-events: auto;
