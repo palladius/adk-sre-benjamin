@@ -18,3 +18,6 @@ private/
 # Temporary work coordinates
 CONTINUE_TOMORROW.md
 .antigravitycli/
+
+# Generated SRE discovery cache and assets
+discover/gcp-project/
