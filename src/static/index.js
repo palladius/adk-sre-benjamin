@@ -276,8 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     projectIdInput.value = data.project_id;
                     projectIdInput.placeholder = data.project_id;
                 }
-            }
-        
+            
                 // Load cached project history from local storage
                 const cachedHistory = localStorage.getItem("benjamin_project_history");
                 if (cachedHistory) {
@@ -1887,7 +1886,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Restore saved width from localStorage
         const storedWidth = localStorage.getItem("sre-sidebar-width");
         if (storedWidth) {
-            const width = Math.max(320, Math.min(800, parseInt(storedWidth)));
+            const width = Math.max(360, Math.min(800, parseInt(storedWidth)));
             appContainer.style.gridTemplateColumns = `280px 1fr ${width}px`;
         }
         
@@ -1904,7 +1903,7 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener("mousemove", (e) => {
             if (!isDragging) return;
             const newWidth = window.innerWidth - e.clientX;
-            const boundedWidth = Math.max(320, Math.min(800, newWidth));
+            const boundedWidth = Math.max(360, Math.min(800, newWidth));
             appContainer.style.gridTemplateColumns = `280px 1fr ${boundedWidth}px`;
             localStorage.setItem("sre-sidebar-width", boundedWidth);
         });
@@ -1913,7 +1912,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!isDragging) return;
             if (e.touches.length === 0) return;
             const newWidth = window.innerWidth - e.touches[0].clientX;
-            const boundedWidth = Math.max(320, Math.min(800, newWidth));
+            const boundedWidth = Math.max(360, Math.min(800, newWidth));
             appContainer.style.gridTemplateColumns = `280px 1fr ${boundedWidth}px`;
             localStorage.setItem("sre-sidebar-width", boundedWidth);
         });
