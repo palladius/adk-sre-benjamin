@@ -406,6 +406,9 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Scroll to the bottom of message feeds
             chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            setTimeout(() => {
+                chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            }, 100);
         } catch (err) {
             console.error("Failed to load chat history:", err);
             chatMessagesContainer.innerHTML = `<div class="chat-placeholder text-danger">Error loading chat interface.</div>`;
@@ -1888,6 +1891,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 chatColumn.classList.remove("collapsed");
                 localStorage.setItem("sre-chat-collapsed", "false");
                 focusChatInput();
+                // Scroll to the bottom of the chat container when expanding
+                setTimeout(() => {
+                    if (chatMessagesContainer) {
+                        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                    }
+                }, 100);
             }
         });
         
@@ -1924,6 +1933,13 @@ document.addEventListener("DOMContentLoaded", () => {
                 // Clear inline style size overrides to snap back
                 chatColumn.style.width = "";
                 chatColumn.style.height = "";
+                
+                // Scroll to the bottom as the layout resizing wraps text differently
+                setTimeout(() => {
+                    if (chatMessagesContainer) {
+                        chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                    }
+                }, 100);
             });
         }
         
@@ -1933,6 +1949,12 @@ document.addEventListener("DOMContentLoaded", () => {
             chatColumn.classList.add("collapsed");
         } else {
             chatColumn.classList.remove("collapsed");
+            // Scroll to the bottom after layout stabilizes on initial load
+            setTimeout(() => {
+                if (chatMessagesContainer) {
+                    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                }
+            }, 300);
         }
 
         // Restore saved maximized state from localStorage
@@ -1943,6 +1965,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 btnMaximizeChat.innerHTML = "🗗";
                 btnMaximizeChat.title = "Restore Normal Size";
             }
+            // Scroll to the bottom after layout stabilizes
+            setTimeout(() => {
+                if (chatMessagesContainer) {
+                    chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+                }
+            }, 300);
         }
     }
 
