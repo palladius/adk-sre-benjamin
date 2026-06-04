@@ -102,17 +102,78 @@ def check_env():
         print("  ⚠️ Could not query active gcloud profile. (Is gcloud CLI installed?)")
         warnings += 1
 
+    # 7. Check local Web server (FE & BE) activity
+    print("\n[5] Checking local Web server (FE & BE) activity...")
+    import socket
+    import urllib.request
+    import urllib.error
+    
+    port = int(env_vars.get("PORT", 8080))
+    url = f"http://localhost:{port}"
+    web_error = False
+    
+    # Try opening socket first
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(1.0)
+    try:
+        s.connect(("127.0.0.1", port))
+        s.close()
+        print(f"  ✅ Port {port} is open and listening.")
+        
+        # Try fetching frontend route
+        try:
+            req = urllib.request.Request(url + "/projects/sre-next")
+            with urllib.request.urlopen(req, timeout=2.0) as response:
+                if response.status == 200:
+                    print("  ✅ Frontend (FE) page loaded successfully (200 OK).")
+        except urllib.error.HTTPError as e:
+            if e.code in (401, 403):
+                print(f"  ✅ Backend (BE) is alive, but requested authentication (HTTP {e.code}).")
+            else:
+                print(f"  ❌ Backend (BE) returned HTTP error: {e.code} - {e.reason}")
+                web_error = True
+        except Exception as e:
+            print(f"  ❌ Failed to communicate with local web server: {e}")
+            web_error = True
+            
+        # Try fetching API config using credentials from .env if present
+        try:
+            username = env_vars.get("WEB_USERNAME")
+            password = env_vars.get("WEB_PASSWORD")
+            req_api = urllib.request.Request(url + "/api/config")
+            if username and password:
+                import base64
+                auth_str = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("utf-8")
+                req_api.add_header("Authorization", f"Basic {auth_str}")
+            with urllib.request.urlopen(req_api, timeout=2.0) as resp_api:
+                if resp_api.status == 200:
+                    import json
+                    data = json.loads(resp_api.read().decode("utf-8"))
+                    print(f"  ✅ Backend API (/api/config) responsive. Project ID: '{data.get('project_id')}', Version: '{data.get('version')}'")
+        except Exception as e:
+            # Don't fail the check on API auth issues, just warn
+            print(f"  ⚠️ Could not query config API (possibly auth-restricted): {e}")
+            
+    except (socket.timeout, ConnectionRefusedError):
+        print(f"  ❌ Port {port} is NOT listening! The SRE Dashboard server is inactive.")
+        print(f"  👉 COMMAND TO RUN: Start the backend server by running 'just web' in another terminal.")
+        web_error = True
+
     print("\n=====================================================")
-    if errors > 0:
+    if errors > 0 or web_error:
         print(f"❌ CHECK FAILED: {errors} error(s), {warnings} warning(s) found.")
-        print("Please correct the errors before running the server.")
+        if web_error and errors == 0:
+            print("Configuration is OK, but the server is not currently running.")
+            print("👉 Run: 'just web' to start the server.")
+        else:
+            print("Please correct the errors before running the server.")
         sys.exit(1)
     elif warnings > 0:
         print(f"⚠️ CHECK PASSED WITH WARNINGS: {warnings} warning(s) found.")
         print("Server should run, but some optional integrations might not work.")
         sys.exit(0)
     else:
-        print("🎉 ALL CHECKS PASSED: Your environment is fully configured!")
+        print("🎉 ALL CHECKS PASSED: Your environment and server are fully active!")
         sys.exit(0)
 
 if __name__ == "__main__":
