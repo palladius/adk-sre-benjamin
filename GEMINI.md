@@ -10,8 +10,8 @@ Never check in .env in git!!
 
 Ensure all features are documented in:
 
-* doc/USER_MANUAL.md from the pov of a user
-* README.md very shortly as features set.
+* `doc/USER_MANUAL.md` from the pov of a user
+* `README.md` very shortly as features set.
 
 ## Intake from GH Issues
 
