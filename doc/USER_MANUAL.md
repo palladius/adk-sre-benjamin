@@ -33,7 +33,7 @@ The SRE Dashboard is designed as a three-column command console, giving you unif
    * Features interactive telemetry graphs, safety gate clearance controls, and live broadcast dispatch logs.
 3. **Right Panel (SRE AI Co-Pilot Chat Console)**:
    * A floating, collapsible SRE chat assistant powered by the dynamically resolved Gemini API.
-   * **Collapsible & Compact**: Folds down to an ultra-compact ~32px header bar (1cm / 10-12px panel padding compensation) that stays completely out of the way when minimized. Clicking anywhere on the bar expands it instantly.
+   * **Collapsible & Compact**: Folds down to a pulsing golden pill-shaped badge labeled `⚡ SRE Co-Pilot (Click to Expand)` that floats in the bottom right corner, keeping workspace real estate completely clean. Clicking the pulsing badge expands it back to the full panel.
    * **Size Toggle**: Includes controls to maximize the chat height to 90vh and 20-30% wider to easily read extensive texts.
    * Automatically ingests active screen metadata, status changes, and target project parameters on every message, providing genuine context-aware SRE troubleshooting guidance.
 

@@ -67,7 +67,7 @@ Provides a high-fidelity visual workspace for auditing discovered GCP project as
 - **Markdown Tables Compiler**: Compiles tabular layouts (`|` pipes) in Project Wiki pages into beautiful glassmorphic, responsive HTML tables.
 
 ### 6. 📟 Collapsible SRE Chat Widget
-- **Ultra-Compact Minimized State**: The floating SRE chat widget collapses into a tiny ~32px header bar (approx. 1cm) to maximize dashboard real estate, and expands instantly on click.
+- **Pulsing Golden Pill State**: The floating SRE chat widget collapses into an ultra-compact, glowing golden pill badge featuring the text `⚡ SRE Co-Pilot (Click to Expand)` to optimize workspace real estate, expanding instantly on click.
 - **Flexible Resizing**: Includes maximize button to expand viewport to 90vh height and 20-30% wider to easily scroll through long diagnostic lists.
 
 ---

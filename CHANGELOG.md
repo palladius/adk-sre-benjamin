@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.6] - 2026-06-05
+### Fixed
+- **Collapsed Chat Widget Sizing**: Fixed CSS layout where `.chat-column.collapsed` was overridden by `min-width` and `min-height` settings, resolving the issue where it rendered as a large blank box.
+- **Pulsing Golden Pill UI**: Redesigned the collapsed chat state into an animated golden pulsing pill widget with custom text shadows, glow effects, hover transitions, and a central label "⚡ SRE Co-Pilot (Click to Expand)".
+
 ## [1.2.5] - 2026-06-04
 ### Added
 - **Maximize Chat Widget Sizing**: Added size toggle button (🗖 / 🗗) to expand the chat panel height to 90vh and width to 480px.

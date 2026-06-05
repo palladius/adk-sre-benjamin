@@ -109,7 +109,7 @@ resource "google_cloud_run_v2_service" "sre_dashboard" {
 
       env {
         name  = "DEPLOY_VERSION"
-        value = "1.2.5"
+        value = "1.2.6"
       }
 
       env {
