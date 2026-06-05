@@ -43,6 +43,12 @@ def load_prompt(
         
     prompt_template = data[prompt_key]
     
+    kwargs.setdefault("comms_name", os.getenv("COMMS_LEAD_NAME") or os.getenv("COMMUNICATIONS_LEAD_NAME") or os.getenv("MADHAVI_NAME") or "Madhavi")
+    kwargs.setdefault("commander_name", os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin")
+    kwargs.setdefault("ops_name", os.getenv("OPS_LEAD_NAME") or os.getenv("OPERATIONS_LEAD_NAME") or os.getenv("OPS_AGENT_NAME") or "OpsAgent")
+    kwargs.setdefault("planning_name", os.getenv("PLANNING_LEAD_NAME") or os.getenv("PLANNING_AGENT_NAME") or "Scrivano Fossati")
+    kwargs.setdefault("logistics_name", os.getenv("LOGISTICS_LEAD_NAME") or os.getenv("LOGISTICS_AGENT_NAME") or "LogisticsAgent")
+    
     # Initialize a clean, sandbox-safe Jinja2 environment for string compilation
     env = Environment(loader=BaseLoader())
     

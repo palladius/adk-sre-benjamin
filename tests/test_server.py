@@ -127,7 +127,8 @@ def test_server_integration():
                 data_chat_get = json.loads(resp_chat_get.read().decode('utf-8'))
                 assert isinstance(data_chat_get, list)
                 assert len(data_chat_get) > 0
-                assert "Benjamin" in data_chat_get[0]["sender"]
+                commander_name = os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
+                assert commander_name in data_chat_get[0]["sender"]
 
         # Test POST /api/incidents/INC-MOCK-123/chat (mocked)
         with patch("os.path.exists") as mock_exists, \

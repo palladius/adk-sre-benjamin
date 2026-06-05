@@ -22,14 +22,15 @@ class PlanningLead:
     def __init__(self, model_name: str = None, loaded_skills: list[dict] = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
-        planning_name = os.getenv("PLANNING_LEAD_NAME") or os.getenv("PLANNING_AGENT_NAME") or "PlanningAgent"
+        planning_name = os.getenv("PLANNING_LEAD_NAME") or os.getenv("PLANNING_AGENT_NAME") or "Scrivano Fossati"
         
         kwargs.setdefault("incident_id", "active-incident")
+        kwargs.setdefault("planning_name", planning_name)
         system_instruction = load_prompt("planning_agent", prompt_key="system_instruction", **kwargs)
+
         
-        if planning_name != "PlanningAgent":
-            system_instruction = system_instruction.replace("Planning Agent", planning_name)
-            system_instruction = system_instruction.replace("PlanningAgent", planning_name)
+        if planning_name != "Scrivano Fossati":
+            system_instruction = system_instruction.replace("Scrivano Fossati", planning_name)
             
         from src.skills_adapter import SkillAdapter
         if loaded_skills is None:

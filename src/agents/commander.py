@@ -77,12 +77,15 @@ from src.prompt_loader import load_prompt
 import os
 
 class IncidentCommander:
-    def __init__(self, model_name: str = None):
+    def __init__(self, model_name: str = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         commander_name = os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
+        
+        kwargs.setdefault("commander_name", commander_name)
+        kwargs.setdefault("name", commander_name)
         # Load system instruction template from YAML
-        system_instruction = load_prompt("benjamin", prompt_key="system_instruction")
+        system_instruction = load_prompt("incident_commander", prompt_key="system_instruction", **kwargs)
         
         if commander_name != "Benjamin":
             system_instruction = system_instruction.replace("Benjamin", commander_name)
@@ -111,7 +114,7 @@ class IncidentCommander:
     def declare_incident(self, alert_event: str, project_id: str, incident_id: str) -> str:
         """Declares an incident active and formats the notification payload."""
         declaration_prompt = load_prompt(
-            "benjamin",
+            "incident_commander",
             prompt_key="incident_declaration",
             alert_event=alert_event,
             project_id=project_id,

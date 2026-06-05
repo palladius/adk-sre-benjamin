@@ -19,11 +19,13 @@ from src.prompt_loader import load_prompt
 import os
 
 class LogisticsLead:
-    def __init__(self, model_name: str = None):
+    def __init__(self, model_name: str = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         logistics_name = os.getenv("LOGISTICS_LEAD_NAME") or os.getenv("LOGISTICS_AGENT_NAME") or "LogisticsAgent"
-        system_instruction = load_prompt("logistics_agent", prompt_key="system_instruction")
+        
+        kwargs.setdefault("logistics_name", logistics_name)
+        system_instruction = load_prompt("logistics_agent", prompt_key="system_instruction", **kwargs)
         
         if logistics_name != "LogisticsAgent":
             system_instruction = system_instruction.replace("Logistics Agent", logistics_name)

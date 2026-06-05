@@ -601,7 +601,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateLeadsHighlight(timeline) {
         const agents = new Set(timeline.map(e => e.agent.toLowerCase()));
         
-        leadCommander.classList.toggle("active", agents.has("incident commander benjamin") || agents.has("benjamin"));
+        leadCommander.classList.toggle("active", agents.has("incident commander") || [...agents].some(a => a.includes("commander") || a.includes("benjamin")));
         leadOps.classList.toggle("active", agents.has("operations lead") || agents.has("ops lead"));
         leadLogistics.classList.toggle("active", agents.has("logistics lead"));
         leadPlanning.classList.toggle("active", agents.has("planning lead"));

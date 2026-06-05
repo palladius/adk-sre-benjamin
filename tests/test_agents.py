@@ -74,7 +74,7 @@ def test_planning_lead(monkeypatch):
     monkeypatch.delenv("PLANNING_LEAD_NAME", raising=False)
     monkeypatch.delenv("PLANNING_AGENT_NAME", raising=False)
     pl = PlanningLead()
-    assert pl.agent.name == "PlanningAgent"
+    assert pl.agent.name == "Scrivano Fossati"
     
     commit = pl.scribe_commit("State updated", "sha123")
     assert "sha123" in commit

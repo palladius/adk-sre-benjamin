@@ -102,13 +102,13 @@ Once your credentials are connected, `@SREBenjaminBot` functions as a fully inte
 3. **🎙️ Voice Note Transcription & SRE Actioning (On-The-Fly STT)**:
    * **Send Voice Notes**: You can record and send standard Telegram **voice messages** or audio notes directly to the bot.
    * **Auto-Transcription**: The bot immediately downloads the audio file, processes it through Google's dynamically resolved Gemini API with zero local dependencies, and replies back with a clean text transcription.
-   * **Intelligent Actioning**: The transcribed text is automatically routed as a direct operational chat message to SRE Commander Benjamin, updating the incident's timeline chat log in real-time, mirroring onto the Web Dashboard, and replying back with the commander's strategic SRE instructions!
+   * **Intelligent Actioning**: The transcribed text is automatically routed as a direct operational chat message to the SRE Incident Commander, updating the incident's timeline chat log in real-time, mirroring onto the Web Dashboard, and replying back with the commander's strategic SRE instructions!
 4. **Active Incident Conversation Mirroring**:
    * Any text message or transcribed voice command you send is automatically appended to the incident's `chat.json` logs, enabling **flawless dual-screen alignment** between your Telegram app and your Web Command Dashboard!
 
 ### 🔒 5. Human-in-the-Loop (HITL) Safety Gates & Approvals
 
-When a dangerous system mutation (e.g. `systemctl restart mysql`) is proposed by SRE Commander Benjamin, the incident is placed on a safety gate hold, transitioning to the `AWAITING_APPROVAL` status. During this hold:
+When a dangerous system mutation (e.g. `systemctl restart mysql`) is proposed by the SRE Incident Commander, the incident is placed on a safety gate hold, transitioning to the `AWAITING_APPROVAL` status. During this hold:
 * **Safety Gate Interception**: Standard chat commands are intercepted, and the Telegram bot dispatches a safety confirmation warning containing the proposed command, safety risk level, and a specialized confirmation keyboard.
 * **Specialized Clearance Buttons**:
   * **`💥 Yes, I am sure`**: Authorizes the mutation command. This executes the action via `resume_simulation`, recovers SRE services, closes the incident, logs the response in the incident's `chat.json` feed, and resets the operator's Telegram keyboard back to standard navigation.

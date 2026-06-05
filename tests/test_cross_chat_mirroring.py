@@ -69,5 +69,6 @@ def test_web_to_telegram_push_mirroring(mock_exists, mock_parse, mock_send_tg):
         args2, kwargs2 = mock_send_tg.call_args_list[1]
         assert args2[0] == "123456:mock-token"
         assert args2[1] == "987654321"
-        assert "🏰 *Benjamin (IC):*" in args2[2]
+        commander_name = os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
+        assert f"🏰 *{commander_name} (IC):*" in args2[2]
         assert "Incident under control." in args2[2]

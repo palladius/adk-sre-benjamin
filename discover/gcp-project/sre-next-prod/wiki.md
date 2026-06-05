@@ -1,53 +1,17 @@
 # GCP Resource Catalog: sre-next-prod
-Auto-generated on **2026-06-02 09:21:18 UTC** by Project Benjamin SRE Discovery Engine.
+Auto-generated on **2026-06-05 08:47:00 UTC** by Project Benjamin SRE Discovery Engine.
 
 ## Executive SRE Audit Summary
-🚨 **VULNERABILITY WARNING**: Found **1** exposed/vulnerable resources out of **6** analyzed assets. Action required!
+🚨 **VULNERABILITY WARNING**: Found **1** exposed/vulnerable resources out of **3** analyzed assets. Action required!
 
 ## Discovered Resource Catalog
 | Type | Name | Location | Status | Audit Warning |
 | --- | --- | --- | --- | --- |
-| 🖥️ Compute VM | `gke-online-boutique-prod-main-pool-61456b2b-x9ux` | `us-central1-a` | `RUNNING` | ✅ SAFE |
-| 🖥️ Compute VM | `gke-online-boutique-prod-main-pool-0a19b5be-7wl6` | `us-central1-c` | `RUNNING` | ✅ SAFE |
-| 🖥️ Compute VM | `gke-online-boutique-prod-main-pool-31a00ce1-qec8` | `us-central1-f` | `RUNNING` | ✅ SAFE |
 | ☸️ GKE Cluster | `online-boutique-prod` | `us-central1` | `RUNNING` | **⚠️ EXPOSED: Public GKE control plane endpoint access enabled** |
 | 🪣 GCS Bucket | `test-riccardo-demo-sre` | `EU` | `ACTIVE` | ✅ SAFE |
 | 🌐 VPC Network | `online-boutique-prod-vpc` | `global` | `ACTIVE` | ✅ SAFE |
 
 ## Detailed Resource Metadata
-### `gke-online-boutique-prod-main-pool-61456b2b-x9ux` (gce_vm)
-- **Location**: `us-central1-a`
-- **Status**: `RUNNING`
-- **Audited Vulnerable**: `False`
-- **Metadata Details**:
-  ```json
-{
-      "internal_ip": "10.0.0.30",
-      "external_ip": null
-  }
-  ```
-### `gke-online-boutique-prod-main-pool-0a19b5be-7wl6` (gce_vm)
-- **Location**: `us-central1-c`
-- **Status**: `RUNNING`
-- **Audited Vulnerable**: `False`
-- **Metadata Details**:
-  ```json
-{
-      "internal_ip": "10.0.0.31",
-      "external_ip": null
-  }
-  ```
-### `gke-online-boutique-prod-main-pool-31a00ce1-qec8` (gce_vm)
-- **Location**: `us-central1-f`
-- **Status**: `RUNNING`
-- **Audited Vulnerable**: `False`
-- **Metadata Details**:
-  ```json
-{
-      "internal_ip": "10.0.0.32",
-      "external_ip": null
-  }
-  ```
 ### `online-boutique-prod` (gke_cluster)
 - **Location**: `us-central1`
 - **Status**: `RUNNING`

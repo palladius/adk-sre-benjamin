@@ -50,6 +50,8 @@ system_instruction: |
     assert "Instruction: Find the database error in active logs." in output
 
 def test_cli_interactive_message(monkeypatch):
+    # Ensure name is predictable
+    monkeypatch.setenv("COMMS_LEAD_NAME", "Lucia")
     # Set up mock prompts directory
     import io
     captured_stdout = io.StringIO()

@@ -25,10 +25,12 @@ class CommunicationsLead:
         comms_name = os.getenv("COMMS_LEAD_NAME") or os.getenv("COMMUNICATIONS_LEAD_NAME") or os.getenv("MADHAVI_NAME") or "Madhavi"
         
         kwargs.setdefault("incident_id", "active-incident")
-        system_instruction = load_prompt("madhavi", prompt_key="system_instruction", **kwargs)
+        kwargs.setdefault("comms_name", comms_name)
+        system_instruction = load_prompt("comms_agent", prompt_key="system_instruction", **kwargs)
         
         if comms_name != "Madhavi":
             system_instruction = system_instruction.replace("Madhavi", comms_name)
+
             
         from src.skills_adapter import SkillAdapter
         if loaded_skills is None:
@@ -72,7 +74,7 @@ class CommunicationsLead:
     def broadcast_incident(self, incident_id: str, incident_status: str, project_id: str, summary_text: str) -> str:
         """Broadcasts active incident reports to channels."""
         return load_prompt(
-            "madhavi",
+            "comms_agent",
             prompt_key="incident_broadcast",
             incident_id=incident_id,
             incident_status=incident_status,
@@ -83,7 +85,7 @@ class CommunicationsLead:
     def request_hitl_approval(self, incident_id: str, command: str, risk_level: str, reasons: list[str]) -> str:
         """Generates Human-in-the-Loop authorization alerts."""
         return load_prompt(
-            "madhavi",
+            "comms_agent",
             prompt_key="hitl_approval_request",
             incident_id=incident_id,
             command=command,

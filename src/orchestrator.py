@@ -32,15 +32,15 @@ def run_incident_flow(payload: dict, base_dir: str = "investigations") -> tuple[
         with open(timeline_path, "a") as f:
             f.write(f"- **[{timestamp}]** {event_text}\n")
             
-    # 3. Step 1: Benjamin Declares Incident Active
+    # 3. Step 1: Incident Commander Declares Incident Active
     declaration = commander.declare_incident(
         alert_event=trigger.event_type,
         project_id=trigger.project_id,
         incident_id=incident.incident_id
     )
-    log_to_timeline(f"Incident ACTIVE - Incident Commander Benjamin declared: {declaration.strip()}")
+    log_to_timeline(f"Incident ACTIVE - Incident Commander {commander.agent.name} declared: {declaration.strip()}")
     
-    # 4. Step 2: Madhavi Broadcasts the Incident
+    # 4. Step 2: Communications Lead Broadcasts the Incident
     broadcast = comms.broadcast_incident(
         incident_id=incident.incident_id,
         incident_status="ACTIVE",
@@ -73,7 +73,7 @@ def run_incident_flow(payload: dict, base_dir: str = "investigations") -> tuple[
 - **Status:** ACTIVE
 - **Target Project:** `{trigger.project_id}`
 - **Trigger Event:** `{trigger.event_type}`
-- **Incident Commander:** Benjamin
+- **Incident Commander:** {commander.agent.name}
 - **Safety Level:** LOW Risk
 
 ## Active Diagnostic Pipeline

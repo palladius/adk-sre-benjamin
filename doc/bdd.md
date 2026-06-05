@@ -27,16 +27,16 @@ Under the IMAG ICS model, the framework is structured as a **hub-and-spoke hiera
                                                 | (Operational Triggers)
                                                 v
                               +-----------------+-----------------+
-                              |      [Agent 1: Benjamin]          |
-                              |   Incident Commander / Lead (IC)  |
+                              | [Incident Commander (IC)]         |
+                              | Role (default: Benjamin)          |
                               +--------+--------+--------+--------+
                                        |        |        |
          +-----------------------------+        |        +-----------------------------+
          |                                      |                                      |
          v (Delegate Communication)             v (Delegate Operations)                v (Delegate Logistics)
   +------+-------------------+           +------+-------------------+           +------+-------------------+
-  |  [Agent 2: Madhavi]      |           |  [Agent 3: Ops Agent]    |           |  [Agent 6: Logi Agent]   |
-  |  Communications Lead     |           |  Operations Lead         |           |  Logistics Lead          |
+  | [Communications Lead]    |           |  [Agent 3: Ops Agent]    |           |  [Agent 6: Logi Agent]   |
+  | Role (default: Madhavi)  |           |  Operations Lead         |           |  Logistics Lead          |
   +------+-------------------+           +------+-------------------+           +------+-------------------+
          |                                      |                                      |
          | (Updates & Bug Filing)               | (Diagnostics & Remediation)          | (Credentials, Quotas & Risk)
@@ -60,7 +60,7 @@ Under the IMAG ICS model, the framework is structured as a **hub-and-spoke hiera
                                                  +------+-------------------+
                                                  | • Memini (Memory)        |
                                                  | • Discovery Agent        |
-                                                 | • Scribe Agent (Scrivano)|
+                                                 | • Scribe: Scrivano Foss|
                                                  +--------------------------+
 ```
 
@@ -85,7 +85,7 @@ Under the IMAG ICS model, the framework is structured as a **hub-and-spoke hiera
 * **Delegates to:**
   * **Memini (Memory Agent):** Custodian of historical runbooks, incidents, and postmortems (*from the Latin 'remember'*). It is queried to find past solutions for recurring issues and logs the final postmortem of resolved incidents.
   * **Discovery Agent (GCP Asset & Security Auditor):** Autonomous asset discovery and security posture scanning. Crawls GCP resources on given `project_id`s, highlights security vulnerabilities (e.g., public GCS buckets, open firewalls), and formats them in interlinked Obsidian-style Wiki pages with an automatically updated index page (**Karpathy autoupdate**).
-  * **Scribe Agent (Lo Scrivano):** The chronicler of the incident. It manages the active **Investigation Folder** (`investigations/INC-YYYYMMDD-ID/`) and maintains the living `state.md` (representing the current "State of the World") and `timeline.md` (the "Running Doc" of executed commands and events). Every state transition is version-controlled via Git commits (`git commit`), providing a complete, audit-safe "Time Machine" of the incident's mental model and actions.
+  * **Scribe Agent (Scrivano Fossati):** The chronicler of the incident. It manages the active **Investigation Folder** (`investigations/INC-YYYYMMDD-ID/`) and maintains the living `state.md` (representing the current "State of the World") and `timeline.md` (the "Running Doc" of executed commands and events). Every state transition is version-controlled via Git commits (`git commit`), providing a complete, audit-safe "Time Machine" of the incident's mental model and actions.
 
 ### ⚙️ 4. Logistics Lead: Logistics Agent
 * **IMAG Role:** **Logistics Lead (Logistics)**. In charge of securing necessary resources, tools, software licenses, API quotas, credentials, and environmental requirements for the Operations team.
@@ -111,17 +111,17 @@ Under the IMAG ICS model, the framework is structured as a **hub-and-spoke hiera
 
 ### Feature 1: IMAG Top-Down Delegation
 **As an** SRE Automation System  
-**I want** Benjamin to ingest alerts and delegate to the four dedicated IMAG ICS Leads  
+**I want** the Incident Commander to ingest alerts and delegate to the four dedicated IMAG ICS Leads  
 **So that** incident roles are strictly separated according to Google's best practices.
 
-* **Scenario: Benjamin activates the 4 ICS Leads on a Latency SLO Violation**
-  * **Given** Benjamin's operational harness receives a GCP alert "frontend_latency_slo_violated"
-  * **When** Benjamin declares the incident active
-  * **Then** Benjamin delegates Operations to the Ops Agent (Ops Lead)
-  * **And** delegates Communication to Madhavi (Communications Lead)
+* **Scenario: Incident Commander activates the 4 ICS Leads on a Latency SLO Violation**
+  * **Given** the Incident Commander's operational harness receives a GCP alert "frontend_latency_slo_violated"
+  * **When** the Incident Commander declares the incident active
+  * **Then** the Incident Commander delegates Operations to the Ops Agent (Ops Lead)
+  * **And** delegates Communication to the Communications Lead
   * **And** delegates Planning to the Planning Agent (Planning Lead)
   * **And** delegates Logistics to the Logistics Agent (Logistics Lead)
-  * **And** Madhavi notifies the user on Telegram and updates the status page.
+  * **And** the Communications Lead notifies the user on Telegram and updates the status page.
 
 ---
 
@@ -150,8 +150,8 @@ Under the IMAG ICS model, the framework is structured as a **hub-and-spoke hiera
   * **When** the Logistics Agent evaluates the command
   * **And** runs the Risk Assessment Agent which returns a **Risk Coefficient** of `HIGH`
   * **Then** the Logistics Agent **blocks** the execution of the Mutation Agent
-  * **And** notifies Madhavi (Communications Lead) of the blocked high-risk escalation
-  * **And** Madhavi logs a ServiceNow ticket and requests explicit human approval on Telegram.
+  * **And** notifies the Communications Lead of the blocked high-risk escalation
+  * **And** the Communications Lead logs a ServiceNow ticket and requests explicit human approval on Telegram.
 
 ---
 

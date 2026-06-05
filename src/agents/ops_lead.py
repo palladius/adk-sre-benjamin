@@ -19,11 +19,13 @@ from src.prompt_loader import load_prompt
 import os
 
 class OperationsLead:
-    def __init__(self, model_name: str = None, loaded_skills: list[dict] = None):
+    def __init__(self, model_name: str = None, loaded_skills: list[dict] = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         ops_name = os.getenv("OPS_LEAD_NAME") or os.getenv("OPERATIONS_LEAD_NAME") or os.getenv("OPS_AGENT_NAME") or "OpsAgent"
-        system_instruction = load_prompt("ops_agent", prompt_key="system_instruction")
+        
+        kwargs.setdefault("ops_name", ops_name)
+        system_instruction = load_prompt("ops_agent", prompt_key="system_instruction", **kwargs)
         
         if ops_name != "OpsAgent":
             system_instruction = system_instruction.replace("Ops Agent", ops_name)

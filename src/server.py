@@ -112,6 +112,10 @@ def parse_incident_folder(folder_path: str) -> dict:
         "folder_path": folder_path
     }
 
+def get_commander_name() -> str:
+    """Gets the Incident Commander name from environment variables, defaulting to 'Benjamin'."""
+    return os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
+
 ACTIVE_STATE_FILE = "investigations/active_state.json"
 
 def get_active_state() -> dict:
@@ -564,8 +568,8 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         details = parse_incident_folder(incident_path)
                         chat_data = [
                             {
-                                "sender": "Benjamin Agent (IC)",
-                                "message": f"Welcome to the tactical Incident Chat for {incident_id}. I am Benjamin, the SRE Incident Commander. We are currently analyzing the incident alert '{details.get('trigger_event')}' targeting project '{details.get('project_id')}'. How can I assist you?",
+                                "sender": f"{get_commander_name()} Agent (IC)",
+                                "message": f"Welcome to the tactical Incident Chat for {incident_id}. I am {get_commander_name()}, the SRE Incident Commander. We are currently analyzing the incident alert '{details.get('trigger_event')}' targeting project '{details.get('project_id')}'. How can I assist you?",
                                 "timestamp": datetime.now(timezone.utc).isoformat()
                             }
                         ]
@@ -753,7 +757,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
                         chat_data.append({
-                            "sender": "Benjamin Agent (IC)",
+                            "sender": f"{get_commander_name()} Agent (IC)",
                             "message": "✅ Safety Gate Clearance Granted! Resuming SRE incident resolution pipeline.",
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
@@ -773,7 +777,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             msg = (
                                 f"✅ *Safety Gate Clearance Granted via Web Dashboard!*\n\n"
                                 f"Proposed SRE mutation command was approved by the operator on the web panel.\n"
-                                f"Resuming incident resolution... Benjamin is executing the action."
+                                f"Resuming incident resolution... {get_commander_name()} is executing the action."
                             )
                             send_telegram_menu(bot_token, chat_id, msg)
                             
@@ -817,7 +821,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
                         chat_data.append({
-                            "sender": "Benjamin Agent (IC)",
+                            "sender": f"{get_commander_name()} Agent (IC)",
                             "message": "❌ Safety Gate Override Active. SRE operations halted.",
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
@@ -959,10 +963,10 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         
                         chat_data = [
                             {
-                                "sender": "Benjamin Agent (IC)",
+                                "sender": f"{get_commander_name()} Agent (IC)",
                                 "message": (
                                     f"Welcome to the tactical Incident Chat for {incident_id}. "
-                                    f"I am Benjamin, the SRE Incident Commander. We are currently analyzing the alert "
+                                    f"I am {get_commander_name()}, the SRE Incident Commander. We are currently analyzing the alert "
                                     f"'{details.get('trigger_event')}' targeting project '{details.get('project_id')}'. "
                                     f"How can I assist you today?{telegram_proposal}"
                                 ),
@@ -1013,7 +1017,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         reply_msg = f"[System Alert] Incident Commander failed: {e}"
                     
                     chat_data.append({
-                        "sender": "Benjamin Agent (IC)",
+                        "sender": f"{get_commander_name()} Agent (IC)",
                         "message": reply_msg,
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     })
@@ -1022,7 +1026,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     if bot_token and chat_id:
                         if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
                             try:
-                                send_raw_telegram_message(bot_token, chat_id, f"🏰 *Benjamin (IC):*\n{reply_msg}")
+                                send_raw_telegram_message(bot_token, chat_id, f"🏰 *{get_commander_name()} (IC):*\n{reply_msg}")
                             except Exception as tg_err:
                                 print(f"[Server] Failed to push commander reply to Telegram: {tg_err}")
                     
@@ -1720,7 +1724,7 @@ def start_telegram_bot():
                                     reply_msg = (
                                         f"✅ *Safety Gate Clearance Granted!*\n\n"
                                         f"Operator approved proposed mutation command:\n`{proposed_mutation}`\n\n"
-                                        f"Resuming SRE incident resolution... Benjamin is executing the action."
+                                        f"Resuming SRE incident resolution... {get_commander_name()} is executing the action."
                                     )
                                 except Exception as e:
                                     reply_msg = f"❌ *Failed to resume simulation:* {e}"
@@ -1743,7 +1747,7 @@ def start_telegram_bot():
                                         "timestamp": datetime.now(timezone.utc).isoformat()
                                     })
                                     chat_data.append({
-                                        "sender": "Benjamin Agent (IC)",
+                                        "sender": f"{get_commander_name()} Agent (IC)",
                                         "message": reply_msg,
                                         "timestamp": datetime.now(timezone.utc).isoformat()
                                     })
@@ -1784,7 +1788,7 @@ def start_telegram_bot():
                                         "timestamp": datetime.now(timezone.utc).isoformat()
                                     })
                                     chat_data.append({
-                                        "sender": "Benjamin Agent (IC)",
+                                        "sender": f"{get_commander_name()} Agent (IC)",
                                         "message": reply_msg,
                                         "timestamp": datetime.now(timezone.utc).isoformat()
                                     })
@@ -1850,7 +1854,7 @@ def start_telegram_bot():
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
                         chat_data.append({
-                            "sender": "Benjamin Agent (IC)",
+                            "sender": f"{get_commander_name()} Agent (IC)",
                             "message": reply_msg,
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
@@ -1859,7 +1863,7 @@ def start_telegram_bot():
                         with open(chat_path, "w") as f:
                             json.dump(chat_data, f, indent=2)
                             
-                        send_raw_telegram_message(bot_token, chat_id, f"🏰 *Benjamin (IC):*\n{reply_msg}")
+                        send_raw_telegram_message(bot_token, chat_id, f"🏰 *{get_commander_name()} (IC):*\n{reply_msg}")
                         
         except Exception as e:
             print(f"[Telegram Bot Loop] Error: {e}")

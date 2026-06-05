@@ -125,16 +125,16 @@ def run_cli(args_list=None) -> int:
     agent_name_lower = parsed_args.agent.lower()
     # Support mapping "comms" or others to appropriate YAML file
     yaml_agent_name = agent_name_lower
-    if yaml_agent_name in ["comms", "madhavi"]:
-        yaml_agent_name = "madhavi"
+    if yaml_agent_name in ["comms", "madhavi", "comms_agent"]:
+        yaml_agent_name = "comms_agent"
     elif yaml_agent_name in ["ops", "opsagent"]:
         yaml_agent_name = "ops_agent"
     elif yaml_agent_name in ["planning", "planningagent"]:
         yaml_agent_name = "planning_agent"
     elif yaml_agent_name in ["logistics", "logisticsagent"]:
         yaml_agent_name = "logistics_agent"
-    elif yaml_agent_name in ["commander", "benjamin"]:
-        yaml_agent_name = "benjamin"
+    elif yaml_agent_name in ["commander", "benjamin", "incident_commander"]:
+        yaml_agent_name = "incident_commander"
         
     try:
         system_instruction = load_prompt(
@@ -146,6 +146,7 @@ def run_cli(args_list=None) -> int:
     except Exception as e:
         sys.stderr.write(f"Error loading agent prompts: {e}\n")
         return 1
+
         
     # Determine the target interactive query
     query_msg = parsed_args.message or stdin_instruction
@@ -168,8 +169,10 @@ def run_cli(args_list=None) -> int:
         
         agent_map = {
             "benjamin": IncidentCommander,
+            "incident_commander": IncidentCommander,
             "commander": IncidentCommander,
             "comms": CommunicationsLead,
+            "comms_agent": CommunicationsLead,
             "madhavi": CommunicationsLead,
             "ops": OperationsLead,
             "ops_agent": OperationsLead,
