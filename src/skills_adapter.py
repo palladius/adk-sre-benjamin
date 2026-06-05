@@ -3,7 +3,12 @@ import re
 import yaml
 
 DEFAULT_SEARCH_DIRS = [
-    "/home/riccardo/git/sre/skills/", # Cloned from https://github.com/gemini-cli-extensions/sre
+    "~/git/sre/skills/", # Cloned from https://github.com/gemini-cli-extensions/sre
+    "~/.gemini/config/plugins/sre-extension/skills/",
+    "~/.gemini/config/plugins/palladius-common-commands/skills/",
+    "~/.gemini/config/plugins/palladius-public-goodies/skills/",
+    "~/.gemini/config/plugins/palladius-private-goodies/skills/",
+    "/home/riccardo/git/sre/skills/", # Backward compatibility
     "/home/riccardo/.gemini/config/plugins/palladius-common-commands/skills/",
     "/home/riccardo/.gemini/config/plugins/palladius-public-goodies/skills/",
     "/home/riccardo/.gemini/config/plugins/palladius-private-goodies/skills/",
@@ -24,9 +29,10 @@ class SkillAdapter:
                     
             # Add defaults
             resolved_dirs.extend(DEFAULT_SEARCH_DIRS)
-            self.search_dirs = resolved_dirs
+            self.search_dirs = [os.path.expanduser(d) for d in resolved_dirs]
         else:
-            self.search_dirs = search_dirs
+            self.search_dirs = [os.path.expanduser(d) for d in search_dirs]
+
         
     def load_sre_skill(self, skill_name: str) -> dict:
         """Discovers, loads, and parses an SRE extension skill from the plugin environment."""

@@ -83,3 +83,49 @@ def test_skill_loader_sre_extension_dir(monkeypatch):
         assert skill["name"] == "anomaly-detection"
         assert "anomal" in skill["description"].lower()
         assert len(skill["instructions"]) > 0
+
+def test_skill_adapter_path_expansion():
+    test_dirs = ["~/mock-skills-dir"]
+    adapter = SkillAdapter(search_dirs=test_dirs)
+    import os
+    expected = os.path.join(os.path.expanduser("~"), "mock-skills-dir")
+    assert adapter.search_dirs[0] == expected
+
+def test_agent_auto_load_skills(tmp_path, monkeypatch):
+    # Create mock skills for Ops and Planning/Comms
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    
+    anomaly_dir = skills_dir / "anomaly-detection"
+    anomaly_dir.mkdir()
+    (anomaly_dir / "SKILL.md").write_text("""---
+name: anomaly-detection
+description: Mock anomaly detection
+---
+# Instructions
+Auto-loaded anomaly detection instructions.
+""")
+    
+    pomo_dir = skills_dir / "postmortem-generator"
+    pomo_dir.mkdir()
+    (pomo_dir / "SKILL.md").write_text("""---
+name: postmortem-generator
+description: Mock postmortem generator
+---
+# Instructions
+Auto-loaded postmortem generator instructions.
+""")
+
+    # Point SkillAdapter search paths to our tmp SRE dir
+    monkeypatch.setenv("GEMINI_CLI_SRE_DIR", str(tmp_path))
+    
+    from src.agents.comms import CommunicationsLead
+    ops = OperationsLead()
+    planning = PlanningLead()
+    comms = CommunicationsLead()
+    
+    assert "Auto-loaded anomaly detection" in ops.agent.instruction
+    assert "Auto-loaded postmortem generator" in planning.agent.instruction
+    assert "Auto-loaded postmortem generator" in comms.agent.instruction
+
+

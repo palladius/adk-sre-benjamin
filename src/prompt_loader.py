@@ -11,11 +11,18 @@ def load_prompt(
     **kwargs
 ) -> str:
     """Loads and hydrates SRE agent prompts from a structured YAML configuration using Jinja2."""
-    if prompt_dir is None:
-        prompt_dir = DEFAULT_PROMPT_DIR
-        
     filename = f"{agent_name}.yaml"
+    
+    if prompt_dir is None:
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        etc_prompts_dir = os.path.join(repo_root, "etc", "prompts")
+        if os.path.exists(os.path.join(etc_prompts_dir, filename)):
+            prompt_dir = etc_prompts_dir
+        else:
+            prompt_dir = DEFAULT_PROMPT_DIR
+            
     filepath = os.path.join(prompt_dir, filename)
+
     
     if not os.path.exists(filepath):
         raise FileNotFoundError(f"Prompt YAML template for agent '{agent_name}' not found at {filepath}")

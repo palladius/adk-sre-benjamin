@@ -29,9 +29,30 @@ class OperationsLead:
             system_instruction = system_instruction.replace("Ops Agent", ops_name)
             system_instruction = system_instruction.replace("OpsAgent", ops_name)
             
+        from src.skills_adapter import SkillAdapter
+        if loaded_skills is None:
+            loaded_skills = []
+            adapter = SkillAdapter()
+            for skill_name in [
+                "anomaly-detection",
+                "cloud-logging",
+                "cloud-monitoring",
+                "gcp-setup",
+                "gcp-playbooks",
+                "gcp-slo-management",
+                "investigation-entrypoint",
+                "safe-sre-investigator"
+            ]:
+                try:
+                    skill = adapter.load_sre_skill(skill_name)
+                    loaded_skills.append(skill)
+                except FileNotFoundError:
+                    pass
+            
         if loaded_skills:
             for skill in loaded_skills:
                 system_instruction += f"\n\n### LOADED SRE SKILL: {skill['name']}\n{skill['instructions']}"
+
         
         self.agent = LlmAgent(
             name=ops_name,

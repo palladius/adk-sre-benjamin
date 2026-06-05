@@ -19,14 +19,32 @@ from src.prompt_loader import load_prompt
 import os
 
 class CommunicationsLead:
-    def __init__(self, model_name: str = None):
+    def __init__(self, model_name: str = None, loaded_skills: list[dict] = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         comms_name = os.getenv("COMMS_LEAD_NAME") or os.getenv("COMMUNICATIONS_LEAD_NAME") or os.getenv("MADHAVI_NAME") or "Madhavi"
-        system_instruction = load_prompt("madhavi", prompt_key="system_instruction")
+        
+        kwargs.setdefault("incident_id", "active-incident")
+        system_instruction = load_prompt("madhavi", prompt_key="system_instruction", **kwargs)
         
         if comms_name != "Madhavi":
             system_instruction = system_instruction.replace("Madhavi", comms_name)
+            
+        from src.skills_adapter import SkillAdapter
+        if loaded_skills is None:
+            loaded_skills = []
+            adapter = SkillAdapter()
+            for skill_name in ["postmortem-generator", "postmortem-aggregator"]:
+                try:
+                    skill = adapter.load_sre_skill(skill_name)
+                    loaded_skills.append(skill)
+                except FileNotFoundError:
+                    pass
+                    
+        if loaded_skills:
+            for skill in loaded_skills:
+                system_instruction += f"\n\n### LOADED SRE SKILL: {skill['name']}\n{skill['instructions']}"
+
             
         self.agent = LlmAgent(
             name=comms_name,

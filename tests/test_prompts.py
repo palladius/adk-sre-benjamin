@@ -82,3 +82,10 @@ system_instruction: |
     
     with pytest.raises(TemplateError):
         load_prompt("bad_jinja", prompt_dir=str(prompt_dir), name="Benjamin")
+
+def test_load_prompt_defaults_to_etc():
+    # Calling load_prompt without specifying prompt_dir should default to etc/prompts/
+    # and load version from etc/prompts/benjamin.yaml which has "etc-version-1.13".
+    val = load_prompt("benjamin", prompt_key="version")
+    assert val == "etc-version-1.13"
+
