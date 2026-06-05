@@ -4,10 +4,11 @@ set -e
 # Load environment variables from .env
 if [ -f .env ]; then
   echo "📖 Loading environment variables from .env..."
-  # Use grep and sed to clean up export syntax safely
   export $(grep -v '^#' .env | xargs)
 else
-  echo "⚠️  .env file not found. Falling back to default environment values."
+  echo "❌ Error: .env file not found at root directory."
+  echo "Please copy .env.example or .env.dist to .env and configure your keys."
+  exit 1
 fi
 
 # Set defaults
