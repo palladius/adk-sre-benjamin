@@ -38,16 +38,24 @@ restart-services:
     fi
     @PYTHONPATH=. uv run python3 src/server.py
 
-# Deploy the SRE dashboard to Google Cloud Run using gcloud source build
+# Deploy SRE dashboard locally via Docker building, pushing, and Cloud Run deploy
 deploy:
-    @echo "🚀 Containerizing and deploying SRE Dashboard to Cloud Run..."
-    gcloud beta run deploy sre-agent-service \
-        --source . \
-        --port 8080 \
-        --no-allow-unauthenticated \
-        --iap \
-        --set-env-vars "WEB_USERNAME=${WEB_USERNAME},WEB_PASSWORD=${WEB_PASSWORD},GEMINI_API_KEY=${GEMINI_API_KEY},DEFAULT_GEMINI_MODEL=${DEFAULT_GEMINI_MODEL},GCLOUD_IDENTITY=${GCLOUD_IDENTITY}" \
-        --region us-central1
+    @bash bin/deploy-to-cloudrun.sh
+
+
+# Build the SRE dashboard Docker container locally
+docker-build:
+    @echo "📦 Building SRE Agent docker image..."
+    docker build \
+        -t us-central1-docker.pkg.dev/$(gcloud config get-value project 2>/dev/null || echo "sre-next")/sre-agent-repo/sre-agent:latest \
+        -t us-central1-docker.pkg.dev/$(gcloud config get-value project 2>/dev/null || echo "sre-next")/sre-agent-repo/sre-agent:v$(cat VERSION | tr -d '\r\n') .
+
+# Push SRE dashboard Docker container to Artifact Registry
+docker-push:
+    @echo "🚀 Pushing SRE Agent docker image to Artifact Registry..."
+    docker push us-central1-docker.pkg.dev/$(gcloud config get-value project 2>/dev/null || echo "sre-next")/sre-agent-repo/sre-agent:latest
+    docker push us-central1-docker.pkg.dev/$(gcloud config get-value project 2>/dev/null || echo "sre-next")/sre-agent-repo/sre-agent:v$(cat VERSION | tr -d '\r\n')
+
 
 # Initialize Terraform configuration
 tf-init:
