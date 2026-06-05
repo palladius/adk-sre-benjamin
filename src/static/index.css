@@ -2548,3 +2548,49 @@ body {
     border-color: rgba(0, 255, 255, 0.6) !important;
     box-shadow: 0 0 8px rgba(0, 255, 255, 0.3) !important;
 }
+
+/* Wiki Autocomplete Box and Items */
+.wiki-editor-pane {
+    position: relative;
+}
+
+.wiki-autocomplete-box {
+    position: absolute;
+    bottom: 50px;
+    left: 20px;
+    max-height: 180px;
+    width: 255px;
+    overflow-y: auto;
+    background: rgba(13, 17, 23, 0.95);
+    border: 1px solid var(--neon-cyan);
+    border-radius: 6px;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    z-index: 1000;
+    list-style: none;
+    padding: 4px 0;
+}
+
+.wiki-autocomplete-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-primary);
+    transition: var(--transition-smooth);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.wiki-autocomplete-item:hover, .wiki-autocomplete-item.active {
+    background: rgba(0, 255, 255, 0.15);
+    color: var(--neon-cyan);
+}
+
+.wiki-autocomplete-type {
+    font-size: 9px;
+    color: var(--text-secondary);
+    border: 1px solid var(--panel-border);
+    border-radius: 4px;
+    padding: 1px 4px;
+    text-transform: uppercase;
+}

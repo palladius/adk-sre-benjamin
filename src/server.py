@@ -16,6 +16,7 @@ def parse_incident_folder(folder_path: str) -> dict:
     # Defaults
     status = "UNKNOWN"
     project_id = "UNKNOWN"
+    domain_id = "UNKNOWN"
     trigger_event = "UNKNOWN"
     timeline = []
     artifacts = []
@@ -33,6 +34,10 @@ def parse_incident_folder(folder_path: str) -> dict:
             project_match = re.search(r'\-\s+\*\*(Target Project|GCP Project):\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
             if project_match:
                 project_id = project_match.group(2).strip()
+                
+            domain_match = re.search(r'\-\s+\*\*(Domain|Domain ID):\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+            if domain_match:
+                domain_id = domain_match.group(2).strip()
                 
             trigger_match = re.search(r'\-\s+\*\*Trigger Event:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
             if trigger_match:
@@ -92,10 +97,15 @@ def parse_incident_folder(folder_path: str) -> dict:
     if not project_id or project_id == "UNKNOWN":
         project_id = os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next"
 
+    if not domain_id or domain_id == "UNKNOWN":
+        if project_id == "sre-next":
+            domain_id = "sre-demo"
+
     return {
         "incident_id": incident_id,
         "status": status,
         "project_id": project_id,
+        "domain_id": domain_id,
         "trigger_event": trigger_event,
         "timeline": timeline,
         "artifacts": artifacts,

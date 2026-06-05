@@ -1,6 +1,16 @@
 // Project Benjamin SRE Dashboard Interactive Controller
 
 document.addEventListener("DOMContentLoaded", () => {
+    // Global wiki links click interception
+    document.addEventListener("click", (e) => {
+        const link = e.target.closest(".wiki-link");
+        if (link) {
+            e.preventDefault();
+            const targetId = link.getAttribute("data-id");
+            navigateTo(`/projects/${encodeURIComponent(targetId)}`);
+        }
+    });
+
     // DOM Elements
     const btnTrigger = document.getElementById("btn-trigger");
     const incidentList = document.getElementById("incident-list");
@@ -467,13 +477,30 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch("/api/incidents");
             const incidents = await res.json();
             
-            if (incidents.length === 0) {
-                incidentList.innerHTML = `<li class="loading-placeholder">No incidents recorded yet.</li>`;
+            let filteredIncidents = incidents;
+            const path = window.location.pathname;
+            if (path.startsWith("/projects/")) {
+                const parts = path.split("/");
+                const currentContext = decodeURIComponent(parts[2] || "").trim();
+                if (currentContext) {
+                    if (currentContext === "sre-demo" || currentContext === "sre-demo-prod") {
+                        filteredIncidents = incidents.filter(inc => 
+                            inc.domain_id === currentContext || 
+                            (currentContext === "sre-demo" && (!inc.domain_id || inc.domain_id === "sre-demo"))
+                        );
+                    } else {
+                        filteredIncidents = incidents.filter(inc => inc.project_id === currentContext);
+                    }
+                }
+            }
+
+            if (filteredIncidents.length === 0) {
+                incidentList.innerHTML = `<li class="loading-placeholder">No incidents for this context.</li>`;
                 return;
             }
             
             incidentList.innerHTML = "";
-            incidents.forEach((inc, index) => {
+            filteredIncidents.forEach((inc, index) => {
                 const li = document.createElement("li");
                 li.className = `incident-item ${selectedId === inc.incident_id || (!selectedId && index === 0) ? 'active' : ''}`;
                 li.dataset.id = inc.incident_id;
@@ -503,11 +530,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 incidentList.appendChild(li);
             });
             
-            // Auto-load details for selected or first incident
-            if (selectedId) {
+            const foundSelected = filteredIncidents.find(inc => inc.incident_id === selectedId);
+            if (foundSelected) {
                 fetchIncidentDetails(selectedId);
-            } else if (incidents.length > 0) {
-                fetchIncidentDetails(incidents[0].incident_id);
+            } else if (filteredIncidents.length > 0) {
+                fetchIncidentDetails(filteredIncidents[0].incident_id);
             }
         } catch (err) {
             console.error("Failed to load incident repository:", err);
@@ -1453,6 +1480,8 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             switchView("dashboard");
         }
+        
+        loadIncidentRepository(activeIncidentId);
     }
 
     window.addEventListener("popstate", handleRouting);
@@ -1607,8 +1636,38 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (insideList) processedLines.push('</ul>');
         if (insideTable) processedLines.push('</tbody></table></div>');
+        const html = processedLines.join('\n');
         
-        return processedLines.join('\n');
+        function replaceDoubleBrackets(str) {
+            return str.replace(/\[\[(.*?)\]\]/g, (match, p1) => {
+                const target = p1.trim();
+                let prefix = "";
+                let id = target;
+                if (target.startsWith("p:")) {
+                    prefix = "p:";
+                    id = target.substring(2).trim();
+                } else if (target.startsWith("d:")) {
+                    prefix = "d:";
+                    id = target.substring(2).trim();
+                }
+                
+                let display = id;
+                if (prefix === "p:") {
+                    display = `☁️ GCP Project: ${id}`;
+                } else if (prefix === "d:") {
+                    display = `🛡️ Domain: ${id}`;
+                } else {
+                    if (id === "sre-demo" || id === "sre-demo-prod") {
+                        display = `🛡️ Domain: ${id}`;
+                    } else {
+                        display = `☁️ GCP Project: ${id}`;
+                    }
+                }
+                return `<a href="/projects/${encodeURIComponent(id)}" class="wiki-link" data-id="${escapeHTML(id)}">${escapeHTML(display)}</a>`;
+            });
+        }
+        
+        return replaceDoubleBrackets(html);
     }
 
     // Markdown Wiki Fetching & Editing
@@ -1628,14 +1687,136 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Live markdown preview updates on input
+    // Live markdown preview updates on input with double bracket autocomplete
     const wikiEditor = document.getElementById("wiki-editor");
     if (wikiEditor) {
+        // Create autocomplete element dynamically
+        const autoBox = document.createElement("div");
+        autoBox.id = "wiki-autocomplete-box";
+        autoBox.className = "wiki-autocomplete-box";
+        autoBox.style.display = "none";
+        wikiEditor.parentNode.insertBefore(autoBox, wikiEditor.nextSibling);
+        
+        let activeIndex = 0;
+        let suggestions = [];
+        
         wikiEditor.addEventListener("input", () => {
             const preview = document.getElementById("wiki-preview");
             if (preview) {
                 preview.innerHTML = renderMarkdown(wikiEditor.value);
             }
+            showAutocomplete();
         });
+        
+        wikiEditor.addEventListener("keydown", (e) => {
+            if (autoBox.style.display === "block") {
+                if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    activeIndex = (activeIndex + 1) % suggestions.length;
+                    renderSuggestions();
+                } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    activeIndex = (activeIndex - 1 + suggestions.length) % suggestions.length;
+                    renderSuggestions();
+                } else if (e.key === "Enter" || e.key === "Tab") {
+                    e.preventDefault();
+                    selectSuggestion();
+                } else if (e.key === "Escape") {
+                    e.preventDefault();
+                    hideAutocomplete();
+                }
+            }
+        });
+        
+        document.addEventListener("click", (e) => {
+            if (!autoBox.contains(e.target) && e.target !== wikiEditor) {
+                hideAutocomplete();
+            }
+        });
+        
+        function showAutocomplete() {
+            const val = wikiEditor.value;
+            const pos = wikiEditor.selectionStart;
+            const textBefore = val.substring(0, pos);
+            const match = textBefore.match(/\[\[([^[\]]*)$/);
+            
+            if (match) {
+                const query = match[1].toLowerCase().trim();
+                
+                const candidates = projectHistory.map(pid => {
+                    const isDomain = (pid === "sre-demo" || pid === "sre-demo-prod");
+                    return {
+                        id: pid,
+                        display: pid,
+                        type: isDomain ? "domain" : "project",
+                        completed: isDomain ? `d:${pid}` : `p:${pid}`
+                    };
+                });
+                
+                suggestions = candidates.filter(item => 
+                    item.id.toLowerCase().includes(query) || 
+                    item.type.includes(query)
+                );
+                
+                if (suggestions.length > 0) {
+                    autoBox.style.display = "block";
+                    activeIndex = 0;
+                    renderSuggestions();
+                } else {
+                    hideAutocomplete();
+                }
+            } else {
+                hideAutocomplete();
+            }
+        }
+        
+        function hideAutocomplete() {
+            autoBox.style.display = "none";
+            suggestions = [];
+        }
+        
+        function renderSuggestions() {
+            autoBox.innerHTML = "";
+            suggestions.forEach((item, idx) => {
+                const div = document.createElement("div");
+                div.className = `wiki-autocomplete-item ${idx === activeIndex ? 'active' : ''}`;
+                div.innerHTML = `
+                    <span>${item.type === 'domain' ? '🛡️' : '☁️'} <strong>${item.id}</strong></span>
+                    <span class="wiki-autocomplete-type">${item.type}</span>
+                `;
+                div.addEventListener("click", () => {
+                    activeIndex = idx;
+                    selectSuggestion();
+                    wikiEditor.focus();
+                });
+                autoBox.appendChild(div);
+            });
+        }
+        
+        function selectSuggestion() {
+            if (suggestions.length === 0) return;
+            const selected = suggestions[activeIndex];
+            const val = wikiEditor.value;
+            const pos = wikiEditor.selectionStart;
+            const textBefore = val.substring(0, pos);
+            const textAfter = val.substring(pos);
+            
+            const match = textBefore.match(/\[\[([^[\]]*)$/);
+            if (match) {
+                const startPos = pos - match[0].length;
+                const insertText = `[[${selected.completed}]]`;
+                wikiEditor.value = val.substring(0, startPos) + insertText + textAfter;
+                
+                const newPos = startPos + insertText.length;
+                wikiEditor.setSelectionRange(newPos, newPos);
+                
+                const preview = document.getElementById("wiki-preview");
+                if (preview) {
+                    preview.innerHTML = renderMarkdown(wikiEditor.value);
+                }
+            }
+            hideAutocomplete();
+        }
     }
 
     const btnSaveWiki = document.getElementById("btn-save-wiki");
