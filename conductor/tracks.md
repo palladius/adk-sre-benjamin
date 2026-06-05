@@ -101,3 +101,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Create a SRE Demo domain under discover/domains/sre-demo/ and add a main file (README.md / index.md)** (Issue #12) [checkpoint: b1e5afc]
 *Link: [./tracks/sre_demo_domain_20260604/](./tracks/sre_demo_domain_20260604/)*
+
+---
+
+- [ ] **Track: Use SRE Extension skills to power up the agents**
+*Link: [./tracks/sre_extension_prompts_20260605/](./tracks/sre_extension_prompts_20260605/)*
+
