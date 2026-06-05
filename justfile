@@ -49,6 +49,20 @@ deploy:
         --set-env-vars "WEB_USERNAME=${WEB_USERNAME},WEB_PASSWORD=${WEB_PASSWORD},GEMINI_API_KEY=${GEMINI_API_KEY},DEFAULT_GEMINI_MODEL=${DEFAULT_GEMINI_MODEL},GCLOUD_IDENTITY=${GCLOUD_IDENTITY}" \
         --region us-central1
 
+# Build the SRE dashboard Docker container locally
+docker-build:
+    @echo "📦 Building SRE Agent docker image..."
+    docker build \
+        -t us-central1-docker.pkg.dev/$(gcloud config get-value project 2>/dev/null || echo "sre-next")/sre-agent-repo/sre-agent:latest \
+        -t us-central1-docker.pkg.dev/$(gcloud config get-value project 2>/dev/null || echo "sre-next")/sre-agent-repo/sre-agent:v$(cat VERSION | tr -d '\r\n') .
+
+# Push SRE dashboard Docker container to Artifact Registry
+docker-push:
+    @echo "🚀 Pushing SRE Agent docker image to Artifact Registry..."
+    docker push us-central1-docker.pkg.dev/$(gcloud config get-value project 2>/dev/null || echo "sre-next")/sre-agent-repo/sre-agent:latest
+    docker push us-central1-docker.pkg.dev/$(gcloud config get-value project 2>/dev/null || echo "sre-next")/sre-agent-repo/sre-agent:v$(cat VERSION | tr -d '\r\n')
+
+
 # Initialize Terraform configuration
 tf-init:
     cd terraform && terraform init
