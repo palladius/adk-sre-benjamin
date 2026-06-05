@@ -48,6 +48,15 @@ data "google_project" "project" {
   project_id = var.project_id
 }
 
+# Create GCS Bucket for investigations
+resource "google_storage_bucket" "investigations_bucket" {
+  project                     = var.project_id
+  name                        = "sre-agent-investigations-${var.project_id}"
+  location                    = var.region
+  force_destroy               = true
+  uniform_bucket_level_access = true
+}
+
 # 3. Create Google Cloud Run V2 Service
 resource "google_cloud_run_v2_service" "sre_dashboard" {
   name        = "sre-agent-service"
@@ -89,8 +98,18 @@ resource "google_cloud_run_v2_service" "sre_dashboard" {
       }
 
       env {
-        name  = "GEMINI_API_KEY"
-        value = var.gemini_api_key
+        name  = "MOCK_TOOLING"
+        value = "false"
+      }
+
+      env {
+        name  = "SRE_MODE"
+        value = "LIVE"
+      }
+
+      env {
+        name  = "DEPLOY_VERSION"
+        value = "1.2.5"
       }
 
       env {
@@ -102,8 +121,39 @@ resource "google_cloud_run_v2_service" "sre_dashboard" {
         name  = "GCLOUD_IDENTITY"
         value = var.gcloud_identity
       }
+
+      env {
+        name = "GEMINI_API_KEY"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.gemini_api_key_secret.secret_id
+            version = "latest"
+          }
+        }
+      }
+
+      volume_mounts {
+        name       = "investigations-volume"
+        mount_path = "/workspace/investigations"
+      }
+    }
+
+    volumes {
+      name = "investigations-volume"
+      gcs {
+        bucket    = google_storage_bucket.investigations_bucket.name
+        read_only = false
+      }
     }
   }
+
+  depends_on = [
+    google_storage_bucket.investigations_bucket,
+    google_secret_manager_secret_version.gemini_api_key_version,
+    google_project_iam_member.sre_agent_secret_accessor_project,
+    google_project_iam_member.sre_agent_secret_accessor_investigator,
+    google_project_iam_member.sre_agent_secret_accessor_user
+  ]
 
   lifecycle {
     ignore_changes = []
