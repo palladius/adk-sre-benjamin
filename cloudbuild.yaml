@@ -1,0 +1,23 @@
+steps:
+  # Build the image with both latest and version tags
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        VERSION=$(cat VERSION | tr -d '\r\n')
+        echo "Building version v$$VERSION"
+        docker build -t $_IMAGE_BASE:latest -t $_IMAGE_BASE:v$$VERSION .
+
+  # Push the latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '$_IMAGE_BASE:latest']
+
+  # Push the versioned tag
+  - name: 'gcr.io/cloud-builders/docker'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        VERSION=$(cat VERSION | tr -d '\r\n')
+        docker push $_IMAGE_BASE:v$$VERSION
