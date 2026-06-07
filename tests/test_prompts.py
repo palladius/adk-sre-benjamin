@@ -89,3 +89,10 @@ def test_load_prompt_defaults_to_etc():
     val = load_prompt("incident_commander", prompt_key="version")
     assert val == "etc-version-1.13"
 
+def test_load_prompt_fallback_embedded():
+    # If we pass a nonexistent directory, it should fall back to embedded prompts
+    system = load_prompt("incident_commander", prompt_dir="/nonexistent/dir", commander_name="Benjamin")
+    assert "Incident Commander" in system
+    assert "Benjamin" in system
+
+
