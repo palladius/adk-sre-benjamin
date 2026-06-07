@@ -42,6 +42,12 @@ restart-services:
 deploy:
     @bash bin/deploy-to-cloudrun.sh
 
+# Deploy SRE Agent to Vertex AI Reasoning Engine (Agent Engine)
+deploy-reasoning-engine:
+    @echo "🚀 Deploying SRE Agent to Vertex AI Reasoning Engine..."
+    @uv run python3 deploy/deploy_remote.py
+
+
 
 # Build the SRE dashboard Docker container locally
 docker-build:
