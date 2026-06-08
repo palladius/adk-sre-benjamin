@@ -21,5 +21,6 @@ CONTINUE_TOMORROW.md
 
 # Generated SRE discovery cache and assets
 discover/gcp-project/
+discover/gcp-project/sre-next*
 tmp-bugs/
 .worktrees/
