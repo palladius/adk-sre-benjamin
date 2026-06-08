@@ -3,8 +3,16 @@
 Never overwrite .env file without asking.
 Never check in .env in git!!
 
+## Coding
+
+* Use worktree to work on GH Issue and work in parallel.
+* Use conductor for features.
+* When adding features, keep `CHANGELOG.md` updated and bump versions by 0.0.1 each time so we can track in the UI
+  the progress. Bump by 010 and 100 for major and breaking changes (SemVer).
+
 ## UI
 
+* The UI should be minimal.
 
 ## Usability/Docs
 
