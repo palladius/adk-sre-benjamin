@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.7] - 2026-06-08
+### Added
+- **GCS Discovery Cache Sync**: Automatic background bidirectional directory sync between local discovery cache and GCS using `gsutil rsync`. Pulse sync dot status indicators displayed on coordinates bar.
+- **Wiki Cross-Linking & Tab State Preservation**: Support for `/projects/` prefix inside double brackets (e.g. `[[/projects/sre-next]]`) and programmatic tab preservation when switching project context.
+
 ## [1.2.6] - 2026-06-05
 ### Fixed
 - **Collapsed Chat Widget Sizing**: Fixed CSS layout where `.chat-column.collapsed` was overridden by `min-width` and `min-height` settings, resolving the issue where it rendered as a large blank box.
