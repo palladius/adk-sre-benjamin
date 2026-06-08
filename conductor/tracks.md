@@ -107,4 +107,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Use SRE Extension skills to power up the agents** [checkpoint: f133999]
 *Link: [./tracks/sre_extension_prompts_20260605/](./tracks/sre_extension_prompts_20260605/)*
 
+---
+
+- [ ] **Track: Unified Incident Lifecycle & Multi-Agent Observability (UUIDs, Cloud Logging, and Discord Interactive Chat)**
+*Link: [./tracks/unified_incident_lifecycle_observability_20260607/](./tracks/unified_incident_lifecycle_observability_20260607/)*
 
