@@ -2632,3 +2632,46 @@ body {
     padding: 1px 4px;
     text-transform: uppercase;
 }
+
+/* GCS Sync Indicator Dot Styles */
+.sync-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+.sync-dot.sync-idle {
+    background-color: var(--neon-cyan);
+    box-shadow: 0 0 8px var(--neon-cyan);
+}
+.sync-dot.sync-syncing {
+    background-color: var(--warm-gold);
+    box-shadow: 0 0 8px var(--warm-gold);
+    animation: sync-pulse 1s infinite alternate;
+}
+.sync-dot.sync-success {
+    background-color: var(--neon-green);
+    box-shadow: 0 0 8px var(--neon-green);
+}
+.sync-dot.sync-failed {
+    background-color: var(--neon-red);
+    box-shadow: 0 0 8px var(--neon-red);
+}
+.sync-dot.sync-offline {
+    background-color: #666;
+    box-shadow: none;
+    opacity: 0.6;
+}
+
+@keyframes sync-pulse {
+    0% {
+        opacity: 0.4;
+        box-shadow: 0 0 2px var(--warm-gold);
+    }
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 10px var(--warm-gold);
+    }
+}
+

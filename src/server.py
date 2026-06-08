@@ -230,6 +230,18 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(get_active_state()).encode("utf-8"))
             return
             
+        # API: Get GCS Sync status
+        elif path == "/api/gcs/status":
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            from src.gcs_sync import get_sync_status, get_gcs_bucket_name
+            self.wfile.write(json.dumps({
+                "status": get_sync_status(),
+                "bucket": get_gcs_bucket_name()
+            }).encode("utf-8"))
+            return
+            
         # API: Get Server Configuration
         elif path == "/api/config":
             self.send_response(200)
@@ -391,6 +403,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     discover_project_resources(project_id)
                     with open(json_path, "r") as f:
                         resources = json.load(f)
+                    try:
+                        from src.gcs_sync import GcsSyncManager
+                        GcsSyncManager.trigger_sync_background("to")
+                    except Exception as sync_err:
+                        print(f"[Server Discovery] Failed to trigger GCS sync: {sync_err}")
                 
                 # Fetch last crawled time from file mtime
                 mtime = os.path.getmtime(json_path) if os.path.exists(json_path) else time.time()
@@ -690,6 +707,32 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
             return
             
+        # API: Trigger GCS sync manually
+        elif path == "/api/gcs/sync":
+            try:
+                content_length = int(self.headers.get('Content-Length', 0))
+                payload = {}
+                if content_length > 0:
+                    try:
+                        post_data = self.rfile.read(content_length)
+                        payload = json.loads(post_data.decode("utf-8"))
+                    except Exception:
+                        pass
+                direction = payload.get("direction", "from")
+                from src.gcs_sync import GcsSyncManager
+                GcsSyncManager.trigger_sync_background(direction)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                from src.gcs_sync import get_sync_status
+                self.wfile.write(json.dumps({"status": get_sync_status(), "message": f"Sync background thread triggered: {direction}"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+            
         # API: Transcribe Voice Notes
         elif path == "/api/transcribe":
             try:
@@ -882,6 +925,12 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     with open(md_path, "w") as f:
                         f.write(content)
                 
+                try:
+                    from src.gcs_sync import GcsSyncManager
+                    GcsSyncManager.trigger_sync_background("to")
+                except Exception as sync_err:
+                    print(f"[Server Wiki Save] Failed to trigger GCS sync: {sync_err}")
+
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
@@ -1878,6 +1927,12 @@ def run_server(port=8080):
         instrument_agents()
     except Exception as e:
         print(f"[Observability Startup] Failed to initialize tracing: {e}")
+        
+    try:
+        from src.gcs_sync import GcsSyncManager
+        GcsSyncManager.trigger_sync_background("from")
+    except Exception as e:
+        print(f"[GCS Sync Startup] Failed to trigger initial sync: {e}")
         
     server_address = ('', port)
     httpd = HTTPServer(server_address, SREHttpRequestHandler)

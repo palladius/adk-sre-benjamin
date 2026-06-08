@@ -1066,6 +1066,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
         
+        // Capture currently active tab to preserve it across projects
+        const activeTabBtn = document.querySelector(".project-tab-btn.active");
+        const targetTab = activeTabBtn ? activeTabBtn.dataset.tab : "audit";
+        
         // Show right-hand side view
         switchView("project");
         
@@ -1108,6 +1112,14 @@ document.addEventListener("DOMContentLoaded", () => {
             renderBigProjectPage(projectId, data);
             saveToProjectHistory(projectId);
             
+            // Programmatically trigger the saved active tab button click if not audit
+            if (targetTab && targetTab !== "audit") {
+                const targetBtn = document.querySelector(`.project-tab-btn[data-tab="${targetTab}"]`);
+                if (targetBtn) {
+                    targetBtn.click();
+                }
+            }
+            
             // Highlight selection in the left sidebar projects list
             document.querySelectorAll(".project-history-item").forEach(item => {
                 if (item.dataset.id === projectId) {
@@ -1120,6 +1132,12 @@ document.addEventListener("DOMContentLoaded", () => {
             // Sync URL in address bar if it's different
             if (window.location.pathname !== `/projects/${projectId}`) {
                 history.pushState(null, "", `/projects/${projectId}`);
+            }
+            
+            // Trigger GCS sync status checks
+            if (typeof pollGcsSyncStatus === "function") {
+                setTimeout(pollGcsSyncStatus, 500);
+                setTimeout(pollGcsSyncStatus, 2000);
             }
         } catch (err) {
             console.error("Discovery request failed:", err);
@@ -1643,7 +1661,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const target = p1.trim();
                 let prefix = "";
                 let id = target;
-                if (target.startsWith("p:")) {
+                if (target.startsWith("/projects/")) {
+                    id = target.substring("/projects/".length).trim();
+                } else if (target.startsWith("p:")) {
                     prefix = "p:";
                     id = target.substring(2).trim();
                 } else if (target.startsWith("d:")) {
@@ -1846,6 +1866,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 const preview = document.getElementById("wiki-preview");
                 if (preview) {
                     preview.innerHTML = renderMarkdown(editor.value);
+                }
+                
+                // Trigger GCS sync status checks
+                if (typeof pollGcsSyncStatus === "function") {
+                    setTimeout(pollGcsSyncStatus, 500);
+                    setTimeout(pollGcsSyncStatus, 2000);
                 }
             } catch (err) {
                 console.error("Failed to save wiki:", err);
@@ -2365,6 +2391,41 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    // GCS Sync Status Polling
+    async function pollGcsSyncStatus() {
+        const statusVal = document.getElementById("gcs-sync-status");
+        const statusDot = document.getElementById("gcs-sync-dot");
+        if (!statusVal || !statusDot) return;
+
+        try {
+            const res = await fetch("/api/gcs/status");
+            if (res.ok) {
+                const data = await res.json();
+                const status = data.status || "OFFLINE";
+                const bucket = data.bucket || "";
+                
+                statusVal.textContent = status;
+                
+                // Update indicator dot classes
+                statusDot.className = "sync-dot"; // reset to base
+                const statusLower = status.toLowerCase();
+                statusDot.classList.add(`sync-${statusLower}`);
+                
+                // Update title tooltip on the indicator container
+                const container = document.getElementById("gcs-sync-indicator");
+                if (container) {
+                    container.title = `GCS Sync Status: ${status}\nBucket: gs://${bucket}/gcp-project/`;
+                }
+            }
+        } catch (err) {
+            console.error("Failed to poll GCS sync status:", err);
+        }
+    }
+
+    // Poll GCS Sync Status every 5 seconds
+    pollGcsSyncStatus();
+    setInterval(pollGcsSyncStatus, 5000);
 
     // Call focus on load
     focusChatInput();

@@ -89,6 +89,12 @@
                     <span id="active-coord-incident" class="coordinate-value">None</span>
                     <span id="active-coord-status" class="coordinate-status-badge">UNKNOWN</span>
                 </div>
+                <div class="coordinate-divider"></div>
+                <div class="coordinate-item" id="gcs-sync-indicator" style="display: flex; align-items: center; gap: 8px;" title="GCS Discovery Cache Sync Status">
+                    <span class="coordinate-label">GCS SYNC:</span>
+                    <span id="gcs-sync-status" class="coordinate-value" style="color: var(--neon-cyan);">OFFLINE</span>
+                    <span id="gcs-sync-dot" class="sync-dot sync-offline"></span>
+                </div>
             </div>
             <!-- Clouds Directory View -->
             <div id="clouds-directory-view" class="clouds-directory-view" style="display: none;">

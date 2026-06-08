@@ -218,6 +218,28 @@ def test_server_integration():
                 data_graph_post = json.loads(resp_graph_post.read().decode('utf-8'))
                 assert data_graph_post["content"] == "digraph G {}"
 
+            # Test GCS status GET API endpoint
+            url_gcs_status = f"http://localhost:{port}/api/gcs/status"
+            req_gcs_status = urllib.request.Request(url_gcs_status)
+            with urllib.request.urlopen(req_gcs_status) as resp_gcs_status:
+                assert resp_gcs_status.status == 200
+                data_gcs_status = json.loads(resp_gcs_status.read().decode('utf-8'))
+                assert "status" in data_gcs_status
+                assert "bucket" in data_gcs_status
+
+            # Test GCS sync POST API endpoint
+            url_gcs_sync = f"http://localhost:{port}/api/gcs/sync"
+            req_gcs_sync = urllib.request.Request(
+                url_gcs_sync,
+                data=json.dumps({"direction": "to"}).encode("utf-8"),
+                method="POST"
+            )
+            with urllib.request.urlopen(req_gcs_sync) as resp_gcs_sync:
+                assert resp_gcs_sync.status == 200
+                data_gcs_sync = json.loads(resp_gcs_sync.read().decode('utf-8'))
+                assert "status" in data_gcs_sync
+                assert "message" in data_gcs_sync
+
         finally:
             for fpath in [json_file, md_file]:
                 if os.path.exists(fpath):
