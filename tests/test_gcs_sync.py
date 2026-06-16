@@ -1,4 +1,5 @@
 import os
+import subprocess
 from unittest.mock import patch, MagicMock
 import pytest
 from src.gcs_sync import (
@@ -93,3 +94,57 @@ def test_gcs_sync_manager_commands(mock_run):
     with patch.dict(os.environ, {"GCP_PROJECT_ID": "sre-next-dev"}):
         assert GcsSyncManager.create_bucket("my-bucket")
         assert mock_run.call_args[0][0] == ["gsutil", "mb", "-p", "sre-next-dev", "gs://my-bucket"]
+
+def test_gcs_sync_manager_live():
+    # Only run this test if SRE_MODE is explicitly set to LIVE (acceptance testing)
+    if os.getenv("SRE_MODE") != "LIVE":
+        pytest.skip("Skipping GCS acceptance testing because SRE_MODE is not LIVE")
+
+    # We will test the actual GcsSyncManager syncing with the real GCS bucket.
+    # We will use a unique folder name in the bucket to prevent collusions with production state.
+    import uuid
+    test_run_id = f"acceptance-test-{uuid.uuid4().hex[:8]}"
+    
+    with patch.dict(os.environ, {
+        "MOCK_TOOLING": "false",
+        "SRE_ENV": "production",  # Enable GCS
+        "GCS_BUCKET": "sre-next-sre-benjamin-discovery",
+    }):
+        # Setup a temporary local discovery file
+        from src.incident import get_discover_dir
+        local_dir = get_discover_dir()
+        os.makedirs(local_dir, exist_ok=True)
+        
+        test_file_path = os.path.join(local_dir, "acceptance_test.json")
+        with open(test_file_path, "w") as f:
+            f.write('{"status": "testing", "test_id": "' + test_run_id + '"}')
+            
+        try:
+            # Synchronize to GCS
+            # We patch the folder path to be unique to this test run
+            with patch("src.gcs_sync.get_gcs_folder_path", return_value=f"discovery/acceptance-tests/{test_run_id}/"):
+                # 1. Test pushing to GCS
+                push_success = GcsSyncManager.do_sync_to_gcs()
+                assert push_success, "Failed to push acceptance test file to GCS"
+                
+                # 2. Verify files are on GCS
+                assert GcsSyncManager.check_gcs_has_files("sre-next-sre-benjamin-discovery"), "GCS does not report files on the test path"
+                
+                # 3. Modify local file, then pull back from GCS and verify it gets restored
+                with open(test_file_path, "w") as f:
+                    f.write('{"status": "overwritten"}')
+                
+                pull_success = GcsSyncManager.do_sync_from_gcs()
+                assert pull_success, "Failed to pull acceptance test file from GCS"
+                
+                with open(test_file_path, "r") as f:
+                    content = f.read()
+                assert test_run_id in content, f"Expected test_run_id {test_run_id} in content, got: {content}"
+                
+        finally:
+            # Clean up local file
+            if os.path.exists(test_file_path):
+                os.remove(test_file_path)
+            # Clean up GCS path by deleting the files using gsutil
+            gcs_folder_path = f"gs://sre-next-sre-benjamin-discovery/discovery/acceptance-tests/{test_run_id}/"
+            subprocess.run(["gsutil", "rm", "-r", gcs_folder_path], capture_output=True)
