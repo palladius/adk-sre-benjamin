@@ -1,7 +1,7 @@
 {
   "track_id": "managed_agents_sandbox_20260616",
   "type": "feature",
-  "status": "new",
+  "status": "not_ready",
   "created_at": "2026-06-16T16:11:26Z",
   "updated_at": "2026-06-16T16:11:26Z",
   "description": "Use Managed Agents API to create a solid SRE agent sandbox",

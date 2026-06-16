@@ -1,7 +1,7 @@
 {
   "track_id": "fuse_mount_gcs_discovery_20260616",
   "type": "feature",
-  "status": "new",
+  "status": "not_ready",
   "created_at": "2026-06-16T16:11:26Z",
   "updated_at": "2026-06-16T16:11:26Z",
   "description": "Fuse-mount discovery folder on GCS",
