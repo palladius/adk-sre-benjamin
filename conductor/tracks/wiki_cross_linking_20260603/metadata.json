@@ -1,9 +1,9 @@
 {
   "track_id": "wiki_cross_linking_20260603",
   "type": "feature",
-  "status": "new",
+  "status": "completed",
   "created_at": "2026-06-03T16:39:52Z",
-  "updated_at": "2026-06-16T10:24:00Z",
+  "updated_at": "2026-06-16T10:14:40Z",
   "description": "Support project cross-referencing inside Project Wiki markdown pages using [[/projects/project-id]] link syntax.",
   "github_issue": {
     "number": 7,
