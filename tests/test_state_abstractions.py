@@ -11,7 +11,9 @@ from src.storage import (
     set_discovery_storage
 )
 
-def test_file_state_manager(tmp_path):
+def test_file_state_manager(tmp_path, monkeypatch):
+    monkeypatch.delenv("PROJECT_ID", raising=False)
+    monkeypatch.delenv("GCP_PROJECT_ID", raising=False)
     state_file = tmp_path / "active_state.json"
     
     # 1. Initialize state manager with resolver
