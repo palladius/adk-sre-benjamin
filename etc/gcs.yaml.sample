@@ -1,4 +1,4 @@
-# SRE/Rails GCS Sync Configuration
+# SRE/Rails GCS Sync Configuration Sample
 # Scoped by SRE_ENV / RAILS_ENV environment name.
 
 test:
@@ -6,10 +6,6 @@ test:
 
 development:
   gcs_enabled: false
-  gcs_bucket: ""
-  gcs_folder: ""
 
 production:
   gcs_enabled: true
-  gcs_bucket: ""
-  gcs_folder: ""

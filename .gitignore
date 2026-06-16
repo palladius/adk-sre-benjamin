@@ -32,3 +32,5 @@ conductor/questions/
 discover/
 discovery
 tmp
+etc/gcs.yaml
+

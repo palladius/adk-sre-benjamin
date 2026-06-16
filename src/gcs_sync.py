@@ -8,11 +8,64 @@ from src.incident import get_discover_dir
 _sync_status = "OFFLINE"
 _sync_lock = threading.Lock()
 
+def _resolve_rails_env() -> str:
+    """Resolves friendly environment names to standard Rails environments."""
+    env = os.getenv("SRE_ENV")
+    if not env and "PYTEST_CURRENT_TEST" in os.environ:
+        env = "test"
+    if not env:
+        env = os.getenv("RAILS_ENV") or "development"
+    env = env.lower().strip()
+    if env in ("prod", "production"):
+        return "production"
+    elif env in ("test", "testing"):
+        return "test"
+    else:
+        return "development"
+
+def _load_gcs_config() -> dict:
+    """Loads GCS config from etc/gcs.yaml if present."""
+    config_path = os.path.join("etc", "gcs.yaml")
+    if os.path.exists(config_path):
+        try:
+            import yaml
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
+            if isinstance(config, dict):
+                return config
+        except Exception as e:
+            print(f"[GCS Sync] Error loading etc/gcs.yaml: {e}")
+    return {}
+
+def get_gcs_folder_path() -> str:
+    """Returns the configured or default GCS folder path/prefix within the bucket."""
+    rails_env = _resolve_rails_env()
+    config = _load_gcs_config()
+    if rails_env in config:
+        env_config = config[rails_env]
+        if isinstance(env_config, dict):
+            folder_val = env_config.get("gcs_folder")
+            if folder_val:
+                folder_str = str(folder_val).strip("'\"/ ")
+                if folder_str:
+                    return f"{folder_str}/"
+    return f"discovery/{rails_env}/"
+
 def get_gcs_bucket_name() -> str:
     """Returns the configured or default GCS bucket name."""
     bucket = os.getenv("GCS_BUCKET")
     if bucket:
         return bucket.strip("'\"")
+    
+    rails_env = _resolve_rails_env()
+    config = _load_gcs_config()
+    if rails_env in config:
+        env_config = config[rails_env]
+        if isinstance(env_config, dict):
+            bucket_val = env_config.get("gcs_bucket")
+            if bucket_val:
+                return str(bucket_val).strip("'\"")
+
     project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("PROJECT_ID")
     if project_id:
         proj = project_id.strip("'\"")
@@ -23,32 +76,24 @@ def is_gcs_enabled() -> bool:
     """Checks if GCS sync is enabled and a bucket name is resolved."""
     if os.getenv("MOCK_TOOLING", "false").lower() == "true":
         return False
-    # Check if the environment resolves to test/testing
-    env = os.getenv("SRE_ENV")
-    if not env and "PYTEST_CURRENT_TEST" in os.environ:
-        env = "test"
-    if not env:
-        env = os.getenv("RAILS_ENV") or "development"
-    env = env.lower().strip()
-
-    # Try loading environment configuration from etc/gcs.yaml
-    config_path = os.path.join("etc", "gcs.yaml")
-    if os.path.exists(config_path):
-        try:
-            import yaml
-            with open(config_path, "r") as f:
-                config = yaml.safe_load(f)
-            if config and env in config:
-                env_config = config[env]
-                if isinstance(env_config, dict) and "gcs_enabled" in env_config:
-                    if not env_config["gcs_enabled"]:
-                        return False
-        except Exception as e:
-            print(f"[GCS Sync] Error loading etc/gcs.yaml: {e}")
-
-    if env in ("test", "testing"):
+    
+    rails_env = _resolve_rails_env()
+    if rails_env == "test":
         return False
-    return bool(get_gcs_bucket_name())
+
+    config = _load_gcs_config()
+    if rails_env in config:
+        env_config = config[rails_env]
+        if isinstance(env_config, dict) and "gcs_enabled" in env_config:
+            if not env_config["gcs_enabled"]:
+                return False
+            return bool(get_gcs_bucket_name())
+    
+    # Default behavior if YAML or key is not present
+    if rails_env == "production":
+        return bool(get_gcs_bucket_name())
+    return False
+
 
 def get_sync_status() -> str:
     """Returns the current GCS Sync status (OFFLINE, IDLE, SYNCING, SUCCESS, FAILED)."""
@@ -101,10 +146,11 @@ class GcsSyncManager:
 
     @classmethod
     def check_gcs_has_files(cls, bucket_name: str) -> bool:
-        """Returns True if GCS gcp-project/ subfolder has any files present."""
+        """Returns True if GCS folder has any files present."""
+        gcs_folder = get_gcs_folder_path()
         try:
             res = subprocess.run(
-                ["gsutil", "ls", f"gs://{bucket_name}/gcp-project/"],
+                ["gsutil", "ls", f"gs://{bucket_name}/{gcs_folder}"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -122,6 +168,7 @@ class GcsSyncManager:
             return False
         
         bucket_name = get_gcs_bucket_name()
+        gcs_folder = get_gcs_folder_path()
         set_sync_status("SYNCING")
         
         # Ensure bucket is prepared
@@ -132,16 +179,16 @@ class GcsSyncManager:
 
         # If GCS has no files, we should do initial upload instead of download (to prevent deleting local cache)
         if not cls.check_gcs_has_files(bucket_name):
-            print(f"[GCS Sync] GCS bucket gs://{bucket_name}/gcp-project/ is empty. Syncing local to GCS instead...")
+            print(f"[GCS Sync] GCS folder gs://{bucket_name}/{gcs_folder} is empty. Syncing local to GCS instead...")
             return cls.do_sync_to_gcs()
 
-        print(f"[GCS Sync] Pulling discovery cache from gs://{bucket_name}/gcp-project/...")
-        local_dir = os.path.join(get_discover_dir(), "gcp-project")
+        print(f"[GCS Sync] Pulling discovery cache from gs://{bucket_name}/{gcs_folder}...")
+        local_dir = get_discover_dir()
         os.makedirs(local_dir, exist_ok=True)
         
         success = cls.run_command([
             "gsutil", "rsync", "-r", "-d",
-            f"gs://{bucket_name}/gcp-project/",
+            f"gs://{bucket_name}/{gcs_folder}",
             f"{local_dir}/"
         ])
         
@@ -160,6 +207,7 @@ class GcsSyncManager:
             return False
         
         bucket_name = get_gcs_bucket_name()
+        gcs_folder = get_gcs_folder_path()
         set_sync_status("SYNCING")
         
         # Ensure bucket is prepared
@@ -168,14 +216,14 @@ class GcsSyncManager:
                 set_sync_status("FAILED")
                 return False
 
-        print(f"[GCS Sync] Pushing local discovery cache to gs://{bucket_name}/gcp-project/...")
-        local_dir = os.path.join(get_discover_dir(), "gcp-project")
+        print(f"[GCS Sync] Pushing local discovery cache to gs://{bucket_name}/{gcs_folder}...")
+        local_dir = get_discover_dir()
         os.makedirs(local_dir, exist_ok=True)
         
         success = cls.run_command([
             "gsutil", "rsync", "-r", "-d",
             f"{local_dir}/",
-            f"gs://{bucket_name}/gcp-project/"
+            f"gs://{bucket_name}/{gcs_folder}"
         ])
         
         if success:
