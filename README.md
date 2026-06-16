@@ -1,4 +1,4 @@
-# 🏰 Project Benjamin SRE Agentic Framework (v1.2.10)
+# 🏰 Project Benjamin SRE Agentic Framework (v1.2.14)
 
 Project Benjamin is a production-grade, highly secure automation harness for Site Reliability Engineering (SRE), built using Google's **Antigravity Development Kit (ADK) for Python** and strictly aligned with the **IMAG (Incident Management At Google) Incident Command System (ICS)** command chain.
 
@@ -71,6 +71,13 @@ Provides a high-fidelity visual workspace for auditing discovered GCP project as
 ### 6. 📟 Collapsible SRE Chat Widget
 - **Pulsing Golden Pill State**: The floating SRE chat widget collapses into an ultra-compact, glowing golden pill badge featuring the text `⚡ SRE Co-Pilot (Click to Expand)` to optimize workspace real estate, expanding instantly on click.
 - **Flexible Resizing**: Includes maximize button to expand viewport to 90vh height and 20-30% wider to easily scroll through long diagnostic lists.
+
+### 7. 🐳 Production Dockerization & Google Cloud Run Deploy
+- **Production-Ready Dockerfile**: Packages the SRE dashboard using `python:3.12-slim` base image, running as a non-root `appuser`.
+- **Serverless Cloud Run Pipeline**: Added the `just deploy` pipeline target running `bin/deploy-to-cloudrun.sh` to package, push to Artifact Registry, and launch on Cloud Run with IAP authentication.
+
+### 8. 📊 OpenTelemetry (OTEL) Observability
+- **Trace Instrumentations**: Dynamic agent execution wrapping in `src/observability.py` logs full audit traces of inter-agent messages and tool execution paths to Cloud Trace or OTLP backends.
 
 ---
 

@@ -11,3 +11,5 @@ tests/
 .coverage
 htmlcov
 */*.log
+conductor
+terraform/

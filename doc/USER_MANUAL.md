@@ -182,3 +182,45 @@ By default, the SRE platform operates in **LIVE Mode** to query real-time GCP re
 * **`SRE_MODE=LIVE`** (Default): Directs diagnostics pipeline queries (`query_logs`, `query_metrics`) to read from live GCP logging and monitoring APIs.
 * **`PROJECT_ID=sre-next`** (Default): The target Google Cloud project ID for resource crawls.
 
+---
+
+## 🐳 8. Cloud Run Deployment & Production Dockerization
+
+Project Benjamin can be packaged into a production-ready container image and deployed serverless to Google Cloud Run.
+
+### 📦 1. Dockerization
+* **Dockerfile**: The application is built using a secure `python:3.12-slim` base image.
+* **Non-Root Execution**: To adhere to security best practices, the container runs under a dedicated, non-root system user (`appuser` of `appgroup`).
+* **Exclusions**: Development resources, tests, secrets, and conductor workflows are excluded from builds via `.dockerignore`.
+
+### 🚀 2. Deploying to Cloud Run
+Run the deployment sequence via:
+```bash
+just deploy
+```
+This target invokes `bin/deploy-to-cloudrun.sh`, which performs:
+1. **Artifact Registry Setup**: Creates a repository `sre-agent-repo` in the target region if it does not exist.
+2. **Local Multi-Tag Build**: Builds and tags the Docker image with both `:latest` and `:v<VERSION>`.
+3. **Registry Push**: Uploads the images to the Google Artifact Registry.
+4. **Cloud Run Launch**: Deploys the service protected by Identity-Aware Proxy (IAP) access control using:
+   ```bash
+   gcloud beta run deploy sre-agent-service --iap --no-allow-unauthenticated ...
+   ```
+
+---
+
+## 📊 9. OpenTelemetry (OTEL) Tracing Observability
+
+The framework features built-in OpenTelemetry logging and tracing for audit trails of all agent communications and mutation pipeline decisions.
+
+### 🛰️ Trace Flow
+* **Tracer Initialization**: Configures automatically based on environment (GCP Cloud Trace exporter when on Cloud Run, or OTLP gRPC endpoint, or fallback console exporter).
+* **Agent Instrumentation**: Monkeypatches ADK Agent `run` loops dynamically at server startup or orchestrator invocation.
+* **Captured Spans**: Every agent execution produces a telemetry span containing:
+  * `agent.class`: The Python class executing (e.g. `OperationsLead`).
+  * `agent.name`: The resolved name of the agent (e.g. `Benjamin`).
+  * `agent.prompt`: The incoming prompt command.
+  * `agent.response_length`: The length of the response string.
+  * Exceptions and status errors are recorded directly onto the span context.
+
+
