@@ -7,7 +7,7 @@ from src.discovery import discover_project_resources
 from src.cli import run_cli
 
 def test_discover_mock_resources():
-    project_id = "test-project-123"
+    project_id = "sre-next-dev"
     cache_dir = os.path.join("discover", "gcp-project", project_id)
     json_path = os.path.join(cache_dir, "discover.json")
     md_path = os.path.join(cache_dir, "wiki.md")

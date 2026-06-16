@@ -1,6 +1,22 @@
+import os
 import uuid
 from enum import Enum
 from typing import Any, Dict
+
+def get_investigations_dir() -> str:
+    env = os.getenv("SRE_ENV")
+    if not env and "PYTEST_CURRENT_TEST" in os.environ:
+        env = "test"
+    if not env:
+        env = os.getenv("RAILS_ENV") or "development"
+    env = env.lower().strip()
+    print(f"DEBUG get_investigations_dir: SRE_ENV={os.getenv('SRE_ENV')}, RAILS_ENV={os.getenv('RAILS_ENV')}, resolved={env}")
+    if env in ("prod", "production"):
+        return "investigations/prod"
+    elif env in ("test", "testing"):
+        return "investigations/test"
+    else:
+        return "investigations/dev"
 
 class IncidentStatus(str, Enum):
     NEW = "NEW"

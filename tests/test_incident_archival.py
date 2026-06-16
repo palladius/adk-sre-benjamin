@@ -9,6 +9,7 @@ from http.server import HTTPServer
 from datetime import datetime, timezone, timedelta
 from unittest.mock import patch, MagicMock
 
+from src.incident import get_investigations_dir
 from src.server import (
     parse_incident_folder,
     set_incident_archived,
@@ -90,16 +91,17 @@ def test_auto_archival_logic(tmp_path):
          auto_archive_incidents()
          
          # Should archive the old closed incident only
-         # We expect mock_archive to be called with: (os.path.join("investigations", "INC-20260601-old"), True)
-         expected_call_path = os.path.join("investigations", "INC-20260601-old")
+         # We expect mock_archive to be called with: (os.path.join(get_investigations_dir(), "INC-20260601-old"), True)
+         expected_call_path = os.path.join(get_investigations_dir(), "INC-20260601-old")
          mock_archive.assert_any_call(expected_call_path, True)
          assert mock_archive.call_count == 1
 
 def test_server_endpoints():
     # Ensure investigations dir exists
-    os.makedirs("investigations", exist_ok=True)
+    inv_dir = get_investigations_dir()
+    os.makedirs(inv_dir, exist_ok=True)
     inc_id = "INC-20260610-testarchive"
-    inc_dir = os.path.join("investigations", inc_id)
+    inc_dir = os.path.join(inv_dir, inc_id)
     if os.path.exists(inc_dir):
         shutil.rmtree(inc_dir)
         
@@ -182,7 +184,7 @@ def test_server_endpoints():
 def temp_active_state(tmp_path):
     temp_file = tmp_path / "active_state.json"
     default_state = {
-        "project_id": "test-project-123",
+        "project_id": "sre-next-dev",
         "incident_id": "None",
         "incident_status": "UNKNOWN"
     }
@@ -221,5 +223,5 @@ def test_telegram_bot_archive_command(mock_request, mock_urlopen, temp_active_st
          patch("src.server.send_raw_telegram_message") as mock_send_msg:
         start_telegram_bot()
         
-        mock_archive_func.assert_called_once_with(os.path.join("investigations", "INC-ARCHIVE-CMD"), True)
+        mock_archive_func.assert_called_once_with(os.path.join(get_investigations_dir(), "INC-ARCHIVE-CMD"), True)
         mock_send_msg.assert_called_once_with("mock-bot-token", "123456", "✅ Incident `INC-ARCHIVE-CMD` has been successfully archived.")

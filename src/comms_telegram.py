@@ -34,7 +34,8 @@ def send_telegram_alert(message: str, incident_id: str, feed_file_path: str = No
     # 2. Fallback Mock Mode (writes to local JSON file for testing and Web UI consumption)
     if not feed_file_path:
         # Save to incident folder if running inside dynamic simulation
-        feed_file_path = os.path.join("investigations", incident_id, "artifacts", "telegram_feed.json")
+        from src.incident import get_investigations_dir
+        feed_file_path = os.path.join(get_investigations_dir(), incident_id, "artifacts", "telegram_feed.json")
         
     try:
         os.makedirs(os.path.dirname(feed_file_path), exist_ok=True)

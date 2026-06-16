@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import urllib.parse
 from run_simulation import run_simulation, resume_simulation
 from src.orchestrator import run_incident_flow
-
+from src.incident import get_investigations_dir
 
 def parse_incident_folder(folder_path: str) -> dict:
     """Parses Scribe files inside an incident folder to return structured JSON."""
@@ -72,7 +72,7 @@ def parse_incident_folder(folder_path: str) -> dict:
             trigger_match = re.search(r'\-\s+\*\*Trigger Event:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
             if trigger_match:
                 trigger_event = trigger_match.group(1).strip()
-                
+
             archived_match = re.search(r'\-\s+\*\*Archived:\*\*\s*([A-Za-z0-9_]+)', state_content, re.IGNORECASE)
             if archived_match:
                 archived = archived_match.group(1).strip().lower() == "true"
@@ -206,7 +206,7 @@ def get_incident_date(incident_id: str):
 def auto_archive_incidents():
     """Auto-archives closed incidents older than 3 days."""
     from datetime import datetime, timezone, timedelta
-    incidents_dir = "investigations"
+    incidents_dir = get_investigations_dir()
     if not os.path.exists(incidents_dir):
         return
     now = datetime.now(timezone.utc)
@@ -241,6 +241,12 @@ ACTIVE_STATE_FILE = "investigations/active_state.json"
 session_states = {}
 
 
+def get_active_state_file() -> str:
+    global ACTIVE_STATE_FILE
+    if ACTIVE_STATE_FILE != "investigations/active_state.json":
+        return ACTIVE_STATE_FILE
+    return os.path.join(get_investigations_dir(), "active_state.json")
+
 def get_active_state() -> dict:
     """Loads active state coordinates from the state file, falling back to defaults."""
     default_state = {
@@ -253,9 +259,10 @@ def get_active_state() -> dict:
         "substatus_verified": False
     }
     
-    if os.path.exists(ACTIVE_STATE_FILE):
+    active_state_file = get_active_state_file()
+    if os.path.exists(active_state_file):
         try:
-            with open(ACTIVE_STATE_FILE, "r") as f:
+            with open(active_state_file, "r") as f:
                 data = json.load(f)
                 # Ensure all required keys exist
                 for key, val in default_state.items():
@@ -269,7 +276,8 @@ def get_active_state() -> dict:
 
 def save_active_state(state: dict):
     """Saves updated active state coordinates to the active state json file."""
-    dir_name = os.path.dirname(ACTIVE_STATE_FILE)
+    active_state_file = get_active_state_file()
+    dir_name = os.path.dirname(active_state_file)
     if dir_name and not os.path.exists(dir_name):
         try:
             os.makedirs(dir_name, exist_ok=True)
@@ -277,7 +285,7 @@ def save_active_state(state: dict):
             pass
             
     try:
-        with open(ACTIVE_STATE_FILE, "w") as f:
+        with open(active_state_file, "w") as f:
             json.dump(state, f, indent=2)
     except Exception as e:
         print(f"[Active State] Failed to write active state file: {e}")
@@ -1034,7 +1042,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             query_params = urllib.parse.parse_qs(parsed_url.query)
             include_archived = query_params.get("include_archived", ["false"])[0].lower() == "true"
             
-            incidents_dir = "investigations"
+            incidents_dir = get_investigations_dir()
             incidents = []
             if os.path.exists(incidents_dir):
                 for item in sorted(os.listdir(incidents_dir), reverse=True):
@@ -1050,7 +1058,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and path.endswith("/chat"):
             try:
                 incident_id = path.split("/")[3]
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path):
                     chat_path = os.path.join(incident_path, "chat.json")
                     chat_data = []
@@ -1117,7 +1125,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # 2. API: Get Single Incident Details
         elif path.startswith("/api/incidents/"):
             incident_id = path.replace("/api/incidents/", "")
-            incident_path = os.path.join("investigations", incident_id)
+            incident_path = os.path.join(get_investigations_dir(), incident_id)
             
             if os.path.exists(incident_path) and os.path.isdir(incident_path):
                 self.send_response(200)
@@ -1192,7 +1200,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 incident_id = path.replace("/api/incidents/", "")
                 # Prevent directory traversal attacks
                 incident_id = os.path.basename(incident_id)
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path) and os.path.isdir(incident_path):
                     import shutil
                     shutil.rmtree(incident_path)
@@ -1344,7 +1352,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             try:
                 incident_id = path.split("/")[3]
                 incident_id = os.path.basename(incident_id)
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path):
                     if set_incident_archived(incident_path, True):
                         self.send_response(200)
@@ -1528,7 +1536,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and path.endswith("/approve"):
             try:
                 incident_id = path.split("/")[3]
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path):
                     resume_simulation(incident_id, approved=True)
                     
@@ -1592,7 +1600,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and path.endswith("/reject"):
             try:
                 incident_id = path.split("/")[3]
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path):
                     resume_simulation(incident_id, approved=False)
                     
@@ -1728,7 +1736,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and path.endswith("/chat"):
             try:
                 incident_id = path.split("/")[3]
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path):
                     content_length = int(self.headers.get('Content-Length', 0))
                     post_data = self.rfile.read(content_length)
@@ -1861,9 +1869,9 @@ def get_incidents_list() -> list[dict]:
     """Helper to query all active and historical incidents inside investigations/ directory."""
     import os
     incidents = []
-    if os.path.exists("investigations"):
-        for folder in sorted(os.listdir("investigations")):
-            folder_path = os.path.join("investigations", folder)
+    if os.path.exists(get_investigations_dir()):
+        for folder in sorted(os.listdir(get_investigations_dir())):
+            folder_path = os.path.join(get_investigations_dir(), folder)
             if os.path.isdir(folder_path):
                 details = parse_incident_folder(folder_path)
                 if not details.get("archived", False):
@@ -1975,7 +1983,7 @@ def get_discovered_projects() -> list[str]:
 def get_top_5_incidents() -> list[dict]:
     """Helper to query the 5 most recent active (non-archived) incidents inside investigations/ directory."""
     incidents = []
-    incidents_dir = "investigations"
+    incidents_dir = get_investigations_dir()
     if os.path.exists(incidents_dir):
         folders = [f for f in os.listdir(incidents_dir) if f.startswith("INC-")]
         folders.sort(reverse=True)
@@ -2191,7 +2199,7 @@ def start_telegram_bot():
                                     state["incident_id"] = inc_id
                                     
                                     # Fetch status
-                                    incident_path = os.path.join("investigations", inc_id)
+                                    incident_path = os.path.join(get_investigations_dir(), inc_id)
                                     if os.path.exists(incident_path):
                                         details = parse_incident_folder(incident_path)
                                         state["incident_status"] = details.get("status", "UNKNOWN")
@@ -2446,7 +2454,7 @@ def start_telegram_bot():
                             if not selected_incident_id or selected_incident_id == "None":
                                 send_raw_telegram_message(bot_token, chat_id, "❌ No active SRE incident selected.")
                                 continue
-                            incident_path = os.path.join("investigations", selected_incident_id)
+                            incident_path = os.path.join(get_investigations_dir(), selected_incident_id)
                             details = parse_incident_folder(incident_path)
                             status_val = details.get('status', 'UNKNOWN')
                             status_msg = (
@@ -2548,8 +2556,8 @@ def start_telegram_bot():
                                 continue
                                 
                             all_folders = []
-                            if os.path.exists("investigations"):
-                                all_folders = [f for f in sorted(os.listdir("investigations")) if os.path.isdir(os.path.join("investigations", f)) and f.startswith("INC-")]
+                            if os.path.exists(get_investigations_dir()):
+                                all_folders = [f for f in sorted(os.listdir(get_investigations_dir())) if os.path.isdir(os.path.join(get_investigations_dir(), f)) and f.startswith("INC-")]
                             
                             matched_id = None
                             if target_inc.isdigit():
@@ -2565,7 +2573,7 @@ def start_telegram_bot():
                             if matched_id:
                                 target_inc = matched_id
                                 
-                            target_inc_path = os.path.join("investigations", target_inc)
+                            target_inc_path = os.path.join(get_investigations_dir(), target_inc)
                             if os.path.exists(target_inc_path):
                                 if set_incident_archived(target_inc_path, True):
                                     send_raw_telegram_message(bot_token, chat_id, f"✅ Incident `{target_inc}` has been successfully archived.")
@@ -2604,7 +2612,7 @@ def start_telegram_bot():
                             if matched_id:
                                 target_inc = matched_id
                                 
-                            target_inc_path = os.path.join("investigations", target_inc)
+                            target_inc_path = os.path.join(get_investigations_dir(), target_inc)
                             if os.path.exists(target_inc_path):
                                 selected_incident_id = target_inc
                                 details = parse_incident_folder(target_inc_path)
@@ -2686,7 +2694,7 @@ def start_telegram_bot():
                         safety_level = "HIGH"
                         incident_path = None
                         if selected_incident_id and selected_incident_id != "None":
-                            incident_path = os.path.join("investigations", selected_incident_id)
+                            incident_path = os.path.join(get_investigations_dir(), selected_incident_id)
                             state_path = os.path.join(incident_path, "state.md")
                             if os.path.exists(state_path):
                                 try:
@@ -2804,7 +2812,7 @@ def start_telegram_bot():
                             send_raw_telegram_message(bot_token, chat_id, "⚠️ No incident selected. Tapp '📋 List Incidents' to select one first.")
                             continue
                             
-                        incident_path = os.path.join("investigations", selected_incident_id)
+                        incident_path = os.path.join(get_investigations_dir(), selected_incident_id)
                         details = parse_incident_folder(incident_path)
                         status = details.get("status", "UNKNOWN").upper()
                         project_id = details.get("project_id", "sre-next")

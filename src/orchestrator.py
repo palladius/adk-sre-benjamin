@@ -10,8 +10,11 @@ from src.agents import (
     LogisticsLead
 )
 
-def run_incident_flow(payload: dict, base_dir: str = "investigations") -> tuple[str, str]:
+from src.incident import get_investigations_dir
+
+def run_incident_flow(payload: dict, base_dir: str = None) -> tuple[str, str]:
     """Orchestrates the top-down IMAG Incident Command System (ICS) delegation workflow."""
+    base_dir = base_dir or get_investigations_dir()
     # 1. Parse Alert Trigger and Scaffold Incident Folders
     trigger = parse_trigger(payload)
     incident = scaffold_incident(trigger, base_dir=base_dir)

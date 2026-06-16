@@ -17,8 +17,8 @@ def test_get_gcs_bucket_name():
         assert get_gcs_bucket_name() == "my-custom-bucket"
 
     with patch.dict(os.environ, {}, clear=True):
-        with patch.dict(os.environ, {"GCP_PROJECT_ID": "my-project-123"}):
-            assert get_gcs_bucket_name() == "my-project-123-sre-benjamin-discovery"
+        with patch.dict(os.environ, {"GCP_PROJECT_ID": "sre-next-dev"}):
+            assert get_gcs_bucket_name() == "sre-next-dev-sre-benjamin-discovery"
 
     with patch.dict(os.environ, {}, clear=True):
         with patch.dict(os.environ, {"PROJECT_ID": "my-project-456"}):
@@ -54,6 +54,6 @@ def test_gcs_sync_manager_commands(mock_run):
 
     # Create bucket
     mock_run.return_value = MagicMock(returncode=0)
-    with patch.dict(os.environ, {"GCP_PROJECT_ID": "my-project-123"}):
+    with patch.dict(os.environ, {"GCP_PROJECT_ID": "sre-next-dev"}):
         assert GcsSyncManager.create_bucket("my-bucket")
-        assert mock_run.call_args[0][0] == ["gsutil", "mb", "-p", "my-project-123", "gs://my-bucket"]
+        assert mock_run.call_args[0][0] == ["gsutil", "mb", "-p", "sre-next-dev", "gs://my-bucket"]

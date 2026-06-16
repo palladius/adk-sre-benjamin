@@ -12,6 +12,9 @@ investigations/**/artifacts/
 investigations/**/artifacts_registry.json
 investigations/**/*.jsonl
 investigations/**/chat.json
+investigations/dev/active_state.json
+investigations/test/active_state.json
+investigations/prod/active_state.json
 private/
 .git-privatize
 
