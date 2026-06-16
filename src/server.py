@@ -24,6 +24,7 @@ def parse_incident_folder(folder_path: str) -> dict:
     trigger_event = "UNKNOWN"
     timeline = []
     artifacts = []
+    archived = False
     
     # 1. Parse state.md
     if os.path.exists(state_path):
@@ -68,6 +69,10 @@ def parse_incident_folder(folder_path: str) -> dict:
             trigger_match = re.search(r'\-\s+\*\*Trigger Event:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
             if trigger_match:
                 trigger_event = trigger_match.group(1).strip()
+                
+            archived_match = re.search(r'\-\s+\*\*Archived:\*\*\s*([A-Za-z0-9_]+)', state_content, re.IGNORECASE)
+            if archived_match:
+                archived = archived_match.group(1).strip().lower() == "true"
         except Exception as e:
             print(f"Error parsing state.md in {folder_path}: {e}")
             
@@ -139,8 +144,86 @@ def parse_incident_folder(folder_path: str) -> dict:
         "trigger_event": trigger_event,
         "timeline": timeline,
         "artifacts": artifacts,
-        "folder_path": folder_path
+        "folder_path": folder_path,
+        "archived": archived
     }
+
+def set_incident_archived(folder_path: str, archived: bool = True) -> bool:
+    """Updates the 'Archived' metadata property in the incident's state.md file."""
+    state_path = os.path.join(folder_path, "state.md")
+    if not os.path.exists(state_path):
+        return False
+    try:
+        with open(state_path, "r") as f:
+            content = f.read()
+        
+        # Check if Archived line already exists
+        pattern = r'(\-\s+\*\*Archived:\*\*\s*)([A-Za-z0-9_]+)'
+        if re.search(pattern, content, re.IGNORECASE):
+            # Replace existing value
+            new_val = "true" if archived else "false"
+            content = re.sub(pattern, r'\g<1>' + new_val, content, flags=re.IGNORECASE)
+        else:
+            # Insert after the ## Metadata line
+            metadata_header = "## Metadata"
+            if metadata_header in content:
+                insert_idx = content.find(metadata_header) + len(metadata_header)
+                # Find end of metadata_header line
+                eol = content.find("\n", insert_idx)
+                if eol == -1:
+                    content += f"\n- **Archived:** {'true' if archived else 'false'}"
+                else:
+                    content = content[:eol] + f"\n- **Archived:** {'true' if archived else 'false'}" + content[eol:]
+            else:
+                # Fallback to appending
+                content += f"\n- **Archived:** {'true' if archived else 'false'}"
+        
+        with open(state_path, "w") as f:
+            f.write(content)
+        return True
+    except Exception as e:
+        print(f"Error archiving incident {folder_path}: {e}")
+        return False
+
+def get_incident_date(incident_id: str):
+    """Extracts date from incident ID (INC-YYYYMMDD-xxxx)."""
+    match = re.match(r"INC-(\d{8})-", incident_id)
+    if match:
+        try:
+            return datetime.strptime(match.group(1), "%Y%m%d").replace(tzinfo=timezone.utc)
+        except ValueError:
+            pass
+    return None
+
+def auto_archive_incidents():
+    """Auto-archives closed incidents older than 3 days."""
+    from datetime import datetime, timezone, timedelta
+    incidents_dir = "investigations"
+    if not os.path.exists(incidents_dir):
+        return
+    now = datetime.now(timezone.utc)
+    for item in os.listdir(incidents_dir):
+        item_path = os.path.join(incidents_dir, item)
+        if os.path.isdir(item_path) and item.startswith("INC-"):
+            try:
+                details = parse_incident_folder(item_path)
+                if details.get("status") == "CLOSED" and not details.get("archived", False):
+                    # Check age
+                    inc_date = get_incident_date(item)
+                    if not inc_date:
+                        # Fallback to mtime of state.md
+                        state_path = os.path.join(item_path, "state.md")
+                        if os.path.exists(state_path):
+                            mtime = os.path.getmtime(state_path)
+                            inc_date = datetime.fromtimestamp(mtime, tz=timezone.utc)
+                        else:
+                            inc_date = now
+                    
+                    if now - inc_date > timedelta(days=3):
+                        print(f"[Auto-Archive] Archiving closed incident: {item}")
+                        set_incident_archived(item_path, True)
+            except Exception as e:
+                print(f"[Auto-Archive] Error processing {item}: {e}")
 
 def get_commander_name() -> str:
     """Gets the Incident Commander name from environment variables, defaulting to 'Benjamin'."""
@@ -194,7 +277,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
     def end_headers(self):
         # Enable CORS for local testing/dashboard consumption
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         super().end_headers()
         
@@ -594,13 +677,18 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             
+            query_params = urllib.parse.parse_qs(parsed_url.query)
+            include_archived = query_params.get("include_archived", ["false"])[0].lower() == "true"
+            
             incidents_dir = "investigations"
             incidents = []
             if os.path.exists(incidents_dir):
                 for item in sorted(os.listdir(incidents_dir), reverse=True):
                     item_path = os.path.join(incidents_dir, item)
                     if os.path.isdir(item_path) and item.startswith("INC-"):
-                        incidents.append(parse_incident_folder(item_path))
+                        inc = parse_incident_folder(item_path)
+                        if include_archived or not inc.get("archived", False):
+                            incidents.append(inc)
             self.wfile.write(json.dumps(incidents).encode("utf-8"))
             return
             
@@ -705,6 +793,50 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(b"404 Not Found")
                     
+    def do_DELETE(self):
+        if not self.check_auth():
+            return
+            
+        parsed_url = urllib.parse.urlparse(self.path)
+        path = parsed_url.path
+        
+        # API: Delete an incident
+        if path.startswith("/api/incidents/"):
+            try:
+                incident_id = path.replace("/api/incidents/", "")
+                # Prevent directory traversal attacks
+                incident_id = os.path.basename(incident_id)
+                incident_path = os.path.join("investigations", incident_id)
+                if os.path.exists(incident_path) and os.path.isdir(incident_path):
+                    import shutil
+                    shutil.rmtree(incident_path)
+                    
+                    # If this was the active incident in coordinates, reset it
+                    state = get_active_state()
+                    if state.get("incident_id") == incident_id:
+                        state["incident_id"] = "None"
+                        state["incident_status"] = "UNKNOWN"
+                        save_active_state(state)
+                        
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"status": "success", "message": f"Incident {incident_id} deleted successfully"}).encode("utf-8"))
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+        else:
+            self.send_response(404)
+            self.end_headers()
+
     def do_POST(self):
         if not self.check_auth():
             return
@@ -819,6 +951,37 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
+        # API: Archive an incident
+        elif path.startswith("/api/incidents/") and path.endswith("/archive"):
+            try:
+                incident_id = path.split("/")[3]
+                incident_id = os.path.basename(incident_id)
+                incident_path = os.path.join("investigations", incident_id)
+                if os.path.exists(incident_path):
+                    if set_incident_archived(incident_path, True):
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"status": "success", "message": f"Incident {incident_id} archived successfully"}).encode("utf-8"))
+                    else:
+                        self.send_response(500)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"error": "Failed to update incident archival status"}).encode("utf-8"))
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
         # 5. API: Approve paused safety gate mutation
         elif path.startswith("/api/incidents/") and path.endswith("/approve"):
             try:
@@ -1154,12 +1317,14 @@ def get_incidents_list() -> list[dict]:
             folder_path = os.path.join("investigations", folder)
             if os.path.isdir(folder_path):
                 details = parse_incident_folder(folder_path)
-                incidents.append({
-                    "id": folder,
-                    "status": details.get("status", "UNKNOWN"),
-                    "project_id": details.get("project_id", "UNKNOWN"),
-                    "trigger_event": details.get("trigger_event", "UNKNOWN")
-                })
+                if not details.get("archived", False):
+                    incidents.append({
+                        "id": folder,
+                        "status": details.get("status", "UNKNOWN"),
+                        "project_id": details.get("project_id", "UNKNOWN"),
+                        "trigger_event": details.get("trigger_event", "UNKNOWN"),
+                        "archived": False
+                    })
     return incidents
 
 def transcribe_voice_bytes(audio_bytes: bytes) -> str:
@@ -1259,20 +1424,23 @@ def get_discovered_projects() -> list[str]:
     return projects
 
 def get_top_5_incidents() -> list[dict]:
-    """Helper to query the 5 most recent incidents inside investigations/ directory."""
+    """Helper to query the 5 most recent active (non-archived) incidents inside investigations/ directory."""
     incidents = []
     incidents_dir = "investigations"
     if os.path.exists(incidents_dir):
         folders = [f for f in os.listdir(incidents_dir) if f.startswith("INC-")]
         folders.sort(reverse=True)
-        for folder in folders[:5]:
+        for folder in folders:
+            if len(incidents) >= 5:
+                break
             folder_path = os.path.join(incidents_dir, folder)
             if os.path.isdir(folder_path):
                 details = parse_incident_folder(folder_path)
-                incidents.append({
-                    "id": folder,
-                    "status": details.get("status", "UNKNOWN").upper()
-                })
+                if not details.get("archived", False):
+                    incidents.append({
+                        "id": folder,
+                        "status": details.get("status", "UNKNOWN").upper()
+                    })
     return incidents
 
 def send_telegram_inline_keyboard(bot_token: str, chat_id: str, text: str, buttons: list[list[dict]]):
@@ -1685,6 +1853,52 @@ def start_telegram_bot():
                             )
                             continue
                             
+                        elif msg_text.startswith("/archive"):
+                            parts = msg_text.split(" ", 1)
+                            target_inc = None
+                            if len(parts) > 1:
+                                target_inc = parts[1].strip()
+                            else:
+                                target_inc = selected_incident_id
+                            
+                            if not target_inc or target_inc == "None":
+                                send_raw_telegram_message(bot_token, chat_id, "❌ No active incident selected to archive.")
+                                continue
+                                
+                            all_folders = []
+                            if os.path.exists("investigations"):
+                                all_folders = [f for f in sorted(os.listdir("investigations")) if os.path.isdir(os.path.join("investigations", f)) and f.startswith("INC-")]
+                            
+                            matched_id = None
+                            if target_inc.isdigit():
+                                idx = int(target_inc) - 1
+                                if 0 <= idx < len(all_folders):
+                                    matched_id = all_folders[idx]
+                            else:
+                                for folder in all_folders:
+                                    if folder.lower() == target_inc.lower():
+                                        matched_id = folder
+                                        break
+                            
+                            if matched_id:
+                                target_inc = matched_id
+                                
+                            target_inc_path = os.path.join("investigations", target_inc)
+                            if os.path.exists(target_inc_path):
+                                if set_incident_archived(target_inc_path, True):
+                                    send_raw_telegram_message(bot_token, chat_id, f"✅ Incident `{target_inc}` has been successfully archived.")
+                                    if selected_incident_id == target_inc:
+                                        state = get_active_state()
+                                        state["incident_id"] = "None"
+                                        state["incident_status"] = "UNKNOWN"
+                                        save_active_state(state)
+                                        selected_incident_id = "None"
+                                else:
+                                    send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to archive incident `{target_inc}`.")
+                            else:
+                                send_raw_telegram_message(bot_token, chat_id, f"❌ Incident `{target_inc}` not found in repository.")
+                            continue
+
                         elif msg_text.startswith("/incident") or msg_text.startswith("/select"):
                             parts = msg_text.split(" ", 1)
                             if len(parts) < 2:
@@ -1964,6 +2178,16 @@ def start_telegram_bot():
             break
         time.sleep(1)
 
+def run_auto_archive_loop():
+    import time
+    while True:
+        try:
+            auto_archive_incidents()
+        except Exception as e:
+            print(f"[Auto-Archive Loop] Error: {e}")
+        interval = int(os.getenv("AUTO_ARCHIVE_INTERVAL_SECS", 86400))
+        time.sleep(interval)
+
 def run_server(port=8080):
     try:
         from src.observability import instrument_agents
@@ -1986,6 +2210,10 @@ def run_server(port=8080):
     import threading
     t = threading.Thread(target=start_telegram_bot, daemon=True)
     t.start()
+    
+    # Launch background auto-archive scheduler thread
+    archive_thread = threading.Thread(target=run_auto_archive_loop, daemon=True)
+    archive_thread.start()
     
     try:
         httpd.serve_forever()

@@ -515,7 +515,49 @@ document.addEventListener("DOMContentLoaded", () => {
                         <span class="incident-item-status status-badge ${badgeClass}">${inc.status}</span>
                     </div>
                     <div class="incident-item-desc">${inc.trigger_event || 'SRE incident trigger'}</div>
+                    <div class="incident-item-actions">
+                        <button class="btn-archive-inc" data-id="${inc.incident_id}">Archive</button>
+                        <button class="btn-delete-inc" data-id="${inc.incident_id}">Delete</button>
+                    </div>
                 `;
+                
+                // Add click handler for Archive button
+                const btnArchive = li.querySelector(".btn-archive-inc");
+                btnArchive.addEventListener("click", async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Are you sure you want to archive incident ${inc.incident_id}?`)) {
+                        try {
+                            const res = await fetch(`/api/incidents/${inc.incident_id}/archive`, { method: "POST" });
+                            if (res.ok) {
+                                loadIncidentRepository(); // Reload the list
+                            } else {
+                                alert("Failed to archive incident");
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            alert("Error archiving incident");
+                        }
+                    }
+                });
+
+                // Add click handler for Delete button
+                const btnDelete = li.querySelector(".btn-delete-inc");
+                btnDelete.addEventListener("click", async (e) => {
+                    e.stopPropagation();
+                    if (confirm(`Are you sure you want to delete incident ${inc.incident_id}?`)) {
+                        try {
+                            const res = await fetch(`/api/incidents/${inc.incident_id}`, { method: "DELETE" });
+                            if (res.ok) {
+                                loadIncidentRepository(); // Reload the list
+                            } else {
+                                alert("Failed to delete incident");
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            alert("Error deleting incident");
+                        }
+                    }
+                });
                 
                 li.addEventListener("click", () => {
                     document.querySelectorAll(".incident-item").forEach(item => item.classList.remove("active"));
