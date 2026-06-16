@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.14] - 2026-06-16
+### Added
+- **OpenTelemetry SRE Agent Instrumentation**: Added dynamic monkeypatching wrapper in `src/observability.py` to instrument agent `run()` method executions with OpenTelemetry spans tracking `agent.class`, `agent.name`, `agent.prompt`, and response status.
+- **Observability Testing**: Added unit test `test_agent_otel_instrumentation` verifying that execution spans and attributes are correctly collected using an InMemorySpanExporter.
+
 ## [1.2.13] - 2026-06-16
 ### Added
 - **Production-Ready Dockerfile & .dockerignore**: Dockerized the web server using `python:3.12-slim` base image, added a non-root `appuser`, configured necessary env vars, and updated `.dockerignore` to exclude development directories like `conductor/` and `terraform/`.

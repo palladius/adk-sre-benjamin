@@ -139,3 +139,56 @@ def test_gcp_logging_integration():
         assert called_payload["message"] == "Structured Cloud Logging test."
         assert called_payload["severity"] == "ERROR"
         assert called_payload["context"] == {"test": "gcp"}
+
+def test_agent_otel_instrumentation():
+    from opentelemetry import trace
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+    from src.observability import instrument_agents
+    from src.agents import PlanningLead
+
+    # Save original provider
+    orig_provider = getattr(trace, "_TRACER_PROVIDER", None)
+    orig_done = False
+    if hasattr(trace, "_TRACER_PROVIDER_SET_ONCE"):
+        orig_done = trace._TRACER_PROVIDER_SET_ONCE._done
+        trace._TRACER_PROVIDER_SET_ONCE._done = False
+    trace._TRACER_PROVIDER = None
+
+    try:
+        # Setup in-memory span exporter
+        provider = TracerProvider()
+        trace.set_tracer_provider(provider)
+        exporter = InMemorySpanExporter()
+        provider.add_span_processor(SimpleSpanProcessor(exporter))
+
+        # Instrument agents
+        instrument_agents()
+
+        # Instantiate planning lead
+        planning = PlanningLead()
+        # Run agent
+        planning.run("Check recent deployments")
+
+        # Retrieve spans
+        spans = exporter.get_finished_spans()
+        assert len(spans) > 0
+
+        # Find the SRE Agent Run span
+        agent_span = None
+        for span in spans:
+            if span.name.startswith("SRE Agent Run:"):
+                agent_span = span
+                break
+
+        assert agent_span is not None
+        assert agent_span.attributes["agent.class"] == "PlanningLead"
+        assert "PlanningLead" in agent_span.name or "SRE Agent Run:" in agent_span.name
+        assert agent_span.attributes["agent.prompt"] == "Check recent deployments"
+    finally:
+        # Restore original provider
+        trace._TRACER_PROVIDER = orig_provider
+        if hasattr(trace, "_TRACER_PROVIDER_SET_ONCE"):
+            trace._TRACER_PROVIDER_SET_ONCE._done = orig_done
+
