@@ -49,8 +49,9 @@ def test_fallback_when_db_inactive(tmp_path):
 
     with patch("src.server.get_active_state_file", return_value=str(temp_active_state_file)):
         # Test default active state
-        state = get_active_state()
-        assert state["project_id"] == "sre-next"
+        with patch.dict(os.environ, {}, clear=True):
+            state = get_active_state()
+            assert state["project_id"] == "sre-next"
         assert state["incident_status"] == "NEW"
 
         # Save active state to file

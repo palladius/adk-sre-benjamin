@@ -28,12 +28,9 @@ class FileStateManager(BaseStateManager):
         if self.state_file_path_resolver:
             return self.state_file_path_resolver()
         
-        # Check if ACTIVE_STATE_FILE is overridden in src.server to preserve
-        # test isolation when tests patch ACTIVE_STATE_FILE.
         try:
             import src.server
-            if src.server.ACTIVE_STATE_FILE != "investigations/active_state.json":
-                return src.server.ACTIVE_STATE_FILE
+            return src.server.get_active_state_file()
         except (ImportError, AttributeError):
             pass
 
