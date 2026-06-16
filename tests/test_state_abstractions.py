@@ -1,6 +1,7 @@
 import os
 import json
 import pytest
+from unittest.mock import patch
 from src.storage import (
     FileStateManager,
     FileDiscoveryStorage,
@@ -17,8 +18,9 @@ def test_file_state_manager(tmp_path):
     manager = FileStateManager(state_file_path_resolver=lambda: str(state_file))
     
     # 2. Test default state loading
-    state = manager.get_active_state()
-    assert state["project_id"] == "sre-next"
+    with patch.dict(os.environ, {}, clear=True):
+        state = manager.get_active_state()
+        assert state["project_id"] == "sre-next"
     assert state["incident_id"] == "None"
     assert state["incident_status"] == "NEW"
     
