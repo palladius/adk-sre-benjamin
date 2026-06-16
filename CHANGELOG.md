@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.13] - 2026-06-16
+### Added
+- **Production-Ready Dockerfile & .dockerignore**: Dockerized the web server using `python:3.12-slim` base image, added a non-root `appuser`, configured necessary env vars, and updated `.dockerignore` to exclude development directories like `conductor/` and `terraform/`.
+- **Cloud Run Deployment**: Configured deploy script and added deploy/docker-build targets to `justfile` using `gcloud run deploy`.
+
 ## [1.2.12] - 2026-06-16
 ### Added
 - **Telegram Bot /pending Command & Callbacks (Phase 2)**: Added Telegram bot listener for `/pending` command to show pending mutation queue formatted with risk indicator emojis (🟢, 🟡, 🟠, 🔴). Added inline keyboards with Approve and Reject callback buttons. Implemented callback listeners with reply-to-comment prompts to capture operator comment inputs for approvals and rejections.
