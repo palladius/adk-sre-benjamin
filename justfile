@@ -23,20 +23,20 @@ simulate:
 test:
     @nice -n 19 systemd-run --user --scope -p MemoryMax=4G -p CPUQuota=80% uv run pytest
 
-# Relaunch the SRE dashboard web server on port 8080
+# Relaunch the SRE dashboard web server on port 10042
 web:
-    @PYTHONPATH=. uv run python3 src/server.py
+    @PORT=10042 PYTHONPATH=. uv run python3 src/server.py
 
-# Kill any process listening on port 8080 and restart the web server (FE and BE)
+# Kill any process listening on port 10042 and restart the web server (FE and BE)
 restart-services:
     @echo "🔄 Restarting Project Benjamin web services..."
-    @pid=$(lsof -t -i :8080 2>/dev/null) || true; \
+    @pid=$(lsof -t -i :10042 2>/dev/null) || true; \
     if [ -n "$pid" ]; then \
-        echo "💀 Killing existing process $pid on port 8080..."; \
+        echo "💀 Killing existing process $pid on port 10042..."; \
         kill -9 $pid || true; \
         sleep 1; \
     fi
-    @PYTHONPATH=. uv run python3 src/server.py
+    @PORT=10042 PYTHONPATH=. uv run python3 src/server.py
 
 # Deploy SRE dashboard locally via Docker building, pushing, and Cloud Run deploy
 deploy:

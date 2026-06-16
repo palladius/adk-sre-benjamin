@@ -162,7 +162,7 @@ Project Benjamin ships with several automation scripts configured in the project
 | `just check` | **Check Environment** | Validates python dependencies, `.env` file structure, active gcloud configuration, and impersonated SA credentials |
 | `just test-logging` | **Validate Cloud Logging** | Queries live GCP Cloud Logging using active credentials and outputs formatted warnings/errors |
 | `just test-metrics` | **Validate Cloud Metrics** | Queries live GCP Cloud Monitoring and outputs CPU time-series lists |
-| `just web` | **Relaunch Web Server** | Runs the Python http dashboard server on port `8080` |
+| `just web` | **Relaunch Web Server** | Runs the Python http dashboard server on port `10042` |
 | `just test` | **Run Test Deck** | Runs all 49 pytest checkers and integration suites |
 | `just simulate` | **Incident Simulator** | Launches the complete E2E Incident ICS delegation simulation |
 | `just clean` | **Purge Cache** | Wipes build files, test covers, and local project crawl JSONs |

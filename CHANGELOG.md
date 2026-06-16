@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Incident Archival & Deletion**: Added a status metadata attribute `Archived` to SRE incident states. Active incidents are filtered out by default in UI/API list views. Added Archive and Delete action buttons to incident list item panels. Added Telegram bot `/archive` command. Added background scheduler to auto-archive CLOSED incidents older than 3 days.
 
+### Changed
+- **Web Port Configuration**: Configured the `just web` and `restart-services` commands to run on port `10042` instead of port `8080`.
+
 ## [1.2.8] - 2026-06-16
 ### Added
 - **Telegram Send CLI Shortcut**: Added `bin/telegram-send` command line tool to easily dispatch Telegram messages and Hello World notifications with custom formatting.

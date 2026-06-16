@@ -110,9 +110,9 @@ just check
 
 ### 3. Launch the Web Dashboard
 ```bash
-uv run python3 src/server.py
+just web
 ```
-Open your browser and navigate to: [http://localhost:8080/](http://localhost:8080/)
+Open your browser and navigate to: [http://localhost:10042/](http://localhost:10042/)
 
 ### 4. Run E2E Incident Simulation
 Click the **Trigger Live Simulation** button in the dashboard, or run it directly via the terminal:
