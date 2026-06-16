@@ -7,6 +7,7 @@ import urllib.error
 from http.server import HTTPServer
 from unittest.mock import MagicMock, patch, mock_open
 from src.server import parse_incident_folder, SREHttpRequestHandler
+from src.incident import get_discover_dir
 
 def test_parse_incident_folder(tmp_path):
     # Set up mock incident folder structure
@@ -170,7 +171,7 @@ def test_server_integration():
                 assert data_chat_post[-2]["message"] == "Hello Benjamin"
                 
         # Test GET /api/projects/test-project-server/discover
-        server_cache_dir = os.path.join("discover", "gcp-project", "test-project-server")
+        server_cache_dir = os.path.join(get_discover_dir(), "gcp-project", "test-project-server")
         json_file = os.path.join(server_cache_dir, "discover.json")
         md_file = os.path.join(server_cache_dir, "wiki.md")
         

@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.12] - 2026-06-16
+### Added
+- **Telegram Bot /pending Command & Callbacks (Phase 2)**: Added Telegram bot listener for `/pending` command to show pending mutation queue formatted with risk indicator emojis (🟢, 🟡, 🟠, 🔴). Added inline keyboards with Approve and Reject callback buttons. Implemented callback listeners with reply-to-comment prompts to capture operator comment inputs for approvals and rejections.
+- **Web UI Mutation Queue Widget (Phase 3)**: Added a "Pending SRE Mutation Actions Queue" dashboard panel. Styled list items with glassmorphic cards showing details in Outfit font. Added non-mandatory comment input and Approve (💥) / Reject buttons.
+- **Dynamic Bot Navigation Key**: Updated `send_telegram_menu` to dynamically show the `📥 Pending Approvals` reply button when the active incident is in a non-closed status.
+- **Telegram Co-pilot Comments Context**: Injected operator comments context into direct Telegram SRE agent chat dispatch.
+
 ## [1.2.11] - 2026-06-16
 ### Added
 - **Multi-Environment State Separation (Rails-style)**: Divided active incident investigations into environment-specific folders (`investigations/prod`, `investigations/dev`, `investigations/test`) matching `RAILS_ENV` / `SRE_ENV`.

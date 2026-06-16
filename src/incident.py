@@ -18,6 +18,20 @@ def get_investigations_dir() -> str:
     else:
         return "investigations/dev"
 
+def get_discover_dir() -> str:
+    env = os.getenv("SRE_ENV")
+    if not env and "PYTEST_CURRENT_TEST" in os.environ:
+        env = "test"
+    if not env:
+        env = os.getenv("RAILS_ENV") or "development"
+    env = env.lower().strip()
+    if env in ("prod", "production"):
+        return "discovery/prod"
+    elif env in ("test", "testing"):
+        return "discovery/test"
+    else:
+        return "discovery/dev"
+
 class IncidentStatus(str, Enum):
     NEW = "NEW"
     ONGOING = "ONGOING"

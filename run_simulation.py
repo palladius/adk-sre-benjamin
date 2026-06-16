@@ -17,12 +17,14 @@ from src.agents import (
     LogisticsLead
 )
 
-def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tuple[str, str]:
+def run_simulation(base_dir: str = None, payload: dict = None) -> tuple[str, str]:
     """Runs a complete end-to-end SRE incident simulation in seconds.
 
     This harness simulates a Latency SLO violation trigger and resolves it using
     Project Benjamin's top-down IMAG Incident Command System (ICS) structure.
     """
+    from src.incident import get_investigations_dir
+    base_dir = base_dir or get_investigations_dir()
     if payload is None:
         payload = {
             "event_type": "frontend_latency_slo_violated",
@@ -242,9 +244,11 @@ def run_simulation(base_dir: str = "investigations", payload: dict = None) -> tu
 
     return incident.incident_id, incident.folder_path
 
-def resume_simulation(incident_id: str, approved: bool, base_dir: str = "investigations") -> tuple[str, str]:
+def resume_simulation(incident_id: str, approved: bool, base_dir: str = None) -> tuple[str, str]:
     """Resumes a paused SRE simulation based on human-in-the-loop manual dashboard approval or rejection."""
     import re
+    from src.incident import get_investigations_dir
+    base_dir = base_dir or get_investigations_dir()
     folder_path = os.path.join(base_dir, incident_id)
     state_path = os.path.join(folder_path, "state.md")
     timeline_path = os.path.join(folder_path, "timeline.md")

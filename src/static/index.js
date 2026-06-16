@@ -152,6 +152,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     
                     fetchIncidentDetails(state.incident_id);
                 }
+                
+                if (state.incident_id && state.incident_id !== "None") {
+                    fetchPendingMutations(state.incident_id);
+                }
             }
         } catch (err) {
             console.error("[Poll Active State] Error:", err);
@@ -652,6 +656,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Focus Chat Input
         focusChatInput();
+
+        // Render Pending SRE Mutations Queue
+        fetchPendingMutations(inc.incident_id);
 
         // Show/hide HITL buttons based on status
         if (hitlActionsContainer) {
@@ -2521,6 +2528,104 @@ document.addEventListener("DOMContentLoaded", () => {
     // Poll GCS Sync Status every 5 seconds
     pollGcsSyncStatus();
     setInterval(pollGcsSyncStatus, 5000);
+
+    // Pending Mutations Queue Helpers
+    async function fetchPendingMutations(incidentId) {
+        if (!incidentId || incidentId === "None") return;
+        try {
+            const res = await fetch(`/api/incidents/${incidentId}/pending`);
+            if (!res.ok) return;
+            const queue = await res.json();
+            renderPendingMutations(queue, incidentId);
+        } catch (err) {
+            console.error("Failed to fetch pending mutations:", err);
+        }
+    }
+
+    function renderPendingMutations(queue, incidentId) {
+        const container = document.getElementById("mutation-queue-container");
+        if (!container) return;
+        
+        if (!queue || queue.length === 0) {
+            container.innerHTML = `<p class="loading-placeholder">No pending mutations in queue.</p>`;
+            return;
+        }
+        
+        container.innerHTML = "";
+        queue.forEach(item => {
+            const div = document.createElement("div");
+            div.className = "mutation-item";
+            
+            const cmdId = item.id;
+            const command = item.command;
+            const risk = item.risk_factor || "UNKNOWN";
+            const reason = item.risk_reason || "";
+            const justification = item.justification || "";
+            
+            div.innerHTML = `
+                <div class="mutation-header">
+                    <span class="mutation-cmd-id Outfit font-bold" style="font-family: 'Outfit', sans-serif; font-weight: 700;">${cmdId}</span>
+                    <span class="mutation-risk Outfit font-semibold" style="font-family: 'Outfit', sans-serif; font-weight: 600;">${risk}</span>
+                </div>
+                <div class="mutation-details" style="font-family: 'Outfit', sans-serif;">
+                    <div class="mutation-detail-row">
+                        <strong>Command:</strong> <code class="code-font" style="font-family: 'JetBrains Mono', monospace;">${escapeHTML(command)}</code>
+                    </div>
+                    <div class="mutation-detail-row">
+                        <strong>Reason:</strong> ${escapeHTML(reason)}
+                    </div>
+                    <div class="mutation-detail-row">
+                        <strong>Justification:</strong> ${escapeHTML(justification)}
+                    </div>
+                </div>
+                <div class="mutation-actions">
+                    <input type="text" placeholder="Operator comment (optional)..." class="glass-input mutation-comment-input Outfit" style="font-family: 'Outfit', sans-serif;" id="comment-${cmdId}">
+                    <div class="mutation-btn-group">
+                        <button class="btn-approve btn-action Outfit" style="font-family: 'Outfit', sans-serif; font-weight: 600;" data-cmd-id="${cmdId}">💥 Approve</button>
+                        <button class="btn-reject btn-action Outfit" style="font-family: 'Outfit', sans-serif; font-weight: 600;" data-cmd-id="${cmdId}">Reject</button>
+                    </div>
+                </div>
+            `;
+            
+            // Bind click handlers for Approve and Reject buttons
+            div.querySelector(".btn-approve").addEventListener("click", async () => {
+                const comment = div.querySelector(`#comment-${cmdId}`).value;
+                await handleMutationAction(incidentId, cmdId, "approve", comment);
+            });
+            
+            div.querySelector(".btn-reject").addEventListener("click", async () => {
+                const comment = div.querySelector(`#comment-${cmdId}`).value;
+                await handleMutationAction(incidentId, cmdId, "reject", comment);
+            });
+            
+            container.appendChild(div);
+        });
+    }
+
+    async function handleMutationAction(incidentId, cmdId, action, comment) {
+        try {
+            const url = `/api/incidents/${encodeURIComponent(incidentId)}/pending/${encodeURIComponent(cmdId)}/${action}`;
+            const res = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ comment: comment })
+            });
+            if (!res.ok) {
+                const errData = await res.json();
+                alert(`Error: ${errData.error || 'Failed to process mutation action'}`);
+                return;
+            }
+            
+            // Refresh incident details and pending queue
+            fetchIncidentDetails(incidentId);
+            fetchPendingMutations(incidentId);
+        } catch (err) {
+            console.error(`Failed to post mutation action ${action}:`, err);
+            alert(`Network error performing ${action} action.`);
+        }
+    }
 
     // Call focus on load
     focusChatInput();

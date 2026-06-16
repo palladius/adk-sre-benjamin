@@ -5,6 +5,11 @@ from unittest.mock import patch, MagicMock
 from src.declaration import parse_declaration_intent, get_projects_list
 from src.server import start_telegram_bot, get_active_state, save_active_state
 
+@pytest.fixture(autouse=True)
+def mock_declaration_projects():
+    with patch("src.declaration.get_projects_list", return_value=["sre-next", "sre-demo"]):
+        yield
+
 def test_get_projects_list():
     with patch("os.path.exists", return_value=True), \
          patch("os.path.isdir", return_value=True), \

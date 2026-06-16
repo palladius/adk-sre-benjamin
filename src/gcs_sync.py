@@ -2,6 +2,7 @@ import os
 import subprocess
 import threading
 import time
+from src.incident import get_discover_dir
 
 # Global sync state
 _sync_status = "OFFLINE"
@@ -21,6 +22,31 @@ def get_gcs_bucket_name() -> str:
 def is_gcs_enabled() -> bool:
     """Checks if GCS sync is enabled and a bucket name is resolved."""
     if os.getenv("MOCK_TOOLING", "false").lower() == "true":
+        return False
+    # Check if the environment resolves to test/testing
+    env = os.getenv("SRE_ENV")
+    if not env and "PYTEST_CURRENT_TEST" in os.environ:
+        env = "test"
+    if not env:
+        env = os.getenv("RAILS_ENV") or "development"
+    env = env.lower().strip()
+
+    # Try loading environment configuration from etc/gcs.yaml
+    config_path = os.path.join("etc", "gcs.yaml")
+    if os.path.exists(config_path):
+        try:
+            import yaml
+            with open(config_path, "r") as f:
+                config = yaml.safe_load(f)
+            if config and env in config:
+                env_config = config[env]
+                if isinstance(env_config, dict) and "gcs_enabled" in env_config:
+                    if not env_config["gcs_enabled"]:
+                        return False
+        except Exception as e:
+            print(f"[GCS Sync] Error loading etc/gcs.yaml: {e}")
+
+    if env in ("test", "testing"):
         return False
     return bool(get_gcs_bucket_name())
 
@@ -110,7 +136,7 @@ class GcsSyncManager:
             return cls.do_sync_to_gcs()
 
         print(f"[GCS Sync] Pulling discovery cache from gs://{bucket_name}/gcp-project/...")
-        local_dir = os.path.join("discover", "gcp-project")
+        local_dir = os.path.join(get_discover_dir(), "gcp-project")
         os.makedirs(local_dir, exist_ok=True)
         
         success = cls.run_command([
@@ -143,7 +169,7 @@ class GcsSyncManager:
                 return False
 
         print(f"[GCS Sync] Pushing local discovery cache to gs://{bucket_name}/gcp-project/...")
-        local_dir = os.path.join("discover", "gcp-project")
+        local_dir = os.path.join(get_discover_dir(), "gcp-project")
         os.makedirs(local_dir, exist_ok=True)
         
         success = cls.run_command([

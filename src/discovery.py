@@ -2,6 +2,7 @@ import os
 import json
 import subprocess
 from datetime import datetime, timezone
+from src.incident import get_discover_dir
 
 def discover_project_resources(project_id: str) -> str:
     """Discovers GCP resources, audits them for vulnerabilities, 
@@ -589,7 +590,7 @@ def discover_project_resources(project_id: str) -> str:
             os.environ.pop("CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT", None)
 
     # Build the deterministic directory paths and save JSON cache and Markdown Wiki
-    cache_dir = os.path.join("discover", "gcp-project", project_id)
+    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
     os.makedirs(cache_dir, exist_ok=True)
     
     json_path = os.path.join(cache_dir, "discover.json")

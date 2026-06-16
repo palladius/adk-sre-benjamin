@@ -8,19 +8,23 @@ import urllib.error
 from http.server import HTTPServer
 from datetime import datetime, timezone
 from src.server import SREHttpRequestHandler, get_mutation_comments_context
+from src.incident import get_investigations_dir
 
 INCIDENT_ID = "INC-MOCK-QUEUE-TEST"
-INCIDENT_PATH = os.path.join("investigations", INCIDENT_ID)
+
+def get_incident_path():
+    return os.path.join(get_investigations_dir(), INCIDENT_ID)
 
 @pytest.fixture(scope="module", autouse=True)
 def setup_mock_incident():
+    incident_path = get_incident_path()
     # Setup
-    if os.path.exists(INCIDENT_PATH):
-        shutil.rmtree(INCIDENT_PATH)
-    os.makedirs(INCIDENT_PATH, exist_ok=True)
+    if os.path.exists(incident_path):
+        shutil.rmtree(incident_path)
+    os.makedirs(incident_path, exist_ok=True)
     
     # Create mock state.md
-    with open(os.path.join(INCIDENT_PATH, "state.md"), "w") as f:
+    with open(os.path.join(incident_path, "state.md"), "w") as f:
         f.write("""# Active SRE Incident State: INC-MOCK-QUEUE-TEST
 ## Metadata
 - **Status:** ACTIVE
@@ -31,18 +35,18 @@ def setup_mock_incident():
 """)
         
     # Create mock timeline.md
-    with open(os.path.join(INCIDENT_PATH, "timeline.md"), "w") as f:
+    with open(os.path.join(incident_path, "timeline.md"), "w") as f:
         f.write("- **[2026-06-01T07:55:00Z]** [System] Incident declared.\n")
         
     # Create mock chat.json
-    with open(os.path.join(INCIDENT_PATH, "chat.json"), "w") as f:
+    with open(os.path.join(incident_path, "chat.json"), "w") as f:
         json.dump([], f)
         
     yield
     
     # Teardown
-    if os.path.exists(INCIDENT_PATH):
-        shutil.rmtree(INCIDENT_PATH)
+    if os.path.exists(incident_path):
+        shutil.rmtree(incident_path)
 
 @pytest.fixture(scope="module")
 def server():
@@ -110,7 +114,7 @@ def test_post_pending_success(server):
         assert data_get[0]["id"] == "cmd-01"
         
     # Check that state.md contains the Markdown table
-    state_file = os.path.join(INCIDENT_PATH, "state.md")
+    state_file = os.path.join(get_incident_path(), "state.md")
     with open(state_file, "r") as f:
         content = f.read()
     assert "## Pending SRE Mutation Actions Queue" in content
@@ -156,21 +160,22 @@ def test_post_pending_approve(server):
         assert data_pending[0]["id"] == "cmd-02"
         
     # Verify timeline and chat are updated
-    timeline_file = os.path.join(INCIDENT_PATH, "timeline.md")
+    timeline_file = os.path.join(get_incident_path(), "timeline.md")
+    
     with open(timeline_file, "r") as f:
         timeline_content = f.read()
     assert "Approved proposed mutation command" in timeline_content
     assert "Executing whitelisted mutation command: kubectl drain node-1" in timeline_content
     assert "Proceeding with node drain" in timeline_content
     
-    chat_file = os.path.join(INCIDENT_PATH, "chat.json")
+    chat_file = os.path.join(get_incident_path(), "chat.json")
     with open(chat_file, "r") as f:
         chat_content = json.load(f)
     assert any("Approved proposed mutation command 'kubectl drain node-1'" in msg["message"] for msg in chat_content)
     assert any("Proceeding with node drain" in msg["message"] for msg in chat_content)
     
     # Verify incident status updated to CLOSED in state.md
-    state_file = os.path.join(INCIDENT_PATH, "state.md")
+    state_file = os.path.join(get_incident_path(), "state.md")
     with open(state_file, "r") as f:
         state_content = f.read()
     assert "- **Status:** CLOSED" in state_content
@@ -200,7 +205,7 @@ def test_post_pending_reject(server):
         assert len(data_pending) == 0
         
     # Verify comment was saved in mutation_comments.json
-    comments_file = os.path.join(INCIDENT_PATH, "mutation_comments.json")
+    comments_file = os.path.join(get_incident_path(), "mutation_comments.json")
     assert os.path.exists(comments_file)
     with open(comments_file, "r") as f:
         comments_data = json.load(f)
@@ -211,7 +216,7 @@ def test_post_pending_reject(server):
     assert comments_data[1]["comment"] == "Database restart is too risky right now."
     
     # Verify prompt injection context builder
-    comments_context = get_mutation_comments_context(INCIDENT_PATH)
+    comments_context = get_mutation_comments_context(get_incident_path())
     assert "[Recent Mutation Queue Actions & Operator Comments]:" in comments_context
     assert "- Command 'kubectl drain node-1' was approved" in comments_context
     assert "- Command 'systemctl restart mysql' was rejected" in comments_context

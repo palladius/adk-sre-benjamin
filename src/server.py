@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 import urllib.parse
 from run_simulation import run_simulation, resume_simulation
 from src.orchestrator import run_incident_flow
-from src.incident import get_investigations_dir
+from src.incident import get_investigations_dir, get_discover_dir
 
 def parse_incident_folder(folder_path: str) -> dict:
     """Parses Scribe files inside an incident folder to return structured JSON."""
@@ -292,7 +292,7 @@ def save_active_state(state: dict):
 
 # Mutation Queue Backend Helper Functions
 def add_pending_mutation(incident_id: str, command: str, risk_factor: str, risk_reason: str, justification: str) -> dict:
-    incident_path = os.path.join("investigations", incident_id)
+    incident_path = os.path.join(get_investigations_dir(), incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     
     queue = []
@@ -349,7 +349,7 @@ def add_pending_mutation(incident_id: str, command: str, risk_factor: str, risk_
     return new_item
 
 def update_state_markdown_table(incident_id: str, queue: list[dict]):
-    incident_path = os.path.join("investigations", incident_id)
+    incident_path = os.path.join(get_investigations_dir(), incident_id)
     state_path = os.path.join(incident_path, "state.md")
     if not os.path.exists(state_path):
         return
@@ -389,7 +389,7 @@ def update_state_markdown_table(incident_id: str, queue: list[dict]):
         print(f"[Server] Failed to update state.md with mutation queue: {e}")
 
 def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -> bool:
-    incident_path = os.path.join("investigations", incident_id)
+    incident_path = os.path.join(get_investigations_dir(), incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     if not os.path.exists(pending_path):
         return False
@@ -473,7 +473,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
     return True
 
 def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -> bool:
-    incident_path = os.path.join("investigations", incident_id)
+    incident_path = os.path.join(get_investigations_dir(), incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     if not os.path.exists(pending_path):
         return False
@@ -850,14 +850,14 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     response_data = {
                         "project_id": project_id,
                         "resources": resources,
-                        "cache_path": "discover/domains/sre-demo/README.md",
+                        "cache_path": os.path.join(get_discover_dir(), "domains", "sre-demo", "README.md"),
                         "last_crawled": time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime()),
-                        "wiki_path": "discover/domains/sre-demo/README.md"
+                        "wiki_path": os.path.join(get_discover_dir(), "domains", "sre-demo", "README.md")
                     }
                     self.wfile.write(json.dumps(response_data).encode("utf-8"))
                     return
 
-                cache_dir = os.path.join("discover", "gcp-project", project_id)
+                cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
                 json_path = os.path.join(cache_dir, "discover.json")
                 
                 # Check for refresh parameter in query string
@@ -916,7 +916,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             try:
                 project_id = path.split("/")[3]
                 if project_id in ("sre-demo", "sre-demo-prod"):
-                    md_path = "discover/domains/sre-demo/README.md"
+                    md_path = os.path.join(get_discover_dir(), "domains", "sre-demo", "README.md")
                     if os.path.exists(md_path):
                         with open(md_path, "r") as f:
                             content = f.read()
@@ -928,7 +928,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"project_id": project_id, "content": content}).encode("utf-8"))
                     return
 
-                cache_dir = os.path.join("discover", "gcp-project", project_id)
+                cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
                 md_path = os.path.join(cache_dir, "wiki.md")
                 
                 os.makedirs(cache_dir, exist_ok=True)
@@ -962,7 +962,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             try:
                 project_id = path.split("/")[3]
                 if project_id in ("sre-demo", "sre-demo-prod"):
-                    dot_path = "discover/domains/sre-demo/graph.dot"
+                    dot_path = os.path.join(get_discover_dir(), "domains", "sre-demo", "graph.dot")
                     if not os.path.exists(dot_path):
                         default_graph = (
                             "digraph G {\n"
@@ -993,7 +993,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.wfile.write(json.dumps({"project_id": project_id, "graph": content}).encode("utf-8"))
                     return
 
-                cache_dir = os.path.join("discover", "gcp-project", project_id)
+                cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
                 dot_path = os.path.join(cache_dir, "graph.dot")
                 
                 os.makedirs(cache_dir, exist_ok=True)
@@ -1094,7 +1094,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and path.endswith("/pending"):
             try:
                 incident_id = path.split("/")[3]
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if not os.path.exists(incident_path):
                     self.send_response(404)
                     self.send_header("Content-Type", "application/json")
@@ -1381,7 +1381,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             try:
                 parts = path.split("/")
                 incident_id = parts[3]
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if not os.path.exists(incident_path):
                     self.send_response(404)
                     self.send_header("Content-Type", "application/json")
@@ -1471,7 +1471,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and path.endswith("/override"):
             try:
                 incident_id = path.split("/")[3]
-                incident_path = os.path.join("investigations", incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path):
                     resume_simulation(incident_id, approved=True)
                     
@@ -1670,12 +1670,12 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 content = payload.get("content", "")
                 
                 if project_id in ("sre-demo", "sre-demo-prod"):
-                    md_path = "discover/domains/sre-demo/README.md"
+                    md_path = os.path.join(get_discover_dir(), "domains", "sre-demo", "README.md")
                     os.makedirs(os.path.dirname(md_path), exist_ok=True)
                     with open(md_path, "w") as f:
                         f.write(content)
                 else:
-                    cache_dir = os.path.join("discover", "gcp-project", project_id)
+                    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
                     os.makedirs(cache_dir, exist_ok=True)
                     md_path = os.path.join(cache_dir, "wiki.md")
                     with open(md_path, "w") as f:
@@ -1708,12 +1708,12 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 content = payload.get("content", "")
                 
                 if project_id in ("sre-demo", "sre-demo-prod"):
-                    dot_path = "discover/domains/sre-demo/graph.dot"
+                    dot_path = os.path.join(get_discover_dir(), "domains", "sre-demo", "graph.dot")
                     os.makedirs(os.path.dirname(dot_path), exist_ok=True)
                     with open(dot_path, "w") as f:
                         f.write(content)
                 else:
-                    cache_dir = os.path.join("discover", "gcp-project", project_id)
+                    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
                     os.makedirs(cache_dir, exist_ok=True)
                     dot_path = os.path.join(cache_dir, "graph.dot")
                     with open(dot_path, "w") as f:
@@ -1965,7 +1965,7 @@ def get_discovered_projects() -> list[str]:
             p = p.strip()
             if p and p not in projects:
                 projects.append(p)
-    projects_dir = os.path.join("discover", "gcp-project")
+    projects_dir = os.path.join(get_discover_dir(), "gcp-project")
     if os.path.exists(projects_dir):
         for item in sorted(os.listdir(projects_dir)):
             item_path = os.path.join(projects_dir, item)
@@ -2067,11 +2067,30 @@ def send_telegram_menu(bot_token: str, chat_id: str, message: str):
     import json
     try:
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        # Check active state and incident status
+        is_active = False
+        try:
+            state = get_active_state()
+            selected_incident_id = state.get("incident_id")
+            if selected_incident_id and selected_incident_id != "None":
+                incident_path = os.path.join(get_investigations_dir(), selected_incident_id)
+                if os.path.exists(incident_path):
+                    details = parse_incident_folder(incident_path)
+                    status = details.get("status", "").upper()
+                    if status not in ["CLOSED", "RESOLVED", "ABORTED", "ARCHIVED"]:
+                        is_active = True
+        except Exception as state_err:
+            print(f"[Telegram Menu] Error checking active incident state: {state_err}")
+            
+        keyboard_buttons = [
+            [{"text": "🚨 Status Check"}, {"text": "📋 List Incidents"}],
+            [{"text": "☁️ List Projects"}, {"text": "🆔 Select Incident"}]
+        ]
+        if is_active:
+            keyboard_buttons.append([{"text": "📥 Pending Approvals"}])
+            
         keyboard = {
-            "keyboard": [
-                [{"text": "🚨 Status Check"}, {"text": "📋 List Incidents"}],
-                [{"text": "☁️ List Projects"}, {"text": "🆔 Select Incident"}]
-            ],
+            "keyboard": keyboard_buttons,
             "resize_keyboard": True,
             "one_time_keyboard": False
         }
@@ -2236,6 +2255,26 @@ def start_telegram_bot():
                                     answer_telegram_callback_query(bot_token, callback_id, f"Project set to {proj_id}")
                                     edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to project:* `{proj_id}`")
                                     
+                                elif cb_data.startswith("approve_mutation:"):
+                                    cmd_id = cb_data.replace("approve_mutation:", "").strip()
+                                    session_states[chat_id] = {
+                                        "state": "AWAITING_MUTATION_COMMENT",
+                                        "cmd_id": cmd_id,
+                                        "action": "approve"
+                                    }
+                                    answer_telegram_callback_query(bot_token, callback_id, f"Awaiting comment for {cmd_id} approval")
+                                    send_raw_telegram_message(bot_token, chat_id, f"💬 Please reply to this message with your comment for approving command `{cmd_id}` (or type 'none' to proceed without comment):")
+                                    
+                                elif cb_data.startswith("reject_mutation:"):
+                                    cmd_id = cb_data.replace("reject_mutation:", "").strip()
+                                    session_states[chat_id] = {
+                                        "state": "AWAITING_MUTATION_COMMENT",
+                                        "cmd_id": cmd_id,
+                                        "action": "reject"
+                                    }
+                                    answer_telegram_callback_query(bot_token, callback_id, f"Awaiting comment for {cmd_id} rejection")
+                                    send_raw_telegram_message(bot_token, chat_id, f"💬 Please reply to this message with your comment for rejecting command `{cmd_id}` (or type 'none' to proceed without comment):")
+
                                 elif cb_data.startswith("resolve_project:"):
                                     proj_id = cb_data.replace("resolve_project:", "").strip()
                                     answer_telegram_callback_query(bot_token, callback_id, f"Resolved to {proj_id}")
@@ -2323,6 +2362,32 @@ def start_telegram_bot():
                                 continue
                                 
                         if not msg_text:
+                            continue
+                            
+                        # Check mutation comment state
+                        session = session_states.get(chat_id, {})
+                        if session.get("state") == "AWAITING_MUTATION_COMMENT":
+                            cmd_id = session.get("cmd_id")
+                            action = session.get("action")
+                            comment = msg_text.strip()
+                            if comment.lower() == "none":
+                                comment = ""
+                            
+                            if action == "approve":
+                                success = approve_pending_mutation(selected_incident_id, cmd_id, comment)
+                                if success:
+                                    send_raw_telegram_message(bot_token, chat_id, f"✅ Command `{cmd_id}` approved successfully with comment: \"{comment}\"")
+                                else:
+                                    send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to approve command `{cmd_id}`.")
+                            elif action == "reject":
+                                success = reject_pending_mutation(selected_incident_id, cmd_id, comment)
+                                if success:
+                                    send_raw_telegram_message(bot_token, chat_id, f"❌ Command `{cmd_id}` rejected with comment: \"{comment}\"")
+                                else:
+                                    send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to reject command `{cmd_id}`.")
+                            
+                            if chat_id in session_states:
+                                del session_states[chat_id]
                             continue
                             
                         # Check wizard state: AWAITING_DESCRIPTION
@@ -2517,6 +2582,50 @@ def start_telegram_bot():
                             )
                             continue
                             
+                        elif msg_text == "📥 Pending Approvals" or lower_text.startswith("/pending"):
+                            if not selected_incident_id or selected_incident_id == "None":
+                                send_raw_telegram_message(bot_token, chat_id, "❌ No active SRE incident selected. Please select one first.")
+                                continue
+                            
+                            pending_path = os.path.join(get_investigations_dir(), selected_incident_id, "pending_approvals.json")
+                            queue = []
+                            if os.path.exists(pending_path):
+                                try:
+                                    with open(pending_path, "r") as f:
+                                        queue = json.load(f)
+                                except Exception:
+                                    queue = []
+                                    
+                            if not queue:
+                                send_raw_telegram_message(bot_token, chat_id, f"🟢 No pending SRE mutation actions in queue for incident `{selected_incident_id}`.")
+                                continue
+                                
+                            send_raw_telegram_message(bot_token, chat_id, f"📥 *Pending SRE Mutation Actions Queue for {selected_incident_id}:*")
+                            
+                            for item in queue:
+                                cmd_id = item.get("id")
+                                cmd_text = item.get("command")
+                                risk = item.get("risk_factor", "UNKNOWN")
+                                reason = item.get("risk_reason", "")
+                                justification = item.get("justification", "")
+                                
+                                detail_msg = (
+                                    f"🔑 *Command ID:* `{cmd_id}`\n"
+                                    f"💻 *Command:* `{cmd_text}`\n"
+                                    f"⚠️ *Risk:* {risk}\n"
+                                    f"❓ *Reason:* {reason}\n"
+                                    f"💡 *Justification:* {justification}"
+                                )
+                                
+                                inline_buttons = [
+                                    [
+                                        {"text": "💥 Approve", "callback_data": f"approve_mutation:{cmd_id}"},
+                                        {"text": "❌ Reject", "callback_data": f"reject_mutation:{cmd_id}"}
+                                    ]
+                                ]
+                                send_telegram_inline_keyboard(bot_token, chat_id, detail_msg, inline_buttons)
+                            continue
+
                         elif msg_text == "☁️ List Projects" or msg_text == "☁️ Set Project" or msg_text == "☁️ Target Project" or msg_text.startswith("/projects"):
                             projects = get_discovered_projects()
                             buttons = []
@@ -2825,12 +2934,14 @@ def start_telegram_bot():
                             ctx = IncidentContext(incident_uuid=incident_uuid) if incident_uuid and incident_uuid != "UNKNOWN" else None
                             commander = IncidentCommander(incident_context=ctx)
                             
+                            comments_context = get_mutation_comments_context(incident_path)
                             chat_context = (
                                 f"[Telegram Interface]\n"
                                 f"Active Incident ID: {selected_incident_id}\n"
                                 f"Current Incident Status: {status}\n"
                                 f"Target GCP Project ID: {project_id}\n"
                                 f"Trigger Alert Event: {trigger_event}\n\n"
+                                f"{comments_context}"
                                 f"Operator Message:\n{msg_text}"
                             )
                             reply_msg = commander.run(chat_context)

@@ -5,10 +5,11 @@ import pytest
 from unittest.mock import patch, MagicMock
 from src.discovery import discover_project_resources
 from src.cli import run_cli
+from src.incident import get_discover_dir
 
 def test_discover_mock_resources():
     project_id = "sre-next-dev"
-    cache_dir = os.path.join("discover", "gcp-project", project_id)
+    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
     json_path = os.path.join(cache_dir, "discover.json")
     md_path = os.path.join(cache_dir, "wiki.md")
     
@@ -71,7 +72,7 @@ def test_discover_mock_resources():
 
 def test_discover_live_resources_mocked_subprocess():
     project_id = "live-project-abc"
-    cache_dir = os.path.join("discover", "gcp-project", project_id)
+    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
     json_path = os.path.join(cache_dir, "discover.json")
     md_path = os.path.join(cache_dir, "wiki.md")
     
@@ -191,7 +192,7 @@ def test_discover_live_resources_mocked_subprocess():
 
 def test_cli_discover_subcommand():
     project_id = "cli-test-project"
-    cache_dir = os.path.join("discover", "gcp-project", project_id)
+    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
     json_path = os.path.join(cache_dir, "discover.json")
     md_path = os.path.join(cache_dir, "wiki.md")
     

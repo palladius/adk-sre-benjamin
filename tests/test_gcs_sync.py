@@ -28,12 +28,12 @@ def test_is_gcs_enabled():
     with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
         assert not is_gcs_enabled()
 
-    with patch.dict(os.environ, {"MOCK_TOOLING": "false", "GCS_BUCKET": "my-bucket"}):
+    with patch.dict(os.environ, {"MOCK_TOOLING": "false", "GCS_BUCKET": "my-bucket", "SRE_ENV": "production"}):
         assert is_gcs_enabled()
 
 def test_sync_status():
     set_sync_status("SYNCING")
-    with patch.dict(os.environ, {"MOCK_TOOLING": "false", "GCS_BUCKET": "my-bucket"}):
+    with patch.dict(os.environ, {"MOCK_TOOLING": "false", "GCS_BUCKET": "my-bucket", "SRE_ENV": "production"}):
         assert get_sync_status() == "SYNCING"
 
     with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
