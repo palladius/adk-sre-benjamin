@@ -103,4 +103,7 @@ conductor-status:
 conductor-status-all:
 	~/git/ricclife-with-gemini-pvt/work/articles/20260605-worktree-multiagent-dev-flow/subtasks/20260616-adk-sre-benjamin/conductor-worktree-hitl/scripts/conductor-inspector . --all --short
 
+poll-ghi-questions:
+	python3 ~/git/ricclife-with-gemini-pvt/work/articles/20260605-worktree-multiagent-dev-flow/subtasks/20260616-adk-sre-benjamin/conductor-worktree-hitl/scripts/poll_ghi_questions.py
+
 
