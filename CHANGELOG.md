@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.11] - 2026-06-16
+### Added
+- **Multi-Environment State Separation (Rails-style)**: Divided active incident investigations into environment-specific folders (`investigations/prod`, `investigations/dev`, `investigations/test`) matching `RAILS_ENV` / `SRE_ENV`.
+- **Pytest Auto-detection & Path Mocking**: Configured `get_investigations_dir()` to auto-detect pytest environments and isolate test operations under `investigations/test`, resolving dotenv overrides while allowing explicit test overrides.
+
 ## [1.2.10] - 2026-06-16
 ### Changed
 - **Remove test-project-123 & Disable Mocking**: Removed all occurrences and environment configuration traces of `test-project-123` across dev, prod, and mocking, replaced them with `sre-next` and `sre-next-dev` respectively. Set default configurations for `MOCK_TOOLING` and `SRE_MODE` to `false` and `LIVE` respectively to disable mocking.

@@ -21,14 +21,15 @@ def test_parse_trigger_invalid():
         parse_trigger({"event_type": ""})
 
 def test_parse_trigger_fallback(monkeypatch):
-    monkeypatch.setenv("GCP_PROJECT_ID", "env-gcp-project-test")
+    # Set fallback environment variables
+    monkeypatch.setenv("GCP_PROJECT_ID", "env-gcp-project-123")
     
     payload = {
         "event_type": "frontend_latency_slo_violated",
         "project_id": ""
     }
     trigger = parse_trigger(payload)
-    assert trigger.project_id == "env-gcp-project-test"
+    assert trigger.project_id == "env-gcp-project-123"
     
     # Empty payload project_id but PROJECT_ID set
     monkeypatch.delenv("GCP_PROJECT_ID")

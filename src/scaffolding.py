@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import secrets
 from src.trigger import Trigger
-from src.incident import IncidentContext
+from src.incident import IncidentContext, get_investigations_dir
 
 @dataclass
 class Incident:
@@ -12,7 +12,8 @@ class Incident:
     trigger: Trigger
     incident_context: IncidentContext = None
 
-def scaffold_incident(trigger: Trigger, base_dir: str = "investigations", incident_context: IncidentContext = None) -> Incident:
+def scaffold_incident(trigger: Trigger, base_dir: str = None, incident_context: IncidentContext = None) -> Incident:
+    base_dir = base_dir or get_investigations_dir()
     # Incident ID generation using UTC time to match SRE standards
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     rand_hex = secrets.token_hex(2)

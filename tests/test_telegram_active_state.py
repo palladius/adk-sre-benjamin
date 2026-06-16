@@ -10,7 +10,7 @@ def temp_active_state(tmp_path):
     temp_file = tmp_path / "active_state.json"
     # Write a default active state
     default_state = {
-        "project_id": "sre-next-dev",
+        "project_id": "test-project-123",
         "incident_id": "None",
         "incident_status": "UNKNOWN"
     }
@@ -184,7 +184,7 @@ def test_telegram_bot_mobile_shortcuts(mock_request, mock_urlopen, temp_active_s
     state = get_active_state()
     assert state["incident_id"] == "INC-SHORTCUT-CASE"
 
-    # 2. Test sending raw project name shortcut (e.g., "sre-next-dev")
+    # 2. Test sending raw project name shortcut (e.g., "test-project-123")
     mock_updates_resp_proj = MagicMock()
     mock_updates_resp_proj.status = 200
     mock_updates_resp_proj.read.return_value = json.dumps({
@@ -194,21 +194,21 @@ def test_telegram_bot_mobile_shortcuts(mock_request, mock_urlopen, temp_active_s
                 "update_id": 1006,
                 "message": {
                     "chat": {"id": 123456},
-                    "text": "sre-next-dev"
+                    "text": "test-project-123"
                 }
             }
         ]
     }).encode("utf-8")
     
     mock_urlopen.return_value.__enter__.return_value = mock_updates_resp_proj
-    mock_get_projects = MagicMock(return_value=["sre-next-dev"])
+    mock_get_projects = MagicMock(return_value=["test-project-123"])
     
     with patch("src.server.get_discovered_projects", mock_get_projects), \
          patch("os.path.exists", return_value=True):
         start_telegram_bot()
         
     state2 = get_active_state()
-    assert state2["project_id"] == "sre-next-dev"
+    assert state2["project_id"] == "test-project-123"
 
 @patch("urllib.request.urlopen")
 @patch("urllib.request.Request")

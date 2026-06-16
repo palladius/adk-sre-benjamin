@@ -39,7 +39,7 @@ def test_active_state_api(tmp_path):
                 
             # 2. Test POST /api/active-state (update values)
             payload = {
-                "project_id": "sre-next-dev",
+                "project_id": "test-project-123",
                 "incident_id": "INC-20260603-abcd",
                 "incident_status": "ONGOING",
                 "substatus_rca": True
@@ -52,7 +52,7 @@ def test_active_state_api(tmp_path):
             with urllib.request.urlopen(req_post) as response_post:
                 assert response_post.status == 200
                 data_post = json.loads(response_post.read().decode('utf-8'))
-                assert data_post["project_id"] == "sre-next-dev"
+                assert data_post["project_id"] == "test-project-123"
                 assert data_post["incident_id"] == "INC-20260603-abcd"
                 assert data_post["incident_status"] == "ONGOING"
                 assert data_post["substatus_rca"] is True
@@ -61,7 +61,7 @@ def test_active_state_api(tmp_path):
             with urllib.request.urlopen(req) as response_get2:
                 assert response_get2.status == 200
                 data_get2 = json.loads(response_get2.read().decode('utf-8'))
-                assert data_get2["project_id"] == "sre-next-dev"
+                assert data_get2["project_id"] == "test-project-123"
                 assert data_get2["incident_id"] == "INC-20260603-abcd"
                 assert data_get2["incident_status"] == "ONGOING"
                 assert data_get2["substatus_rca"] is True
@@ -70,7 +70,7 @@ def test_active_state_api(tmp_path):
             assert temp_active_state_file.exists()
             with open(temp_active_state_file, "r") as f:
                 saved_data = json.load(f)
-                assert saved_data["project_id"] == "sre-next-dev"
+                assert saved_data["project_id"] == "test-project-123"
                 
         finally:
             server.shutdown()

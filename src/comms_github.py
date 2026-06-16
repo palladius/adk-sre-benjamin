@@ -3,6 +3,8 @@ import json
 import urllib.request
 from datetime import datetime, timezone
 
+from src.incident import get_investigations_dir
+
 class GitHubTicketingEngine:
     def __init__(self, issue_file_path: str = None):
         self.token = os.getenv("GITHUB_TOKEN")
@@ -12,7 +14,7 @@ class GitHubTicketingEngine:
     def _get_issue_path(self, incident_id: str) -> str:
         if self.issue_file_path:
             return self.issue_file_path
-        return os.path.join("investigations", incident_id, "artifacts", "github_issue.json")
+        return os.path.join(get_investigations_dir(), incident_id, "artifacts", "github_issue.json")
         
     def create_incident_issue(self, incident_id: str, trigger_event: str, project_id: str) -> str:
         """Creates a real or mock GitHub issue tracking ticket for the SRE incident."""
