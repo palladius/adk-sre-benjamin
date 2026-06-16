@@ -1,0 +1,13 @@
+{
+  "track_id": "workspace_agent_installation_20260616",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-06-16T16:11:26Z",
+  "updated_at": "2026-06-16T16:11:26Z",
+  "description": "Feature Request: Implement Workspace-based Agent Installation",
+  "github_issue": {
+    "number": 19,
+    "url": "https://github.com/palladius/adk-sre-benjamin/issues/19"
+  },
+  "github_issue_url": "https://github.com/palladius/adk-sre-benjamin/issues/19"
+}

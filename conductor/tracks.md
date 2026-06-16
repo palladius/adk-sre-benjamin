@@ -89,12 +89,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Graduate local state to work in the Cloud** (Issue #9)
+- [x] **Track: Graduate local state to work in the Cloud** (Issue #9)
 *Link: [./tracks/graduate_local_state_cloud_20260604/](./tracks/graduate_local_state_cloud_20260604/)*
 
 ---
 
-- [ ] **Track: Edit wiki should visualize better** (Issue #10)
+- [x] **Track: Edit wiki should visualize better** (Issue #10)
 *Link: [./tracks/better_wiki_edit_ui_20260604/](./tracks/better_wiki_edit_ui_20260604/)*
 
 ---
@@ -109,7 +109,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [x] **Track: Unified Incident Lifecycle & Multi-Agent Observability (UUIDs, Cloud Logging, and Discord Interactive Chat)**
+- [ ] **Track: Unified Incident Lifecycle & Multi-Agent Observability (UUIDs, Cloud Logging, and Discord Interactive Chat)**
 *Link: [./tracks/unified_incident_lifecycle_observability_20260607/](./tracks/unified_incident_lifecycle_observability_20260607/)*
 
 ---
@@ -121,3 +121,36 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [x] **Track: Make sense of state in multiple environments (local vs cloud)**
 *Link: [./tracks/multi_env_state_management_20260616/](./tracks/multi_env_state_management_20260616/)*
+
+---
+
+- [ ] **Track: Use Managed Agents API to create a solid SRE agent sandbox** (Issue #23)
+*Link: [./tracks/managed_agents_sandbox_20260616/](./tracks/managed_agents_sandbox_20260616/)*
+
+---
+
+- [ ] **Track: P1 Add MCP to streamline ahents abilities** (Issue #22)
+*Link: [./tracks/mcp_streamline_abilities_20260616/](./tracks/mcp_streamline_abilities_20260616/)*
+
+---
+
+- [ ] **Track: Read this great doc and make FRs** (Issue #21)
+*Link: [./tracks/ai_engineering_practices_20260616/](./tracks/ai_engineering_practices_20260616/)*
+
+---
+
+- [ ] **Track: Feature Request: Implement Workspace-based Agent Installation** (Issue #19)
+*Link: [./tracks/workspace_agent_installation_20260616/](./tracks/workspace_agent_installation_20260616/)*
+
+---
+
+- [ ] **Track: migrate the TF/CB logic from Pvt Codelab to here** (Issue #15)
+*Link: [./tracks/migrate_tf_cb_logic_20260616/](./tracks/migrate_tf_cb_logic_20260616/)*
+
+---
+
+- [ ] **Track: Fuse-mount discovery folder on GCS** (Issue #11)
+*Link: [./tracks/fuse_mount_gcs_discovery_20260616/](./tracks/fuse_mount_gcs_discovery_20260616/)*
+
+---
+

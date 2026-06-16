@@ -1,0 +1,13 @@
+{
+  "track_id": "mcp_streamline_abilities_20260616",
+  "type": "feature",
+  "status": "new",
+  "created_at": "2026-06-16T16:11:26Z",
+  "updated_at": "2026-06-16T16:11:26Z",
+  "description": "P1 Add MCP to streamline ahents abilities",
+  "github_issue": {
+    "number": 22,
+    "url": "https://github.com/palladius/adk-sre-benjamin/issues/22"
+  },
+  "github_issue_url": "https://github.com/palladius/adk-sre-benjamin/issues/22"
+}
