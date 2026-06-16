@@ -1,26 +1,25 @@
 # Specification - Use Managed Agents API to create a solid SRE agent sandbox (Track: managed_agents_sandbox_20260616)
 
 ## 1. Overview
-Use Managed Agents API to create a solid SRE agent sandbox
+This specification defines the requirements and architecture for creating a secure, isolated SRE Agent Sandbox using the Vertex AI / Gemini Managed Agents API (via `google-genai` SDK). The sandbox enables instantiating agents with specific context, playbooks, SRE Extension skills, and safe execution tools to troubleshoot outages.
 
-Issue URL: https://github.com/palladius/adk-sre-benjamin/issues/23
+## 2. Goals & Scope
+- **Provisioning:** Ability to dynamically create, configure, and invoke Gemini Managed Agents.
+- **SRE Extension Mount:** Expose SRE Extension skills to the agent via workspace mounting or file-based prompt loading.
+- **AGENTS.md Context:** Utilize `.agents/AGENTS.md` (stored under `sandbox/`) to define agent personas, instructions, and rules.
+- **Safe Tool Execution:** Bind the Safe Executor MCP server (Issue #22) to the agent's tool config to limit high-risk mutations.
+- **GCS Playbook Integration:** Mount or synchronize GCP discovery files and playbooks from GCS.
+- **Outage Triggering:** Allow starting a troubleshooting run with a query like "I have a possible outage, PTAL".
 
-## 2. Description
-OMG I got a vision. Think of this:
+## 3. Tech Stack & Architecture
+- **SDK:** `google-genai` SDK (Gemini Managed Agents / Vertex AI Agentic API).
+- **Configuration Path:** `sandbox/.agents/AGENTS.md` for instructions, and `sandbox/skills/` for SRE Extension skills.
+- **Tooling Interface:** Vertex AI Agent tool bindings mapped to the Safe Executor MCP server.
+- **Authentication:** Application Default Credentials (ADC) with permissions to Vertex AI and GCS.
 
-Instance an agent with: 
-
-* An `.agents/AGENTS.md` which tells it o use skills from SRE Extension
-* a mounted download of SRE Extension
-* An MCP for safe executor (depends on https://github.com/palladius/adk-sre-benjamin/issues/22 )
-* Super-duper: GCS mount of GCP discovery/playbooks.
-* You can just instantiate with "I have a possible outage, PTAL".
-
-## Sources
-1. https://www.philschmid.de/gemini-managed-agents-developer-guide
-2. https://www.philschmid.de/how-managed-agents-work 
-
-
-## 3. Acceptance Criteria
-* The feature is fully implemented according to the issue requirements.
-* Unit/integration tests are written and passing.
+## 4. Acceptance Criteria
+- Sandbox folder `sandbox/` created with standard `.agents/AGENTS.md` template.
+- Implementation of `src/agents/managed_sandbox.py` or similar class/cli module to provision, deploy, and run the agent.
+- Integration with GCP GCS bucket or local directory representing playbooks / discovery data.
+- Safe Executor MCP tool bindings set up correctly.
+- Unit and integration tests written and passing for managed agent creation and interaction.
