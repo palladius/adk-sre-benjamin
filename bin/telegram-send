@@ -1,0 +1,15 @@
+#!/bin/bash
+# Send a Telegram message using the SRE Agent CLI
+# Usage: ./bin/telegram-send "Your message here"
+
+# Get the directory of this script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+if [ -z "$1" ]; then
+    echo "❌ Error: Message parameter is required."
+    echo "Usage: $0 \"Hello World\""
+    exit 1
+fi
+
+# Run the CLI with pythonpath set
+PYTHONPATH="$DIR/.." uv run python3 "$DIR/../src/cli.py" telegram send "$@"
