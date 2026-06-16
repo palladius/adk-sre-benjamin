@@ -64,3 +64,72 @@ def test_comms_lead_discord_channel_creation(tmp_path, monkeypatch):
     assert channel_info["mock"] is True
     assert channel_info["channel_name"] == "war-room-inc-discord-comms"
     assert os.path.exists(feed_path)
+
+@pytest.mark.asyncio
+async def test_mention_routing_ops_agent():
+    # Mock message
+    mock_message = MagicMock()
+    mock_message.author.bot = False
+    mock_message.content = "@OpsAgent check database CPU"
+    mock_message.channel.name = "war-room-inc-20260616-b7b7"
+    mock_message.reply = AsyncMock()
+    
+    # Mock OperationsLead run method
+    with patch("src.agents.OperationsLead.run") as mock_run:
+        mock_run.return_value = "[OpsAgent] CPU utilization is at 45%."
+        
+        from src.comms_discord import handle_discord_message
+        handled = await handle_discord_message(mock_message)
+        
+        assert handled is True
+        mock_run.assert_called_once_with("check database CPU")
+        mock_message.reply.assert_called_once_with("[OpsAgent] CPU utilization is at 45%.")
+
+@pytest.mark.asyncio
+async def test_mention_routing_benjamin():
+    # Mock message
+    mock_message = MagicMock()
+    mock_message.author.bot = False
+    mock_message.content = "@Benjamin what is the status?"
+    mock_message.channel.name = "war-room-inc-20260616-b7b7"
+    mock_message.reply = AsyncMock()
+    
+    # Mock IncidentCommander run method
+    with patch("src.agents.IncidentCommander.run") as mock_run:
+        mock_run.return_value = "[Benjamin] Standing by. I can declare SRE incidents active."
+        
+        from src.comms_discord import handle_discord_message
+        handled = await handle_discord_message(mock_message)
+        
+        assert handled is True
+        mock_run.assert_called_once_with("what is the status?")
+        mock_message.reply.assert_called_once_with("[Benjamin] Standing by. I can declare SRE incidents active.")
+
+@pytest.mark.asyncio
+async def test_message_no_mention():
+    mock_message = MagicMock()
+    mock_message.author.bot = False
+    mock_message.content = "Just some standard chat text without mentions"
+    mock_message.channel.name = "war-room-inc-20260616-b7b7"
+    mock_message.reply = AsyncMock()
+    
+    from src.comms_discord import handle_discord_message
+    handled = await handle_discord_message(mock_message)
+    
+    assert handled is False
+    mock_message.reply.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_message_from_bot():
+    mock_message = MagicMock()
+    mock_message.author.bot = True
+    mock_message.content = "@OpsAgent do something"
+    mock_message.channel.name = "war-room-inc-20260616-b7b7"
+    mock_message.reply = AsyncMock()
+    
+    from src.comms_discord import handle_discord_message
+    handled = await handle_discord_message(mock_message)
+    
+    assert handled is False
+    mock_message.reply.assert_not_called()
+

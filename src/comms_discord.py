@@ -95,3 +95,93 @@ def create_discord_channel(incident_id: str, token: str = None, guild_id: str = 
         return result
     except Exception as e:
         return {"error": str(e)}
+
+async def handle_discord_message(message) -> bool:
+    import re
+    if getattr(message.author, "bot", False):
+        return False
+        
+    from src.agents import (
+        IncidentCommander,
+        OperationsLead,
+        PlanningLead,
+        LogisticsLead,
+        CommunicationsLead
+    )
+    
+    AGENT_MAP = {
+        "opsagent": (OperationsLead, "OperationsLead"),
+        "operationslead": (OperationsLead, "OperationsLead"),
+        "benjamin": (IncidentCommander, "IncidentCommander"),
+        "incidentcommander": (IncidentCommander, "IncidentCommander"),
+        "planningagent": (PlanningLead, "PlanningLead"),
+        "planninglead": (PlanningLead, "PlanningLead"),
+        "logisticsagent": (LogisticsLead, "LogisticsLead"),
+        "logisticslead": (LogisticsLead, "LogisticsLead"),
+        "commsagent": (CommunicationsLead, "CommunicationsLead"),
+        "communicationslead": (CommunicationsLead, "CommunicationsLead"),
+        "madhavi": (CommunicationsLead, "CommunicationsLead"),
+    }
+    
+    # Regex to find @mentions in message content
+    match_mention = re.search(r'@(\w+)', message.content)
+    if not match_mention:
+        return False
+        
+    agent_key = match_mention.group(1).lower()
+    if agent_key not in AGENT_MAP:
+        return False
+        
+    agent_class, agent_name = AGENT_MAP[agent_key]
+    
+    # Clean the prompt by removing the mention
+    prompt = message.content.replace(f"@{match_mention.group(1)}", "").strip()
+    
+    # Extract incident_id from the channel name
+    channel_name = getattr(message.channel, "name", "")
+    incident_id = "active-incident"
+    if channel_name:
+        match_inc = re.search(r'inc-[a-zA-Z0-9_-]+', channel_name.lower())
+        if match_inc:
+            incident_id = match_inc.group(0).upper()
+            
+    # Initialize IncidentContext and Agent
+    from src.incident import IncidentContext
+    from src.observability import log_audit_event
+    
+    ctx = IncidentContext(incident_id=incident_id)
+    agent = agent_class(incident_context=ctx)
+    
+    # Log the incoming user command to audit log
+    log_audit_event(
+        incident_context=ctx,
+        sender_agent="DiscordUser",
+        receiver_agent=agent_name,
+        message=prompt,
+        severity="INFO"
+    )
+    
+    try:
+        response = agent.run(prompt)
+        # Log response back to audit log
+        log_audit_event(
+            incident_context=ctx,
+            sender_agent=agent_name,
+            receiver_agent="DiscordUser",
+            message=response,
+            severity="INFO"
+        )
+        await message.reply(response)
+        return True
+    except Exception as e:
+        err_msg = f"Error executing agent {agent_name}: {e}"
+        # Log failure
+        log_audit_event(
+            incident_context=ctx,
+            sender_agent=agent_name,
+            receiver_agent="DiscordUser",
+            message=err_msg,
+            severity="ERROR"
+        )
+        await message.reply(err_msg)
+        return True
