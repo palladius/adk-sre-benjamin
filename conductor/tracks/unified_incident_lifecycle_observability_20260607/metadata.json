@@ -2,9 +2,14 @@
   "track_id": "unified_incident_lifecycle_observability_20260607",
   "type": "feature",
   "status": "in_progress",
+  "agent": "grazia",
   "created_at": "2026-06-07T13:00:44Z",
-  "updated_at": "2026-06-16T14:50:52Z",
+  "updated_at": "2026-06-16T15:41:00Z",
   "description": "Feature Request: Unified Incident Lifecycle & Multi-Agent Observability (UUIDs, Cloud Logging, and Discord Interactive Chat)",
+  "worktree": {
+    "path": ".worktrees/issue-18-grazia",
+    "branch": "feature/issue-18"
+  },
   "github_issue": {
     "number": 18,
     "url": "https://github.com/palladius/adk-sre-benjamin/issues/18"
