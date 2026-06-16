@@ -19,12 +19,12 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Integrate SRE Extension Skills into ADK Agents**
   *Link: [./tracks/sre_skills_integration_20260601/](./tracks/sre_skills_integration_20260601/)*
 
-- [ ] **Track: Connect SRE Agents to Live GCP Diagnostics and VMSSH Mutations**
+- [x] **Track: Connect SRE Agents to Live GCP Diagnostics and VMSSH Mutations**
   *Link: [./tracks/live_gcp_connectors_20260601/](./tracks/live_gcp_connectors_20260601/)*
 
 ---
 
-- [ ] **Track: GCP Resource Discovery and Asset Audit**
+- [x] **Track: GCP Resource Discovery and Asset Audit**
 *Link: [./tracks/gcp_resource_discovery_20260601/](./tracks/gcp_resource_discovery_20260601/)*
 
 ---
@@ -39,7 +39,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Pending Mutation Approvals Queue**
+- [x] **Track: Pending Mutation Approvals Queue**
 *Link: [./tracks/pending_mutations_registry_20260602/](./tracks/pending_mutations_registry_20260602/)*
 
 ---
@@ -49,7 +49,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Interactive Telegram Incident Creation**
+- [x] **Track: Interactive Telegram Incident Creation**
 *Link: [./tracks/telegram_incident_creation_20260603/](./tracks/telegram_incident_creation_20260603/)*
 
 ---
@@ -64,22 +64,22 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: ADK Observability + Cloud Run** (Issue #1)
+- [x] **Track: ADK Observability + Cloud Run** (Issue #1)
 *Link: [./tracks/adk_observability_cloud_run_20260603/](./tracks/adk_observability_cloud_run_20260603/)*
 
 ---
 
-- [ ] **Track: Incident Status Taxonomy** (Issue #5)
+- [x] **Track: Incident Status Taxonomy** (Issue #5)
 *Link: [./tracks/incident_status_taxonomy_20260603/](./tracks/incident_status_taxonomy_20260603/)*
 
 ---
 
-- [ ] **Track: Incident Archival & Deletion** (Issue #6)
+- [x] **Track: Incident Archival & Deletion** (Issue #6)
 *Link: [./tracks/incident_delete_archive_20260603/](./tracks/incident_delete_archive_20260603/)*
 
 ---
 
-- [ ] **Track: Wiki Project Cross-Linking** (Issue #7)
+- [x] **Track: Wiki Project Cross-Linking** (Issue #7)
 *Link: [./tracks/wiki_cross_linking_20260603/](./tracks/wiki_cross_linking_20260603/)*
 
 ---
@@ -109,7 +109,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Unified Incident Lifecycle & Multi-Agent Observability (UUIDs, Cloud Logging, and Discord Interactive Chat)**
+- [x] **Track: Unified Incident Lifecycle & Multi-Agent Observability (UUIDs, Cloud Logging, and Discord Interactive Chat)**
 *Link: [./tracks/unified_incident_lifecycle_observability_20260607/](./tracks/unified_incident_lifecycle_observability_20260607/)*
 
 ---
@@ -119,5 +119,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Make sense of state in multiple environments (local vs cloud)**
+- [x] **Track: Make sense of state in multiple environments (local vs cloud)**
 *Link: [./tracks/multi_env_state_management_20260616/](./tracks/multi_env_state_management_20260616/)*

@@ -1,9 +1,9 @@
 {
   "track_id": "gcp_resource_discovery_20260601",
   "type": "feature",
-  "status": "new",
+  "status": "completed",
   "created_at": "2026-06-01T21:23:00Z",
-  "updated_at": "2026-06-01T21:23:00Z",
+  "updated_at": "2026-06-16T15:05:00Z",
   "description": "lets add a discovery function. given a prohect id, it discovers all GCE VMs, Cloud Run instances, GKE clusters and Cloud SQL instances.",
   "github_issue": {
     "number": 26,
