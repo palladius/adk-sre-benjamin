@@ -70,7 +70,11 @@ def run_incident_flow(payload: dict, base_dir: str = "investigations") -> tuple[
         f.write(f"""# Active SRE Incident State: {incident.incident_id}
 
 ## Metadata
-- **Status:** ACTIVE
+- **Status:** NEW
+- **RCA Found:** False
+- **Mitigated:** False
+- **Fixed:** False
+- **Verified:** False
 - **Target Project:** `{trigger.project_id}`
 - **Trigger Event:** `{trigger.event_type}`
 - **Incident Commander:** {commander.agent.name}
