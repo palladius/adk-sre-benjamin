@@ -49,14 +49,15 @@ class CommunicationsLead:
                 system_instruction += f"\n\n### LOADED SRE SKILL: {skill['name']}\n{skill['instructions']}"
 
         self.metadata = kwargs.get("metadata") or {}
+        if "incident_uuid" in kwargs:
+            self.metadata["incident_uuid"] = kwargs["incident_uuid"]
+        if "incident_id" in kwargs:
+            self.metadata["incident_id"] = kwargs["incident_id"]
+            
         if incident_context is not None:
             self.metadata["incident_uuid"] = incident_context.incident_uuid
             if getattr(incident_context, "incident_id", None):
                 self.metadata["incident_id"] = incident_context.incident_id
-        elif "incident_uuid" in kwargs:
-            self.metadata["incident_uuid"] = kwargs["incident_uuid"]
-        if "incident_id" in kwargs:
-            self.metadata["incident_id"] = kwargs["incident_id"]
             
         self.agent = LlmAgent(
             name=comms_name,
@@ -104,3 +105,9 @@ class CommunicationsLead:
             risk_level=risk_level,
             reasons=", ".join(reasons)
         )
+
+    def create_discord_war_room(self) -> dict:
+        """Dynamically creates a Discord war-room channel for the active incident."""
+        from src.comms_discord import create_discord_channel
+        incident_id = self.metadata.get("incident_id") or "active-incident"
+        return create_discord_channel(incident_id=incident_id)
