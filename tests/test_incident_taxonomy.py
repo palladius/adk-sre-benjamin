@@ -91,3 +91,4 @@ def test_transition_incident_state(tmp_path):
     assert "RCA Found transitioned from False to True" in timeline_content
     assert "Mitigated transitioned from False to True" in timeline_content
     assert "[Lucia]" in timeline_content
+

@@ -538,12 +538,27 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? "status-resolved" 
                     : "status-active";
                     
+                let substatusHtml = "";
+                if (inc.substatus_rca) {
+                    substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-cyan); color: #000; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">RCA</span>`;
+                }
+                if (inc.substatus_mitigated) {
+                    substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-green); color: #000; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">MIT</span>`;
+                }
+                if (inc.substatus_fixed) {
+                    substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-purple); color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">FIX</span>`;
+                }
+                if (inc.substatus_verified) {
+                    substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-yellow); color: #000; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">VER</span>`;
+                }
+                    
                 li.innerHTML = `
                     <div class="incident-item-header">
                         <span class="incident-item-id">${inc.incident_id}</span>
                         <span class="incident-item-status status-badge ${badgeClass}">${inc.status}</span>
                     </div>
                     <div class="incident-item-desc">${inc.trigger_event || 'SRE incident trigger'}</div>
+                    ${substatusHtml ? `<div class="incident-item-substatuses" style="margin-top: 4px; display: flex; gap: 4px;">${substatusHtml}</div>` : ''}
                     <div class="incident-item-actions">
                         <button class="btn-archive-inc" data-id="${inc.incident_id}">Archive</button>
                         <button class="btn-delete-inc" data-id="${inc.incident_id}">Delete</button>

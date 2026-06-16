@@ -116,7 +116,6 @@ class IncidentContext:
         if incident_id:
             self.metadata["incident_id"] = incident_id
 
-
 def transition_incident_state(
     incident_path: str,
     status: str = None,
@@ -202,3 +201,4 @@ def transition_incident_state(
         with open(timeline_path, "a") as f:
             for entry in timeline_entries:
                 f.write(f"- **[{timestamp}]** [{operator}] {entry}\n")
+

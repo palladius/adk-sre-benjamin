@@ -83,3 +83,4 @@ def test_telegram_bot_status_check(mock_request, mock_urlopen, mock_incident_fol
         assert "Mitigated: `No`" in sent_message
         assert "Fixed: `Yes`" in sent_message
         assert "Verified: `No`" in sent_message
+

@@ -48,6 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.9] - 2026-06-16
 ### Added
+- **Incident Status Transition Logging**: Added transition helper `transition_incident_state` in `src/incident.py` to record status/substatus transitions in `state.md` and chronological log entries in `timeline.md`.
+- **Status & Substatus Badges**: Updated the SRE dashboard sidebar and main pane to display active status and substatus badges (RCA, MITIGATED, FIXED, VERIFIED).
+- **Telegram Integration**: Expanded Telegram status checking commands (`🚨 Status Check` and `/status`) and interactive listing to display status and substatus metadata on menu options.
 - **Incident Archival & Deletion**: Added a status metadata attribute `Archived` to SRE incident states. Active incidents are filtered out by default in UI/API list views. Added Archive and Delete action buttons to incident list item panels. Added Telegram bot `/archive` command. Added background scheduler to auto-archive CLOSED incidents older than 3 days.
 
 ### Changed
