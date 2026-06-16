@@ -106,42 +106,36 @@ def test_gcp_logging_integration():
     mock_logger = MagicMock()
     mock_client.logger.return_value = mock_logger
     
-    # Patch google.cloud.logging
-    with patch("sys.modules") as mock_modules:
-        import sys
-        # Create a mock module structure
-        mock_gcp_logging = MagicMock()
-        mock_gcp_logging.Client = mock_client_class
+    # Create a mock module structure
+    mock_gcp_logging = MagicMock()
+    mock_gcp_logging.Client = mock_client_class
+    
+    # Intercept background thread to run synchronously for test
+    def mock_start(thread_self):
+        thread_self._target(*thread_self._args, **thread_self._kwargs)
         
-        # Inject mock into sys.modules
-        sys.modules["google.cloud.logging"] = mock_gcp_logging
-        sys.modules["google.cloud"] = MagicMock()
+    with patch.object(threading.Thread, "start", mock_start), \
+         patch("src.observability.cloud_logging", mock_gcp_logging):
+        ctx = IncidentContext(incident_uuid="gcp-uuid-456", incident_id="INC-gcp-456")
+        ctx.incident_id = "INC-gcp-456"
         
-        # Intercept background thread to run synchronously for test
-        def mock_start(thread_self):
-            thread_self._target(*thread_self._args, **thread_self._kwargs)
-            
-        with patch.object(threading.Thread, "start", mock_start):
-            ctx = IncidentContext(incident_uuid="gcp-uuid-456", incident_id="INC-gcp-456")
-            ctx.incident_id = "INC-gcp-456"
-            
-            log_audit_event(
-                incident_context=ctx,
-                sender_agent="OpsAgent",
-                receiver_agent="ScribeAgent",
-                message="Structured Cloud Logging test.",
-                severity="ERROR",
-                context={"test": "gcp"}
-            )
-            
-            mock_client_class.assert_called_once()
-            mock_client.logger.assert_called_with("benjamin-audit")
-            mock_logger.log_struct.assert_called_once()
-            
-            called_payload = mock_logger.log_struct.call_args[0][0]
-            assert called_payload["incident_uuid"] == "gcp-uuid-456"
-            assert called_payload["incident_id"] == "INC-gcp-456"
-            assert called_payload["sender agent"] == "OpsAgent"
-            assert called_payload["message"] == "Structured Cloud Logging test."
-            assert called_payload["severity"] == "ERROR"
-            assert called_payload["context"] == {"test": "gcp"}
+        log_audit_event(
+            incident_context=ctx,
+            sender_agent="OpsAgent",
+            receiver_agent="ScribeAgent",
+            message="Structured Cloud Logging test.",
+            severity="ERROR",
+            context={"test": "gcp"}
+        )
+        
+        mock_client_class.assert_called_once()
+        mock_client.logger.assert_called_with("benjamin-audit")
+        mock_logger.log_struct.assert_called_once()
+        
+        called_payload = mock_logger.log_struct.call_args[0][0]
+        assert called_payload["incident_uuid"] == "gcp-uuid-456"
+        assert called_payload["incident_id"] == "INC-gcp-456"
+        assert called_payload["sender agent"] == "OpsAgent"
+        assert called_payload["message"] == "Structured Cloud Logging test."
+        assert called_payload["severity"] == "ERROR"
+        assert called_payload["context"] == {"test": "gcp"}

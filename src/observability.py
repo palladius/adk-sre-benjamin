@@ -18,7 +18,9 @@ try:
     from google.cloud import logging as cloud_logging
     HAS_CLOUD_LOGGING = True
 except ImportError:
+    cloud_logging = None
     HAS_CLOUD_LOGGING = False
+
 
 _current_agent = threading.local()
 
