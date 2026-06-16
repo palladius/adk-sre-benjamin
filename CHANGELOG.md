@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.10] - 2026-06-16
+### Added
+- **Pending Mutations Queue (Phase 1)**: Added shared JSON persistence for pending mutations queue inside `<incident_folder>/pending_approvals.json` and compiled Markdown tables inside `state.md`. Exposed GET/POST `/api/incidents/<id>/pending` and approve/reject POST endpoints. Integrated operator comment piggybacking to the LLM agent prompt.
+
 ## [1.2.9] - 2026-06-16
 ### Added
 - **Incident Archival & Deletion**: Added a status metadata attribute `Archived` to SRE incident states. Active incidents are filtered out by default in UI/API list views. Added Archive and Delete action buttons to incident list item panels. Added Telegram bot `/archive` command. Added background scheduler to auto-archive CLOSED incidents older than 3 days.

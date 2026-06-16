@@ -117,6 +117,9 @@ When a dangerous system mutation (e.g. `systemctl restart mysql`) is proposed by
   * **`💥 Yes, I am sure`**: Authorizes the mutation command. This executes the action via `resume_simulation`, recovers SRE services, closes the incident, logs the response in the incident's `chat.json` feed, and resets the operator's Telegram keyboard back to standard navigation.
   * **`❌ No, abort mutation`**: Aborts and blocks the mutation. This halts the operation, updates the incident state as blocked/aborted, logs the abort action in `chat.json`, and resets the Telegram keyboard back to standard.
 * **Two-Way Synchronization**: If an operator authorizes or rejects the pending mutation directly from the Web Command Dashboard, the active Telegram session is instantly notified, sending a confirmation log message and automatically resetting the operator's Telegram keyboard back to standard.
+* **Pending Mutation Approvals Queue**: Project Benjamin supports queuing multiple proposed mutations within a structured queue (`pending_approvals.json`). Operators can inspect the queue, and selectively approve or reject items with optional comments:
+  * **Structure**: Each pending mutation contains a unique ID (e.g., `cmd-01`), proposed command, timestamp, risk factor (🟢 LOW, 🟡 MEDIUM, 🟠 HIGH, 🔴 CRITICAL), risk reason, and action justification.
+  * **Interactive Feedback & Piggybacking**: When approving or rejecting mutations, comments can be supplied (e.g., via REST JSON payload `{"comment": "operator feedback"}`). These comments are saved, appended to the incident chat, and dynamically "piggybacked" into the active Incident Commander conversation context to redirect strategy.
 
 ---
 
