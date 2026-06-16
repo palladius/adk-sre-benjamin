@@ -988,6 +988,71 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
             return
 
+        # API: Force override paused safety gate mutation
+        elif path.startswith("/api/incidents/") and path.endswith("/override"):
+            try:
+                incident_id = path.split("/")[3]
+                incident_path = os.path.join("investigations", incident_id)
+                if os.path.exists(incident_path):
+                    resume_simulation(incident_id, approved=True)
+                    
+                    # 1. Sync operator's response in chat.json
+                    try:
+                        chat_path = os.path.join(incident_path, "chat.json")
+                        chat_data = []
+                        if os.path.exists(chat_path):
+                            try:
+                                with open(chat_path, "r") as f:
+                                    chat_data = json.load(f)
+                            except Exception:
+                                pass
+                        chat_data.append({
+                            "sender": "Operator (Web Dashboard)",
+                            "message": "⚠️ FORCE OVERRIDDEN and Approved proposed mutation command via SRE Web Panel.",
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        chat_data.append({
+                            "sender": f"{get_commander_name()} Agent (IC)",
+                            "message": "⚠️ Safety Gate FORCE OVERRIDE Granted! Resuming SRE incident resolution pipeline.",
+                            "timestamp": datetime.now(timezone.utc).isoformat()
+                        })
+                        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
+                        with open(chat_path, "w") as f:
+                            json.dump(chat_data, f, indent=2)
+                    except Exception as chat_err:
+                        print(f"[Server] Failed to write chat log to chat.json: {chat_err}")
+                        
+                    # 2. Reset Telegram bot keyboard to standard navigation
+                    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+                    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+                    if bot_token and chat_id:
+                        bot_token = bot_token.strip("'\"")
+                        chat_id = chat_id.strip("'\"")
+                        if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
+                            msg = (
+                                f"⚠️ *Safety Gate FORCE OVERRIDE Granted via Web Dashboard!*\n\n"
+                                f"Proposed SRE mutation command was force-approved by the operator on the web panel.\n"
+                                f"Resuming incident resolution... {get_commander_name()} is executing the action."
+                            )
+                            send_telegram_menu(bot_token, chat_id, msg)
+                            
+                    details = parse_incident_folder(incident_path)
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(details).encode("utf-8"))
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
         # 5. API: Approve paused safety gate mutation
         elif path.startswith("/api/incidents/") and path.endswith("/approve"):
             try:

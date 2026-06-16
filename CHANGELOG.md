@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.10] - 2026-06-16
+### Added
+- **Whitelisted Mutations via Compute SSH**: Configured SRE Mutation Agent to execute whitelisted Compute commands via `gcloud compute ssh` under `SRE_MODE=LIVE`, using secure subprocess execution.
+- **Human-in-the-Loop Override Panel**: Implemented manual override force-approval button on the visual dashboard panel to override safety gates for high-risk commands.
+- **Security Validation Tests**: Added pytest test suite validating whitelisted VM commands and MutationAgent execution logic.
+
 ## [1.2.9] - 2026-06-16
 ### Added
 - **Incident Archival & Deletion**: Added a status metadata attribute `Archived` to SRE incident states. Active incidents are filtered out by default in UI/API list views. Added Archive and Delete action buttons to incident list item panels. Added Telegram bot `/archive` command. Added background scheduler to auto-archive CLOSED incidents older than 3 days.

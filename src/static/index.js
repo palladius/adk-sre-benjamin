@@ -41,6 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // HITL Elements
     const btnApprove = document.getElementById("btn-approve-mutation");
+    const btnOverride = document.getElementById("btn-override-mutation");
     const btnReject = document.getElementById("btn-reject-mutation");
     const hitlActionsContainer = document.getElementById("hitl-actions-container");
     const projectIdInput = document.getElementById("project-id-input");
@@ -168,6 +169,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Event Listeners
     btnTrigger.addEventListener("click", triggerLiveSimulation);
     if (btnApprove) btnApprove.addEventListener("click", approveMutation);
+    if (btnOverride) btnOverride.addEventListener("click", overrideMutation);
     if (btnReject) btnReject.addEventListener("click", rejectMutation);
     if (btnChatSend) btnChatSend.addEventListener("click", sendChatMessage);
     
@@ -348,6 +350,28 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Error approving mutation.");
         } finally {
             if (btnApprove) btnApprove.disabled = false;
+            if (btnReject) btnReject.disabled = false;
+        }
+    }
+
+    // Force override and approve proposed mutation
+    async function overrideMutation() {
+        if (!activeIncidentId) return;
+        if (btnApprove) btnApprove.disabled = true;
+        if (btnOverride) btnOverride.disabled = true;
+        if (btnReject) btnReject.disabled = true;
+        try {
+            const res = await fetch(`/api/incidents/${activeIncidentId}/override`, {
+                method: "POST"
+            });
+            const data = await res.json();
+            await loadIncidentRepository(activeIncidentId);
+        } catch (err) {
+            console.error("Failed to override mutation:", err);
+            alert("Error overriding mutation.");
+        } finally {
+            if (btnApprove) btnApprove.disabled = false;
+            if (btnOverride) btnOverride.disabled = false;
             if (btnReject) btnReject.disabled = false;
         }
     }
@@ -884,24 +908,41 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Override status rendering based on manual approval gate state
         const upperStatus = status ? status.toUpperCase() : "UNKNOWN";
+        const isBlocked = logiEvents.some(e => e.message.toLowerCase().includes("blocked") || e.message.toLowerCase().includes("high risk"));
+        
         if (upperStatus === "AWAITING_APPROVAL") {
-            safetyStatusText.textContent = "AWAITING CLEARANCE";
-            safetyStatusText.className = "metric-value text-warning";
-            safetyReasonsText.textContent = "Proposed mutation command is held. Awaiting human operator safety clearance on the dashboard.";
+            safetyStatusText.textContent = isBlocked ? "BLOCKED BY SAFETY" : "AWAITING CLEARANCE";
+            safetyStatusText.className = isBlocked ? "metric-value text-danger" : "metric-value text-warning";
+            safetyReasonsText.textContent = isBlocked 
+                ? "Proposed mutation command is blocked due to HIGH risk. Force manual override required to execute." 
+                : "Proposed mutation command is held. Awaiting human operator safety clearance on the dashboard.";
+            
+            if (btnOverride && btnApprove) {
+                if (isBlocked) {
+                    btnOverride.style.display = "inline-block";
+                    btnApprove.style.display = "none";
+                } else {
+                    btnOverride.style.display = "none";
+                    btnApprove.style.display = "inline-block";
+                }
+            }
         } else if (upperStatus === "ABORTED") {
             safetyStatusText.textContent = "REJECTED";
             safetyStatusText.className = "metric-value text-danger";
             safetyReasonsText.textContent = "Mutation command rejected and halted by manual safety override.";
+            if (btnOverride) btnOverride.style.display = "none";
         } else if (upperStatus === "CLOSED" || upperStatus === "RESOLVED") {
             safetyStatusText.textContent = "EXECUTED";
             safetyStatusText.className = "metric-value text-success";
             safetyReasonsText.textContent = "Mutation command approved and executed successfully.";
+            if (btnOverride) btnOverride.style.display = "none";
         } else {
             safetyStatusText.textContent = "APPROVED";
             safetyStatusText.className = "metric-value text-success";
             if (riskEvent) {
                 safetyReasonsText.textContent = riskEvent.message;
             }
+            if (btnOverride) btnOverride.style.display = "none";
         }
     }
     

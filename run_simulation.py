@@ -318,6 +318,14 @@ def resume_simulation(incident_id: str, approved: bool, base_dir: str = "investi
         log_event(f"Communications Lead {comms.agent.name}", f"Safety clearance granted for whitelisted mutation command: {proposed_command}.", hitl_msg)
 
         log_event("Mutation Agent", f"Executing whitelisted mutation command: {proposed_command}")
+        from src.agents import MutationAgent
+        mutation_agent = MutationAgent(project_id=project_id)
+        success, exec_output = mutation_agent.execute_mutation(proposed_command)
+        if success:
+            log_event("Mutation Agent", f"Mutation executed successfully: {exec_output}")
+        else:
+            log_event("Mutation Agent", f"Mutation execution failed/blocked: {exec_output}")
+            raise RuntimeError(f"Mutation execution failed: {exec_output}")
 
         # Step 9: Diagnostic checks confirm metric recovery
         log_event(f"Operations Lead {ops.agent.name}", "Performing post-mutation recovery verification metrics check.")
