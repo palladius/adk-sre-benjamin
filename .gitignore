@@ -24,3 +24,5 @@ discover/gcp-project/
 discover/gcp-project/sre-next*
 tmp-bugs/
 .worktrees/
+conductor/questions.json
+conductor/questions/
