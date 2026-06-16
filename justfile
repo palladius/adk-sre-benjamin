@@ -98,3 +98,7 @@ telegram-send-test-message:
 # Setup just for Riccardo
 ricc-setup:
   git-privatize sync
+conductor-status:
+	~/git/ricclife-with-gemini-pvt/work/articles/20260605-worktree-multiagent-dev-flow/subtasks/20260616-adk-sre-benjamin/conductor-worktree-hitl/scripts/conductor-inspector . --open --short
+
+

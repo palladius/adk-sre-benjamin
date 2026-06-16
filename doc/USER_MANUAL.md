@@ -66,15 +66,18 @@ PYTHONPATH=. uv run python3 src/cli.py telegram set "<CHAT_ID>" "<BOT_TOKEN>"
 
 # 2. Send a live test alert to verify the connection is active
 PYTHONPATH=. uv run python3 src/cli.py telegram send "Hello, SRE! Live alert test complete."
+
+# 3. Alternatively, use the shorthand shortcut script
+./bin/telegram-send "Hello, SRE! This is a shorthand test."
 ```
 
 *Example:*
 ```bash
 PYTHONPATH=. uv run python3 src/cli.py telegram set "605724096" "8936005425:AAEjkDi0rXXXXXXX..."
-PYTHONPATH=. uv run python3 src/cli.py telegram send "Castle Security Breach Simulated!"
+./bin/telegram-send "Castle Security Breach Simulated!"
 ```
 
-The set command will automatically parse, secure, and write the credentials into your local `.env` configuration file, and the send command will instantly dispatch a live alert using the configured credentials.
+The set command will automatically parse, secure, and write the credentials into your local `.env` configuration file, and the send command (or `./bin/telegram-send` script) will instantly dispatch a live alert using the configured credentials.
 
 ### 📝 Method B: Manual Configuration
 Alternatively, open your local `.env` file and append the following variables manually:
@@ -165,3 +168,4 @@ Project Benjamin ships with several automation scripts configured in the project
 | `just clean` | **Purge Cache** | Wipes build files, test covers, and local project crawl JSONs |
 | `PYTHONPATH=. uv run python3 src/cli.py telegram set <ID> <TOKEN>` | **Telegram Connect** | Connects and saves Telegram credentials to `.env` |
 | `PYTHONPATH=. uv run python3 src/cli.py telegram send "<MSG>"` | **Telegram Send** | Sends a live, direct alert message to Telegram |
+| `./bin/telegram-send "<MSG>"` | **Telegram Send Shortcut** | Shorthand script to send a live Telegram alert message |
