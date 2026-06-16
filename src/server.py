@@ -14,7 +14,11 @@ def parse_incident_folder(folder_path: str) -> dict:
     registry_path = os.path.join(folder_path, "artifacts_registry.json")
     
     # Defaults
-    status = "UNKNOWN"
+    status = "NEW"
+    substatus_rca = False
+    substatus_mitigated = False
+    substatus_fixed = False
+    substatus_verified = False
     project_id = "UNKNOWN"
     domain_id = "UNKNOWN"
     trigger_event = "UNKNOWN"
@@ -27,9 +31,31 @@ def parse_incident_folder(folder_path: str) -> dict:
             with open(state_path, "r") as f:
                 state_content = f.read()
                 
-            status_match = re.search(r'\-\s+\*\*Status:\*\*\s*([A-Za-z0-9_]+)', state_content, re.IGNORECASE)
+            status_match = re.search(r'\-\s+\*\*Status:\*\*\s*([A-Za-z0-9_-]+)', state_content, re.IGNORECASE)
             if status_match:
-                status = status_match.group(1).strip()
+                status_raw = status_match.group(1).strip()
+                from src.incident import validate_incident_status
+                try:
+                    status = validate_incident_status(status_raw)
+                except Exception:
+                    status = "NEW"
+                    
+            # Parse substatuses
+            rca_match = re.search(r'\-\s+\*\*(RCA Found|rca_found|substatus_rca):\*\*\s*([A-Za-z0-9_-]+)', state_content, re.IGNORECASE)
+            if rca_match:
+                substatus_rca = rca_match.group(2).strip().lower() == "true"
+                
+            mitigated_match = re.search(r'\-\s+\*\*(Mitigated|mitigated|substatus_mitigated):\*\*\s*([A-Za-z0-9_-]+)', state_content, re.IGNORECASE)
+            if mitigated_match:
+                substatus_mitigated = mitigated_match.group(2).strip().lower() == "true"
+                
+            fixed_match = re.search(r'\-\s+\*\*(Fixed|fixed|substatus_fixed):\*\*\s*([A-Za-z0-9_-]+)', state_content, re.IGNORECASE)
+            if fixed_match:
+                substatus_fixed = fixed_match.group(2).strip().lower() == "true"
+                
+            verified_match = re.search(r'\-\s+\*\*(Verified|verified|substatus_verified):\*\*\s*([A-Za-z0-9_-]+)', state_content, re.IGNORECASE)
+            if verified_match:
+                substatus_verified = verified_match.group(2).strip().lower() == "true"
                 
             project_match = re.search(r'\-\s+\*\*(Target Project|GCP Project):\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
             if project_match:
@@ -104,6 +130,10 @@ def parse_incident_folder(folder_path: str) -> dict:
     return {
         "incident_id": incident_id,
         "status": status,
+        "substatus_rca": substatus_rca,
+        "substatus_mitigated": substatus_mitigated,
+        "substatus_fixed": substatus_fixed,
+        "substatus_verified": substatus_verified,
         "project_id": project_id,
         "domain_id": domain_id,
         "trigger_event": trigger_event,
@@ -123,7 +153,11 @@ def get_active_state() -> dict:
     default_state = {
         "project_id": os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next",
         "incident_id": "None",
-        "incident_status": "UNKNOWN"
+        "incident_status": "NEW",
+        "substatus_rca": False,
+        "substatus_mitigated": False,
+        "substatus_fixed": False,
+        "substatus_verified": False
     }
     
     if os.path.exists(ACTIVE_STATE_FILE):
@@ -692,7 +726,16 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 if "incident_id" in payload:
                     state["incident_id"] = payload["incident_id"]
                 if "incident_status" in payload:
-                    state["incident_status"] = payload["incident_status"]
+                    from src.incident import validate_incident_status
+                    state["incident_status"] = validate_incident_status(payload["incident_status"])
+                if "substatus_rca" in payload:
+                    state["substatus_rca"] = bool(payload["substatus_rca"])
+                if "substatus_mitigated" in payload:
+                    state["substatus_mitigated"] = bool(payload["substatus_mitigated"])
+                if "substatus_fixed" in payload:
+                    state["substatus_fixed"] = bool(payload["substatus_fixed"])
+                if "substatus_verified" in payload:
+                    state["substatus_verified"] = bool(payload["substatus_verified"])
                 
                 save_active_state(state)
                 

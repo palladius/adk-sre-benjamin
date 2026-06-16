@@ -18,6 +18,10 @@ def test_parse_incident_folder(tmp_path):
     state_file.write_text("""# Active SRE Incident State: INC-20260601-test
 ## Metadata
 - **Status:** RESOLVED
+- **RCA Found:** True
+- **Mitigated:** True
+- **Fixed:** False
+- **Verified:** False
 - **Target Project:** `prod-db-999`
 - **Trigger Event:** `frontend_latency_slo_violated`
 - **Incident Commander:** Benjamin
@@ -39,7 +43,11 @@ def test_parse_incident_folder(tmp_path):
     parsed = parse_incident_folder(str(inc_dir))
     
     assert parsed["incident_id"] == "INC-20260601-test"
-    assert parsed["status"] == "RESOLVED"
+    assert parsed["status"] == "CLOSED"
+    assert parsed["substatus_rca"] is True
+    assert parsed["substatus_mitigated"] is True
+    assert parsed["substatus_fixed"] is False
+    assert parsed["substatus_verified"] is False
     assert parsed["project_id"] == "prod-db-999"
     assert parsed["trigger_event"] == "frontend_latency_slo_violated"
     assert len(parsed["timeline"]) == 2

@@ -34,13 +34,15 @@ def test_active_state_api(tmp_path):
                 data = json.loads(response.read().decode('utf-8'))
                 assert data["project_id"] == "sre-next"
                 assert data["incident_id"] == "None"
-                assert data["incident_status"] == "UNKNOWN"
+                assert data["incident_status"] == "NEW"
+                assert data["substatus_rca"] is False
                 
             # 2. Test POST /api/active-state (update values)
             payload = {
                 "project_id": "test-project-123",
                 "incident_id": "INC-20260603-abcd",
-                "incident_status": "ACTIVE"
+                "incident_status": "ONGOING",
+                "substatus_rca": True
             }
             req_post = urllib.request.Request(
                 url,
@@ -52,6 +54,8 @@ def test_active_state_api(tmp_path):
                 data_post = json.loads(response_post.read().decode('utf-8'))
                 assert data_post["project_id"] == "test-project-123"
                 assert data_post["incident_id"] == "INC-20260603-abcd"
+                assert data_post["incident_status"] == "ONGOING"
+                assert data_post["substatus_rca"] is True
                 
             # 3. Test GET /api/active-state again (to verify persistence)
             with urllib.request.urlopen(req) as response_get2:
@@ -59,7 +63,8 @@ def test_active_state_api(tmp_path):
                 data_get2 = json.loads(response_get2.read().decode('utf-8'))
                 assert data_get2["project_id"] == "test-project-123"
                 assert data_get2["incident_id"] == "INC-20260603-abcd"
-                assert data_get2["incident_status"] == "ACTIVE"
+                assert data_get2["incident_status"] == "ONGOING"
+                assert data_get2["substatus_rca"] is True
                 
             # 4. Verify temporary file was written
             assert temp_active_state_file.exists()
