@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.15] - 2026-06-16
+### Added
+- **Discord Bot Channel Creation**: Implemented dynamic Discord channel creation in Communications Lead (Madhavi) using `discord.py` client/REST APIs, with a local file mock mode fallback.
+- **Discord Human @mention Routing**: Implemented message event listener to intercept mentions of specific SRE agent roles in Discord incident war-room channels, route queries to target agents, and reply to channels.
+- **TDD Test Coverage**: Added pytest test suite `tests/test_discord.py` validating mock channel creation, live mode mocks, and mention routing event handling.
+
 ## [1.2.14] - 2026-06-16
 ### Added
 - **OpenTelemetry SRE Agent Instrumentation**: Added dynamic monkeypatching wrapper in `src/observability.py` to instrument agent `run()` method executions with OpenTelemetry spans tracking `agent.class`, `agent.name`, `agent.prompt`, and response status.
