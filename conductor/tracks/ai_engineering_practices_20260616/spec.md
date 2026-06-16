@@ -1,4 +1,9 @@
-# Specification - Read this great doc and make FRs (Track: ai_engineering_practices_20260616)
+# Specification
+> [!NOTE]
+> **Priority:** P4 (Nice-to-have)
+> This track is a P4 nice-to-have follow-up. Implementation is deferred.
+
+ - Read this great doc and make FRs (Track: ai_engineering_practices_20260616)
 
 ## 1. Overview
 Read this great doc and make FRs

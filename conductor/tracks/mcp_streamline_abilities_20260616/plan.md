@@ -6,6 +6,7 @@
 - [ ] Task: Create Unsafe Mutator SRE Service Account script
   - [ ] Write `bin/create_mutator_svc_acct.sh` to create `unsafe-sre-mutator` SA with Editor / Mutation-capable roles.
   - [ ] Ensure key files are generated under `private/` and properly ignored by git.
+- [ ] Task: Conductor - User Manual Verification 'Phase 1: Service Account Setup & Provisioning' (Protocol in workflow.md)
 
 ## Phase 2: MCP Safe Executor Implementation
 - [ ] Task: Implement MCP Safe Executor Server
@@ -14,8 +15,10 @@
 - [ ] Task: Integrate MITM (Man-in-the-Middle) Vetting Layer
   - [ ] Implement validation logic that intercepts mutation requests.
   - [ ] Hook mutations into the Telegram/Discord Pending Mutation Queue (`pending_approvals.json`) for operator approval before execution via the unsafe SA.
+- [ ] Task: Conductor - User Manual Verification 'Phase 2: MCP Safe Executor Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Verification
 - [ ] Task: Write unit and integration tests
   - [ ] Write tests in `tests/test_mcp_safe_executor.py` verifying that `safe_call_gcloud` executes read commands and blocks write commands.
   - [ ] Verify MITM interception and queue insertion works as expected.
+- [ ] Task: Conductor - User Manual Verification 'Phase 3: Verification' (Protocol in workflow.md)
