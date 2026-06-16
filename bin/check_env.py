@@ -77,6 +77,31 @@ def check_env():
     else:
         print(f"  ✅ TELEGRAM_CHAT_ID is set ({tg_chat})")
 
+    # 5.b Check Discord Integration
+    print("\n[3.b] Checking Discord configurations...")
+    discord_token = env_vars.get("DISCORD_BOT_TOKEN")
+    discord_guild = env_vars.get("DISCORD_GUILD_ID")
+    
+    if not discord_token or discord_token in ("your_discord_bot_token", "ENTER_DISCORD_BOT_TOKEN_HERE", ""):
+        print("  ⚠️ DISCORD_BOT_TOKEN is not configured or uses placeholder.")
+        warnings += 1
+    else:
+        print(f"  ✅ DISCORD_BOT_TOKEN is set ({discord_token[:6]}...{discord_token[-4:] if len(discord_token) > 10 else ''})")
+
+    if not discord_guild or discord_guild in ("your_discord_server_guild_id", "ENTER_DISCORD_GUILD_ID_HERE", ""):
+        print("  ⚠️ DISCORD_GUILD_ID is not configured or uses placeholder.")
+        warnings += 1
+    else:
+        print(f"  ✅ DISCORD_GUILD_ID is set ({discord_guild})")
+
+    # Print summary status check
+    tg_ready = bool(tg_bot and tg_bot not in ("ENTER_BOT_TOKEN_HERE", "your_telegram_bot_token_here", "") and tg_chat and tg_chat not in ("ENTER_CHAT_ID_HERE", "your_telegram_chat_id_here", ""))
+    discord_ready = bool(discord_token and discord_token not in ("your_discord_bot_token", "ENTER_DISCORD_BOT_TOKEN_HERE", "") and discord_guild and discord_guild not in ("your_discord_server_guild_id", "ENTER_DISCORD_GUILD_ID_HERE", ""))
+    
+    print("\n📢 Chat Integrations Summary:")
+    print(f"  Telegram: {'CHECK' if tg_ready else 'MISSING'}")
+    print(f"  Discord:  {'CHECK' if discord_ready else 'MISSING'}")
+
     # 6. Check GCP Impersonation
     print("\n[4] Checking active GCP credentials...")
     import subprocess

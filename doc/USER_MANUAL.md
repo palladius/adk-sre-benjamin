@@ -123,6 +123,31 @@ When a dangerous system mutation (e.g. `systemctl restart mysql`) is proposed by
 
 ---
 
+## 💬 4. Discord Alerts & War-Rooms Integration Setup
+
+Project Benjamin is integrated with Discord to dynamically create text-channel incident war-rooms and support remote human steering of ADK agents.
+
+### 🛠️ Setup & Configuration
+Add the following variables to your local `.env` configuration file:
+
+```env
+# Discord Bot Integration Keys
+DISCORD_BOT_TOKEN="your_discord_bot_token"
+DISCORD_GUILD_ID="your_discord_server_guild_id"
+```
+
+*Note:* If either of these variables is missing, the system will fall back to **Mock Mode**, logging channel creation events to `investigations/discord_feed.json` and simulating agent actions.
+
+### 🛰️ Dynamic War-Room Creation
+* Whenever an SRE incident is initialized, the Communications Lead (Madhavi) automatically creates a corresponding text channel `war-room-inc-xxxx` on the target Discord guild.
+* A welcome message is posted containing the incident metadata and instructions for human steering.
+
+### 🎙️ Human steering via Mentions
+* Operators can communicate directly with specific ADK agents by mentioning them in the channel (e.g. `@Benjamin check CPU` or `@OpsAgent list containers`).
+* The Discord listener intercepts the mention, routes the command to the target agent, runs their diagnostics, logs the event in the audit trail, and replies back to the channel.
+
+---
+
 ## 🌐 6. Multi-View Project Workspace, Editable Wiki & Graphviz Topologies
 
 Project Benjamin provides an interactive, highly visual project exploration workspace. For any targeted GCP Project ID entered in the sidebar or discovered in your network, you can toggle between four rich, deep-linked views:
