@@ -14,6 +14,9 @@ from src.incident import get_investigations_dir
 
 def run_incident_flow(payload: dict, base_dir: str = None) -> tuple[str, str]:
     """Orchestrates the top-down IMAG Incident Command System (ICS) delegation workflow."""
+    from src.observability import instrument_agents
+    instrument_agents()
+    
     base_dir = base_dir or get_investigations_dir()
     # 1. Parse Alert Trigger and Scaffold Incident Folders
     trigger = parse_trigger(payload)

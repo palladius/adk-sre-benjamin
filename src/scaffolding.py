@@ -21,7 +21,10 @@ def scaffold_incident(trigger: Trigger, base_dir: str = None, incident_context: 
     
     if incident_context is None:
         incident_context = IncidentContext()
-    
+    incident_context.incident_id = incident_id
+    if "incident_id" not in incident_context.metadata:
+        incident_context.metadata["incident_id"] = incident_id
+        
     folder_path = os.path.join(base_dir, incident_id)
     os.makedirs(folder_path, exist_ok=True)
     

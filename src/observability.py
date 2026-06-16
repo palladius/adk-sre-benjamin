@@ -1,5 +1,8 @@
 import os
 import sys
+import json
+import threading
+from datetime import datetime, timezone
 
 # Define a mock/noop trace context if opentelemetry is not installed
 try:
@@ -9,6 +12,15 @@ try:
     HAS_OTEL = True
 except ImportError:
     HAS_OTEL = False
+
+# Import Google Cloud Logging if installed
+try:
+    from google.cloud import logging as cloud_logging
+    HAS_CLOUD_LOGGING = True
+except ImportError:
+    HAS_CLOUD_LOGGING = False
+
+_current_agent = threading.local()
 
 def init_tracer():
     if not HAS_OTEL:
@@ -71,6 +83,107 @@ def init_tracer():
     except Exception as err:
         print(f"[Observability] Error during tracer setup: {err}")
 
+def log_to_gcp_async(client, payload, severity):
+    def _log():
+        try:
+            logger = client.logger("benjamin-audit")
+            logger.log_struct(payload, severity=severity)
+        except Exception as e:
+            sys.stderr.write(f"[Observability] Failed to log to GCP Cloud Logging: {e}\n")
+            
+    threading.Thread(target=_log, daemon=True).start()
+
+def log_audit_event(incident_context, sender_agent: str, receiver_agent: str, message: str, severity: str = "INFO", context: dict = None):
+    # Determine the log path
+    log_path = os.getenv("BENJAMIN_AUDIT_LOG_PATH", "logs/benjamin-audit.jsonl")
+    
+    # Ensure directory exists
+    log_dir = os.path.dirname(log_path)
+    if log_dir:
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except Exception as e:
+            # Fallback path if directory cannot be created
+            fallback_dir = "/tmp" if os.name != "nt" else os.getenv("TEMP", ".")
+            log_path = os.path.join(fallback_dir, os.path.basename(log_path))
+            log_dir = fallback_dir
+            try:
+                os.makedirs(log_dir, exist_ok=True)
+            except Exception:
+                pass
+                
+    # Simple log rotation if file exceeds 10MB
+    MAX_BYTES = 10 * 1024 * 1024  # 10MB
+    if os.path.exists(log_path):
+        try:
+            if os.path.getsize(log_path) > MAX_BYTES:
+                # Rotate
+                for i in range(5, 0, -1):
+                    old_file = f"{log_path}.{i}"
+                    new_file = f"{log_path}.{i+1}"
+                    if os.path.exists(old_file):
+                        try:
+                            os.rename(old_file, new_file)
+                        except Exception:
+                            pass
+                try:
+                    os.rename(log_path, f"{log_path}.1")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # Extract incident_uuid and incident_id
+    incident_uuid = "UNKNOWN"
+    incident_id = "UNKNOWN"
+    if incident_context is not None:
+        if hasattr(incident_context, "incident_uuid"):
+            incident_uuid = incident_context.incident_uuid
+        elif isinstance(incident_context, dict):
+            incident_uuid = incident_context.get("incident_uuid", "UNKNOWN")
+            
+        if hasattr(incident_context, "incident_id"):
+            incident_id = incident_context.incident_id
+        elif hasattr(incident_context, "metadata") and isinstance(incident_context.metadata, dict):
+            incident_id = incident_context.metadata.get("incident_id", "UNKNOWN")
+            incident_uuid = incident_context.metadata.get("incident_uuid", incident_uuid)
+        elif isinstance(incident_context, dict):
+            incident_id = incident_context.get("incident_id", "UNKNOWN")
+
+    timestamp = datetime.now(timezone.utc).isoformat()
+    audit_entry = {
+        "timestamp": timestamp,
+        "incident_uuid": incident_uuid,
+        "incident_id": incident_id,
+        "sender agent": sender_agent,
+        "sender_agent": sender_agent,
+        "receiver agent": receiver_agent,
+        "receiver_agent": receiver_agent,
+        "message": message,
+        "severity": severity,
+        "context": context or {}
+    }
+    
+    # Write to local file
+    try:
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(audit_entry) + "\n")
+            text_line = f"[{timestamp}] [{severity}] [{incident_id}] [{incident_uuid}] {sender_agent} -> {receiver_agent}: {message}"
+            f.write(text_line + "\n")
+    except Exception as e:
+        sys.stderr.write(f"[Audit Fallback] Failed to write log: {e}\n")
+        sys.stderr.write(json.dumps(audit_entry) + "\n")
+        
+    # Write to Google Cloud Logging
+    if HAS_CLOUD_LOGGING:
+        try:
+            project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("GOOGLE_CLOUD_PROJECT")
+            client = cloud_logging.Client(project=project_id)
+            log_to_gcp_async(client, audit_entry, severity)
+        except Exception as e:
+            # Fallback/ignore so we don't crash
+            sys.stderr.write(f"[Observability] Failed to initialize/log to GCP Cloud Logging: {e}\n")
+
 def instrument_agents():
     # Setup the tracer provider first
     init_tracer()
@@ -78,29 +191,94 @@ def instrument_agents():
     # Trace wrapper function
     def make_trace_wrapper(original_run, class_name):
         def wrapper(self, prompt, *args, **kwargs):
-            if not HAS_OTEL:
-                return original_run(self, prompt, *args, **kwargs)
-                
-            tracer = trace.get_tracer("adk-sre-benjamin")
             agent_name = getattr(self.agent, "name", class_name)
+            caller = getattr(_current_agent, "name", "orchestrator")
             
-            with tracer.start_as_current_span(f"SRE Agent Run: {agent_name}") as span:
-                span.set_attribute("agent.class", class_name)
-                span.set_attribute("agent.name", agent_name)
-                span.set_attribute("agent.prompt", prompt)
+            # Log the incoming message (inter-agent message / prompt)
+            log_audit_event(
+                incident_context=self,
+                sender_agent=caller,
+                receiver_agent=agent_name,
+                message=prompt,
+                severity="INFO",
+                context=getattr(self, "metadata", {})
+            )
+            
+            # Setup thread-local for nested calls tracking
+            old_agent = getattr(_current_agent, "name", None)
+            _current_agent.name = agent_name
+            
+            if HAS_OTEL:
+                from opentelemetry import trace
+                tracer = trace.get_tracer("adk-sre-benjamin")
                 
-                model = getattr(self.agent, "model", None)
-                if model:
-                    span.set_attribute("agent.model", str(model))
-                
+                with tracer.start_as_current_span(f"SRE Agent Run: {agent_name}") as span:
+                    span.set_attribute("agent.class", class_name)
+                    span.set_attribute("agent.name", agent_name)
+                    span.set_attribute("agent.prompt", prompt)
+                    
+                    model = getattr(self.agent, "model", None)
+                    if model:
+                        span.set_attribute("agent.model", str(model))
+                    
+                    try:
+                        result = original_run(self, prompt, *args, **kwargs)
+                        span.set_attribute("agent.response_length", len(result) if result else 0)
+                        
+                        # Log response
+                        log_audit_event(
+                            incident_context=self,
+                            sender_agent=agent_name,
+                            receiver_agent=caller,
+                            message=result,
+                            severity="INFO",
+                            context=getattr(self, "metadata", {})
+                        )
+                        return result
+                    except Exception as e:
+                        span.record_exception(e)
+                        from opentelemetry.trace.status import StatusCode, Status
+                        span.set_status(Status(StatusCode.ERROR, str(e)))
+                        
+                        # Log error response
+                        log_audit_event(
+                            incident_context=self,
+                            sender_agent=agent_name,
+                            receiver_agent=caller,
+                            message=f"Error: {e}",
+                            severity="ERROR",
+                            context=getattr(self, "metadata", {})
+                        )
+                        raise
+                    finally:
+                        _current_agent.name = old_agent
+            else:
                 try:
                     result = original_run(self, prompt, *args, **kwargs)
-                    span.set_attribute("agent.response_length", len(result) if result else 0)
+                    
+                    # Log response
+                    log_audit_event(
+                        incident_context=self,
+                        sender_agent=agent_name,
+                        receiver_agent=caller,
+                        message=result,
+                        severity="INFO",
+                        context=getattr(self, "metadata", {})
+                    )
                     return result
                 except Exception as e:
-                    span.record_exception(e)
-                    span.set_status(trace.status.Status(trace.status.StatusCode.ERROR, str(e)))
+                    # Log error response
+                    log_audit_event(
+                        incident_context=self,
+                        sender_agent=agent_name,
+                        receiver_agent=caller,
+                        message=f"Error: {e}",
+                        severity="ERROR",
+                        context=getattr(self, "metadata", {})
+                    )
                     raise
+                finally:
+                    _current_agent.name = old_agent
         return wrapper
 
     # Apply monkeypatching to each of the SRE lead classes

@@ -94,8 +94,12 @@ class IncidentCommander:
         self.metadata = kwargs.get("metadata") or {}
         if incident_context is not None:
             self.metadata["incident_uuid"] = incident_context.incident_uuid
+            if getattr(incident_context, "incident_id", None):
+                self.metadata["incident_id"] = incident_context.incident_id
         elif "incident_uuid" in kwargs:
             self.metadata["incident_uuid"] = kwargs["incident_uuid"]
+        if "incident_id" in kwargs:
+            self.metadata["incident_id"] = kwargs["incident_id"]
             
         self.agent = LlmAgent(
             name=commander_name,

@@ -185,13 +185,21 @@ def run_cli(args_list=None) -> int:
         if agent_name_lower in agent_map:
             import re
             from src.incident import IncidentContext
+            from src.observability import instrument_agents
+            instrument_agents()
+            
             incident_uuid = None
+            incident_id = None
             state_content = hydration_vars.get("state")
             if state_content:
                 uuid_match = re.search(r'\-\s+\*\*Incident UUID:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
                 if uuid_match:
                     incident_uuid = uuid_match.group(1).strip()
-            ctx = IncidentContext(incident_uuid=incident_uuid) if incident_uuid else None
+                id_match = re.search(r'# Active SRE Incident State:\s*(INC-\S+)', state_content, re.IGNORECASE)
+                if id_match:
+                    incident_id = id_match.group(1).strip()
+                    
+            ctx = IncidentContext(incident_uuid=incident_uuid, incident_id=incident_id) if (incident_uuid or incident_id) else None
             agent_instance = agent_map[agent_name_lower](incident_context=ctx)
             response = agent_instance.run(query_msg)
             print(f"Response:\n{response}")
