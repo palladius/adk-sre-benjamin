@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnTrigger = document.getElementById("btn-trigger");
     const incidentList = document.getElementById("incident-list");
     const activeStatusBadge = document.getElementById("active-status-badge");
+    const activeSubstatusBadges = document.getElementById("active-substatus-badges");
     const activeIncidentTitle = document.getElementById("active-incident-title");
     const activeIncidentMeta = document.getElementById("active-incident-meta");
     
@@ -509,12 +510,27 @@ document.addEventListener("DOMContentLoaded", () => {
                     ? "status-resolved" 
                     : "status-active";
                     
+                let substatusHtml = "";
+                if (inc.substatus_rca) {
+                    substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-cyan); color: #000; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">RCA</span>`;
+                }
+                if (inc.substatus_mitigated) {
+                    substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-green); color: #000; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">MIT</span>`;
+                }
+                if (inc.substatus_fixed) {
+                    substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-purple); color: #fff; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">FIX</span>`;
+                }
+                if (inc.substatus_verified) {
+                    substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-yellow); color: #000; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">VER</span>`;
+                }
+                    
                 li.innerHTML = `
                     <div class="incident-item-header">
                         <span class="incident-item-id">${inc.incident_id}</span>
                         <span class="incident-item-status status-badge ${badgeClass}">${inc.status}</span>
                     </div>
                     <div class="incident-item-desc">${inc.trigger_event || 'SRE incident trigger'}</div>
+                    ${substatusHtml ? `<div class="incident-item-substatuses" style="margin-top: 4px; display: flex; gap: 4px;">${substatusHtml}</div>` : ''}
                 `;
                 
                 li.addEventListener("click", () => {
@@ -564,6 +580,24 @@ document.addEventListener("DOMContentLoaded", () => {
         const status = inc.status.toUpperCase();
         activeStatusBadge.textContent = status;
         activeStatusBadge.className = "status-badge " + (status === "RESOLVED" || status === "CLOSED" ? "status-resolved" : "status-active");
+        
+        // Substatus Badges
+        let activeSubstatusHtml = "";
+        if (inc.substatus_rca) {
+            activeSubstatusHtml += `<span class="status-badge" style="background-color: var(--neon-cyan); color: #000; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">RCA</span>`;
+        }
+        if (inc.substatus_mitigated) {
+            activeSubstatusHtml += `<span class="status-badge" style="background-color: var(--neon-green); color: #000; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">MITIGATED</span>`;
+        }
+        if (inc.substatus_fixed) {
+            activeSubstatusHtml += `<span class="status-badge" style="background-color: var(--neon-purple); color: #fff; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">FIXED</span>`;
+        }
+        if (inc.substatus_verified) {
+            activeSubstatusHtml += `<span class="status-badge" style="background-color: var(--neon-yellow); color: #000; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">VERIFIED</span>`;
+        }
+        if (activeSubstatusBadges) {
+            activeSubstatusBadges.innerHTML = activeSubstatusHtml;
+        }
         
         // Handle Active Leads Badge highlights
         updateLeadsHighlight(inc.timeline);
@@ -1023,6 +1057,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 const status = inc.status.toUpperCase();
                 activeStatusBadge.textContent = status;
                 activeStatusBadge.className = "status-badge " + (status === "RESOLVED" || status === "CLOSED" ? "status-resolved" : "status-active");
+                
+                // Substatus Badges
+                let activeSubstatusHtml = "";
+                if (inc.substatus_rca) {
+                    activeSubstatusHtml += `<span class="status-badge" style="background-color: var(--neon-cyan); color: #000; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">RCA</span>`;
+                }
+                if (inc.substatus_mitigated) {
+                    activeSubstatusHtml += `<span class="status-badge" style="background-color: var(--neon-green); color: #000; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">MITIGATED</span>`;
+                }
+                if (inc.substatus_fixed) {
+                    activeSubstatusHtml += `<span class="status-badge" style="background-color: var(--neon-purple); color: #fff; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">FIXED</span>`;
+                }
+                if (inc.substatus_verified) {
+                    activeSubstatusHtml += `<span class="status-badge" style="background-color: var(--neon-yellow); color: #000; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold;">VERIFIED</span>`;
+                }
+                if (activeSubstatusBadges) {
+                    activeSubstatusBadges.innerHTML = activeSubstatusHtml;
+                }
                 
                 // Show/hide HITL buttons based on status
                 if (hitlActionsContainer) {

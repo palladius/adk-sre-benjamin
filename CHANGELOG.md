@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.9] - 2026-06-16
+### Added
+- **Incident Status Transition Logging**: Added transition helper `transition_incident_state` in `src/incident.py` to record status/substatus transitions in `state.md` and chronological log entries in `timeline.md`.
+- **Status & Substatus Badges**: Updated the SRE dashboard sidebar and main pane to display active status and substatus badges (RCA, MITIGATED, FIXED, VERIFIED).
+- **Telegram Integration**: Expanded Telegram status checking commands (`🚨 Status Check` and `/status`) and interactive listing to display status and substatus metadata on menu options.
+
 ## [1.2.8] - 2026-06-16
 ### Added
 - **Telegram Send CLI Shortcut**: Added `bin/telegram-send` command line tool to easily dispatch Telegram messages and Hello World notifications with custom formatting.

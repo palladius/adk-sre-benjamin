@@ -1271,7 +1271,11 @@ def get_top_5_incidents() -> list[dict]:
                 details = parse_incident_folder(folder_path)
                 incidents.append({
                     "id": folder,
-                    "status": details.get("status", "UNKNOWN").upper()
+                    "status": details.get("status", "UNKNOWN").upper(),
+                    "substatus_rca": details.get("substatus_rca", False),
+                    "substatus_mitigated": details.get("substatus_mitigated", False),
+                    "substatus_fixed": details.get("substatus_fixed", False),
+                    "substatus_verified": details.get("substatus_verified", False)
                 })
     return incidents
 
@@ -1592,16 +1596,26 @@ def start_telegram_bot():
                             send_telegram_menu(bot_token, chat_id, welcome_msg)
                             continue
                             
-                        elif msg_text == "🚨 Status Check":
+                        elif msg_text == "🚨 Status Check" or lower_text.startswith("/status"):
                             if not selected_incident_id or selected_incident_id == "None":
                                 send_raw_telegram_message(bot_token, chat_id, "❌ No active SRE incident selected.")
                                 continue
                             incident_path = os.path.join("investigations", selected_incident_id)
                             details = parse_incident_folder(incident_path)
                             status_val = details.get('status', 'UNKNOWN')
+                            substatus_rca = details.get('substatus_rca', False)
+                            substatus_mitigated = details.get('substatus_mitigated', False)
+                            substatus_fixed = details.get('substatus_fixed', False)
+                            substatus_verified = details.get('substatus_verified', False)
+                            
                             status_msg = (
                                 f"🏰 *Status for Incident:* `{selected_incident_id}`\n"
                                 f"• *Status:* `{status_val}`\n"
+                                f"• *Substatuses:*\n"
+                                f"  - RCA Found: `{'Yes' if substatus_rca else 'No'}`\n"
+                                f"  - Mitigated: `{'Yes' if substatus_mitigated else 'No'}`\n"
+                                f"  - Fixed: `{'Yes' if substatus_fixed else 'No'}`\n"
+                                f"  - Verified: `{'Yes' if substatus_verified else 'No'}`\n"
                                 f"• *Target Project:* `{details.get('project_id', 'UNKNOWN')}`\n"
                                 f"• *Trigger Event:* `{details.get('trigger_event', 'UNKNOWN')}`\n"
                                 f"• *Timeline entries:* {len(details.get('timeline', []))}"
@@ -1647,8 +1661,14 @@ def start_telegram_bot():
                             for inc in inc_list:
                                 status = inc["status"]
                                 emoji = "⚪" if status in ["RESOLVED", "CLOSED", "ABORTED"] else "🟢"
+                                sub_flags = []
+                                if inc.get("substatus_rca"): sub_flags.append("RCA")
+                                if inc.get("substatus_mitigated"): sub_flags.append("MIT")
+                                if inc.get("substatus_fixed"): sub_flags.append("FIX")
+                                if inc.get("substatus_verified"): sub_flags.append("VER")
+                                sub_str = f" | {', '.join(sub_flags)}" if sub_flags else ""
                                 buttons.append([{
-                                    "text": f"{emoji} {inc['id']} ({status})",
+                                    "text": f"{emoji} {inc['id']} ({status}{sub_str})",
                                     "callback_data": f"select_incident:{inc['id']}"
                                 }])
                             
