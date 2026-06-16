@@ -1,10 +1,10 @@
 # Implementation Plan: Unified Incident Lifecycle & Multi-Agent Observability
 
 ## Phase 1: Globally Unique Incident Identifiers (UUIDv4)
-- [ ] Task: Generate and propagate UUIDv4 in IncidentContext
-    - [ ] Write unit tests for UUIDv4 generation on incident creation
-    - [ ] Implement UUIDv4 generation during `IncidentContext` initialization
-    - [ ] Update ADK agent initialization to propagate the incident UUID in agent metadata
+- [x] Task: Generate and propagate UUIDv4 in IncidentContext (45fddb6)
+    - [x] Write unit tests for UUIDv4 generation on incident creation
+    - [x] Implement UUIDv4 generation during `IncidentContext` initialization
+    - [x] Update ADK agent initialization to propagate the incident UUID in agent metadata
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Globally Unique Incident Identifiers (UUIDv4)' (Protocol in workflow.md)
 
 ## Phase 2: Multi-Agent Unified Logging
