@@ -1,31 +1,22 @@
-# Specification - P1 Add MCP to streamline ahents abilities (Track: mcp_streamline_abilities_20260616)
+# Specification - P1 Add MCP to streamline agents abilities (Track: mcp_streamline_abilities_20260616)
 
 ## 1. Overview
-P1 Add MCP to streamline ahents abilities
+Introduce a secure model for SRE agents using MCP (Model Context Protocol) to execute gcloud commands. It enforces least privilege by separating read-only queries from mutations using two distinct Google Cloud Service Accounts and a Man-in-the-Loop (MITM) vetting layer.
 
 Issue URL: https://github.com/palladius/adk-sre-benjamin/issues/22
 
-## 2. Description
-We should add an MCP with tools like:
-
-1. `safe_gcloud`: to combine ability to execute ANY `gcloud XXX ` command under the safe Service Account use. And also kubectl (TODO find how to, lets start without).
-2. `unsafe_gcloud`: to allow use of a powerful ServiceAccount. This tool will be available onlt to the unsafe executor which is vetted by the vetting agent.
-
-## Plan of action
-
-Let's start with just (1).
-1. terraform the 2 srervice accounts
-2. Create MCP tools for 1.
-3. attach this tool to the operator
-
-Testing:
-
-Let's use it for discovery and use the same ops agent for discovery. of cours eprompting might be different so we might considr a Discovery agent, with its own custom prompting, but basically the SAME MCP.
-
-## Open topics
-
-Lets start with a single project id, but we should consider in the MCP that project_id is part of the arguments (so potentially in the future we can relax this).
+## 2. Requirements & Design
+*   **Dual Service Account Model**:
+    1.  **Safe SRE Service Account (`safe-sre-investigator`)**: Configured with read-only viewer roles (Viewer, Logging Viewer, Monitoring Viewer). Cannot edit or delete any resources. Used by discovery and diagnostic agents.
+    2.  **Unsafe Mutator SRE Service Account (`unsafe-sre-mutator`)**: Configured with Editor / mutation-capable roles. Restricted only to execution commands approved by a human.
+*   **MCP Safe Executor (`safe_call_gcloud`)**:
+    *   Exposes an MCP tool: `safe_call_gcloud(project_id, gcloud_tail)`.
+    *   Executes read-only operations using the safe SA credentials.
+*   **MITM Vetting Agent Layer**:
+    *   Intercepts any proposed mutations.
+    *   Integrates with the `pending_approvals.json` queue to request explicit operator confirmation via Telegram/Discord before running mutations under the unsafe SA credentials.
 
 ## 3. Acceptance Criteria
-* The feature is fully implemented according to the issue requirements.
-* Unit/integration tests are written and passing.
+*   Agent calls to `safe_call_gcloud` run successfully with read-only access.
+*   Attempts to run mutating commands directly are blocked by the safety gate.
+*   Mutations are successfully intercepted, queued, and executed only upon human approval.
