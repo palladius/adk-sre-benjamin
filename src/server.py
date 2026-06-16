@@ -249,46 +249,13 @@ def get_active_state_file() -> str:
 
 def get_active_state() -> dict:
     """Loads active state coordinates from the state file, falling back to defaults."""
-    default_state = {
-        "project_id": os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next",
-        "incident_id": "None",
-        "incident_status": "NEW",
-        "substatus_rca": False,
-        "substatus_mitigated": False,
-        "substatus_fixed": False,
-        "substatus_verified": False
-    }
-    
-    active_state_file = get_active_state_file()
-    if os.path.exists(active_state_file):
-        try:
-            with open(active_state_file, "r") as f:
-                data = json.load(f)
-                # Ensure all required keys exist
-                for key, val in default_state.items():
-                    if key not in data:
-                        data[key] = val
-                return data
-        except Exception as e:
-            print(f"[Active State] Failed to read active state file: {e}")
-            
-    return default_state
+    from src.storage import get_state_manager
+    return get_state_manager().get_active_state()
 
 def save_active_state(state: dict):
     """Saves updated active state coordinates to the active state json file."""
-    active_state_file = get_active_state_file()
-    dir_name = os.path.dirname(active_state_file)
-    if dir_name and not os.path.exists(dir_name):
-        try:
-            os.makedirs(dir_name, exist_ok=True)
-        except Exception:
-            pass
-            
-    try:
-        with open(active_state_file, "w") as f:
-            json.dump(state, f, indent=2)
-    except Exception as e:
-        print(f"[Active State] Failed to write active state file: {e}")
+    from src.storage import get_state_manager
+    get_state_manager().save_active_state(state)
 
 # Mutation Queue Backend Helper Functions
 def add_pending_mutation(incident_id: str, command: str, risk_factor: str, risk_reason: str, justification: str) -> dict:
@@ -872,16 +839,16 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     if (time.time() - mtime) > 3600:
                         cache_expired = True
                 
+                from src.storage import get_discovery_storage
+                discovery_storage = get_discovery_storage()
                 # Check cache: if it exists and is fresh, read it
                 if os.path.exists(json_path) and not force_refresh and not cache_expired:
-                    with open(json_path, "r") as f:
-                        resources = json.load(f)
+                    resources = discovery_storage.load_discovery_json(project_id)
                 else:
                     # Run the crawler
                     from src.discovery import discover_project_resources
                     discover_project_resources(project_id)
-                    with open(json_path, "r") as f:
-                        resources = json.load(f)
+                    resources = discovery_storage.load_discovery_json(project_id)
                     try:
                         from src.gcs_sync import GcsSyncManager
                         GcsSyncManager.trigger_sync_background("to")
@@ -929,22 +896,20 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     return
 
                 cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
-                md_path = os.path.join(cache_dir, "wiki.md")
+                from src.storage import get_discovery_storage
+                discovery_storage = get_discovery_storage()
+                content = discovery_storage.load_discovery_markdown(project_id)
                 
-                os.makedirs(cache_dir, exist_ok=True)
-                if not os.path.exists(md_path):
+                if not content:
                     # Check if json cache exists to regenerate or bootstrap it
                     json_path = os.path.join(cache_dir, "discover.json")
                     if os.path.exists(json_path):
                         from src.discovery import discover_project_resources
                         discover_project_resources(project_id)
+                        content = discovery_storage.load_discovery_markdown(project_id)
                     else:
-                        default_wiki = f"# SRE Wiki: {project_id}\n\nNo custom SRE notes have been added yet for this project.\n"
-                        with open(md_path, "w") as f:
-                            f.write(default_wiki)
-                
-                with open(md_path, "r") as f:
-                    content = f.read()
+                        content = f"# SRE Wiki: {project_id}\n\nNo custom SRE notes have been added yet for this project.\n"
+                        discovery_storage.save_discovery(project_id, [], content)
                 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -1675,11 +1640,10 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     with open(md_path, "w") as f:
                         f.write(content)
                 else:
-                    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
-                    os.makedirs(cache_dir, exist_ok=True)
-                    md_path = os.path.join(cache_dir, "wiki.md")
-                    with open(md_path, "w") as f:
-                        f.write(content)
+                    from src.storage import get_discovery_storage
+                    discovery_storage = get_discovery_storage()
+                    resources = discovery_storage.load_discovery_json(project_id)
+                    discovery_storage.save_discovery(project_id, resources, content)
                 
                 try:
                     from src.gcs_sync import GcsSyncManager
