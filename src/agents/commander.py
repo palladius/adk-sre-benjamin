@@ -19,6 +19,7 @@ except ImportError:
             self.instruction = instruction
             self.model = model or os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
             self.kwargs = kwargs
+            self.metadata = kwargs.get("metadata") or {}
             
         def run(self, prompt: str) -> str:
             api_key = os.getenv("GEMINI_API_KEY")
@@ -77,7 +78,7 @@ from src.prompt_loader import load_prompt
 import os
 
 class IncidentCommander:
-    def __init__(self, model_name: str = None, **kwargs):
+    def __init__(self, model_name: str = None, incident_context = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         commander_name = os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
@@ -90,11 +91,19 @@ class IncidentCommander:
         if commander_name != "Benjamin":
             system_instruction = system_instruction.replace("Benjamin", commander_name)
             
+        self.metadata = kwargs.get("metadata") or {}
+        if incident_context is not None:
+            self.metadata["incident_uuid"] = incident_context.incident_uuid
+        elif "incident_uuid" in kwargs:
+            self.metadata["incident_uuid"] = kwargs["incident_uuid"]
+            
         self.agent = LlmAgent(
             name=commander_name,
             instruction=system_instruction,
-            model=model_name
+            model=model_name,
+            metadata=self.metadata
         )
+        self.agent.metadata = self.metadata
         
     def run(self, prompt: str) -> str:
         """Runs or chats with the Incident Commander."""

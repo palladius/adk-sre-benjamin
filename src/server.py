@@ -18,6 +18,7 @@ def parse_incident_folder(folder_path: str) -> dict:
     project_id = "UNKNOWN"
     domain_id = "UNKNOWN"
     trigger_event = "UNKNOWN"
+    incident_uuid = "UNKNOWN"
     timeline = []
     artifacts = []
     
@@ -42,6 +43,10 @@ def parse_incident_folder(folder_path: str) -> dict:
             trigger_match = re.search(r'\-\s+\*\*Trigger Event:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
             if trigger_match:
                 trigger_event = trigger_match.group(1).strip()
+                
+            uuid_match = re.search(r'\-\s+\*\*Incident UUID:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+            if uuid_match:
+                incident_uuid = uuid_match.group(1).strip()
         except Exception as e:
             print(f"Error parsing state.md in {folder_path}: {e}")
             
@@ -107,6 +112,7 @@ def parse_incident_folder(folder_path: str) -> dict:
         "project_id": project_id,
         "domain_id": domain_id,
         "trigger_event": trigger_event,
+        "incident_uuid": incident_uuid,
         "timeline": timeline,
         "artifacts": artifacts,
         "folder_path": folder_path
@@ -1050,7 +1056,10 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     
                     try:
                         from src.agents import IncidentCommander
-                        commander = IncidentCommander()
+                        from src.incident import IncidentContext
+                        incident_uuid = details.get("incident_uuid")
+                        ctx = IncidentContext(incident_uuid=incident_uuid) if incident_uuid and incident_uuid != "UNKNOWN" else None
+                        commander = IncidentCommander(incident_context=ctx)
                         
                         # Supply full screen operational context dynamically to the model
                         chat_context = (
@@ -1873,7 +1882,10 @@ def start_telegram_bot():
                         
                         try:
                             from src.agents import IncidentCommander
-                            commander = IncidentCommander()
+                            from src.incident import IncidentContext
+                            incident_uuid = details.get("incident_uuid")
+                            ctx = IncidentContext(incident_uuid=incident_uuid) if incident_uuid and incident_uuid != "UNKNOWN" else None
+                            commander = IncidentCommander(incident_context=ctx)
                             
                             chat_context = (
                                 f"[Telegram Interface]\n"

@@ -17,11 +17,11 @@ def run_incident_flow(payload: dict, base_dir: str = "investigations") -> tuple[
     incident = scaffold_incident(trigger, base_dir=base_dir)
     
     # 2. Instantiate all primary functional SRE leads
-    commander = IncidentCommander()
-    comms = CommunicationsLead()
-    ops = OperationsLead()
-    planning = PlanningLead()
-    logistics = LogisticsLead()
+    commander = IncidentCommander(incident_context=incident.incident_context)
+    comms = CommunicationsLead(incident_context=incident.incident_context)
+    ops = OperationsLead(incident_context=incident.incident_context)
+    planning = PlanningLead(incident_context=incident.incident_context)
+    logistics = LogisticsLead(incident_context=incident.incident_context)
     
     timeline_path = os.path.join(incident.folder_path, "timeline.md")
     state_path = os.path.join(incident.folder_path, "state.md")
@@ -75,6 +75,7 @@ def run_incident_flow(payload: dict, base_dir: str = "investigations") -> tuple[
 - **Trigger Event:** `{trigger.event_type}`
 - **Incident Commander:** {commander.agent.name}
 - **Safety Level:** LOW Risk
+- **Incident UUID:** `{incident.incident_context.incident_uuid}`
 
 ## Active Diagnostic Pipeline
 - Operations Lead is executing log checks.
