@@ -5,3 +5,6 @@
 - **[2026-06-16T10:41:53.467660+00:00]** [Operations Lead Gigi Smanettone] Post-mutation checks complete. Latency: 15.0ms (threshold: 100ms). CPU: 11.0%. Status: RECOVERED.
 - **[2026-06-16T10:41:53.468048+00:00]** [Planning Lead Scrivano Fossati] Scribe Agent closing incident chronicles.
 - **[2026-06-16T10:41:53.468398+00:00]** [Planning Lead Scrivano Fossati] Incident resolved successfully. Closed.
+- **[2026-06-16T10:41:53.789415+00:00]** [Communications Lead Madhavi Al-Qul] Safety clearance REJECTED by human operator for command: systemctl restart mysql.
+- **[2026-06-16T10:41:53.789921+00:00]** [Mutation Agent] Halted mutation execution. Safety gate block active.
+- **[2026-06-16T10:41:53.790290+00:00]** [Planning Lead Scrivano Fossati] Incident aborted successfully. Closed as BLOCKED.

@@ -1,12 +1,12 @@
 # Active SRE Incident State: INC-MOCK-QUEUE-TEST
 
 ## Metadata
-- **Status:** CLOSED
+- **Status:** ABORTED
 - **Target Project:** `test-project`
 - **Trigger Event:** `test_trigger`
 - **Incident Commander:** Benjamin
 - **Safety Level:** LOW Risk
+- **Proposed Mutation:** `systemctl restart mysql` (REJECTED)
 
 ## Active Diagnostic Pipeline
-- Incident resolved via whitelisted restart of MySQL database.
-- All services healthy and verified.
+- Mutation rejected by human operator. Safety gate aborted operations.
