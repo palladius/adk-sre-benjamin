@@ -10,13 +10,13 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Environment-Specific Directory Routing' (Protocol in workflow.md)
 
 ## Phase 2: Pluggable Abstractions for Active State & Discovery Storage
-- [ ] Task: Design pluggable abstraction interface for Active State and Discovery Storage
-    - [ ] Create interface/abstract classes or config toggles for StateManager and DiscoveryStorage
-    - [ ] Implement local filesystem backend for StateManager and DiscoveryStorage
-- [ ] Task: Write tests for pluggable state and discovery storage backends
-    - [ ] Create `tests/test_state_abstractions.py` to test local filesystem backend
-    - [ ] Confirm tests fail before implementation (Red Phase)
-- [ ] Task: Implement abstraction changes in orchestrator and server
-    - [ ] Refactor server and orchestrator to load active state and discovery via pluggable storage manager
-    - [ ] Run test suite and confirm all tests pass (Green Phase)
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: Pluggable Abstractions for Active State & Discovery Storage' (Protocol in workflow.md)
+- [x] Task: Design pluggable abstraction interface for Active State and Discovery Storage [2a3d2c7]
+    - [x] Create interface/abstract classes or config toggles for StateManager and DiscoveryStorage [2a3d2c7]
+    - [x] Implement local filesystem backend for StateManager and DiscoveryStorage [2a3d2c7]
+- [x] Task: Write tests for pluggable state and discovery storage backends [2a3d2c7]
+    - [x] Create `tests/test_state_abstractions.py` to test local filesystem backend [2a3d2c7]
+    - [x] Confirm tests fail before implementation (Red Phase) [2a3d2c7]
+- [x] Task: Implement abstraction changes in orchestrator and server [2a3d2c7]
+    - [x] Refactor server and orchestrator to load active state and discovery via pluggable storage manager [2a3d2c7]
+    - [x] Run test suite and confirm all tests pass (Green Phase) [2a3d2c7]
+- [x] Task: Conductor - User Manual Verification 'Phase 2: Pluggable Abstractions for Active State & Discovery Storage' (Protocol in workflow.md) [2a3d2c7]
