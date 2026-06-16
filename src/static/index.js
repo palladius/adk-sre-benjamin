@@ -1549,12 +1549,24 @@ document.addEventListener("DOMContentLoaded", () => {
             graphPanel.classList.remove("edit-mode");
             if (btnEditGraph) btnEditGraph.textContent = "✍️ Edit Graph";
         }
+        const appContainer = document.querySelector(".app-container");
+        if (appContainer) {
+            appContainer.classList.remove("wiki-edit-active");
+        }
     }
 
     if (btnEditWiki && wikiPanel) {
         btnEditWiki.addEventListener("click", () => {
             const isEditing = wikiPanel.classList.toggle("edit-mode");
             btnEditWiki.textContent = isEditing ? "👁️ View Wiki" : "✍️ Edit Wiki";
+            const appContainer = document.querySelector(".app-container");
+            if (appContainer) {
+                if (isEditing) {
+                    appContainer.classList.add("wiki-edit-active");
+                } else {
+                    appContainer.classList.remove("wiki-edit-active");
+                }
+            }
         });
     }
 

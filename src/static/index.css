@@ -98,6 +98,19 @@ body {
     width: 100vw;
 }
 
+.app-container.wiki-edit-active {
+    grid-template-columns: 1fr;
+}
+
+.app-container.wiki-edit-active .sidebar {
+    display: none !important;
+}
+
+.app-container.wiki-edit-active .chat-column {
+    display: none !important;
+}
+
+
 /* Sidebar Styling */
 .sidebar {
     background: rgba(13, 17, 23, 0.85);
