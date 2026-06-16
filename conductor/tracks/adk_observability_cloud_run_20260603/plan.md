@@ -8,12 +8,12 @@
   - [x] Add header check middleware in `src/server.py` to validate user identity.
 
 ## Phase 2: OpenTelemetry Integration
-- [~] Task: Install OTEL Dependencies
-  - [ ] Update `requirements.txt` with `opentelemetry-api` and `opentelemetry-sdk`.
-- [ ] Task: Instrument ADK Agents
-  - [ ] Add tracer instrumentation to core agent execution loops in `src/agents/`.
+- [x] bb95b3a Task: Install OTEL Dependencies
+  - [x] Update `requirements.txt` with `opentelemetry-api` and `opentelemetry-sdk`.
+- [x] bb95b3a Task: Instrument ADK Agents
+  - [x] Add tracer instrumentation to core agent execution loops in `src/agents/`.
 
 ## Phase 3: Verification
-- [ ] Task: End-to-End Verification
-  - [ ] Deploy to staging environment.
-  - [ ] Verify trace logs export correctly.
+- [x] bb95b3a Task: End-to-End Verification
+  - [x] Deploy to staging environment.
+  - [x] Verify trace logs export correctly.
