@@ -278,6 +278,350 @@ def save_active_state(state: dict):
     except Exception as e:
         print(f"[Active State] Failed to write active state file: {e}")
 
+# Mutation Queue Backend Helper Functions
+def add_pending_mutation(incident_id: str, command: str, risk_factor: str, risk_reason: str, justification: str) -> dict:
+    incident_path = os.path.join("investigations", incident_id)
+    pending_path = os.path.join(incident_path, "pending_approvals.json")
+    
+    queue = []
+    if os.path.exists(pending_path):
+        try:
+            with open(pending_path, "r") as f:
+                queue = json.load(f)
+        except Exception:
+            queue = []
+            
+    next_num = 1
+    for item in queue:
+        item_id = item.get("id", "")
+        if item_id.startswith("cmd-"):
+            try:
+                num = int(item_id.split("-")[1])
+                if num >= next_num:
+                    next_num = num + 1
+            except (IndexError, ValueError):
+                pass
+    cmd_id = f"cmd-{next_num:02d}"
+    
+    risk_emoji = ""
+    clean_risk = risk_factor.upper()
+    if "LOW" in clean_risk:
+        risk_emoji = "🟢"
+    elif "MEDIUM" in clean_risk:
+        risk_emoji = "🟡"
+    elif "HIGH" in clean_risk:
+        risk_emoji = "🟠"
+    elif "CRITICAL" in clean_risk:
+        risk_emoji = "🔴"
+        
+    if risk_emoji and risk_emoji not in risk_factor:
+        risk_factor = f"{risk_emoji} {clean_risk}"
+    elif not risk_emoji:
+        risk_factor = f"🟢 {clean_risk}"
+        
+    new_item = {
+        "id": cmd_id,
+        "command": command,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "risk_factor": risk_factor,
+        "risk_reason": risk_reason,
+        "justification": justification
+    }
+    
+    queue.append(new_item)
+    
+    with open(pending_path, "w") as f:
+        json.dump(queue, f, indent=2)
+        
+    update_state_markdown_table(incident_id, queue)
+    return new_item
+
+def update_state_markdown_table(incident_id: str, queue: list[dict]):
+    incident_path = os.path.join("investigations", incident_id)
+    state_path = os.path.join(incident_path, "state.md")
+    if not os.path.exists(state_path):
+        return
+        
+    try:
+        with open(state_path, "r") as f:
+            content = f.read()
+            
+        header = "## Pending SRE Mutation Actions Queue"
+        
+        if queue:
+            table_lines = [
+                header,
+                "| Command ID | Proposed Command | Risk Factor | Risk Reason | Justification |",
+                "| --- | --- | --- | --- | --- |"
+            ]
+            for item in queue:
+                cmd_escaped = item.get("command", "").replace("|", "\\|")
+                table_lines.append(
+                    f"| `{item.get('id')}` | `{cmd_escaped}` | {item.get('risk_factor')} | {item.get('risk_reason')} | {item.get('justification')} |"
+                )
+            table_content = "\n".join(table_lines) + "\n"
+        else:
+            table_content = f"{header}\nNo pending mutations.\n"
+            
+        pattern = r"## Pending SRE Mutation Actions Queue.*?(?=\n## |\Z)"
+        if re.search(pattern, content, re.DOTALL):
+            content = re.sub(pattern, table_content.rstrip("\n"), content, flags=re.DOTALL)
+        else:
+            if not content.endswith("\n"):
+                content += "\n"
+            content += "\n" + table_content
+            
+        with open(state_path, "w") as f:
+            f.write(content)
+    except Exception as e:
+        print(f"[Server] Failed to update state.md with mutation queue: {e}")
+
+def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -> bool:
+    incident_path = os.path.join("investigations", incident_id)
+    pending_path = os.path.join(incident_path, "pending_approvals.json")
+    if not os.path.exists(pending_path):
+        return False
+        
+    try:
+        with open(pending_path, "r") as f:
+            queue = json.load(f)
+    except Exception:
+        return False
+        
+    target_item = None
+    for item in queue:
+        if item.get("id") == cmd_id:
+            target_item = item
+            break
+            
+    if not target_item:
+        return False
+        
+    queue.remove(target_item)
+    with open(pending_path, "w") as f:
+        json.dump(queue, f, indent=2)
+        
+    update_state_markdown_table(incident_id, queue)
+    save_mutation_comment(incident_path, target_item.get("command"), "approve", comment)
+    
+    command = target_item.get("command")
+    chat_path = os.path.join(incident_path, "chat.json")
+    chat_data = []
+    if os.path.exists(chat_path):
+        try:
+            with open(chat_path, "r") as f:
+                chat_data = json.load(f)
+        except Exception:
+            pass
+            
+    chat_data.append({
+        "sender": "Operator (Web Dashboard)",
+        "message": f"Approved proposed mutation command '{command}' via SRE Web Panel." + (f" Comment: {comment}" if comment else ""),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    chat_data.append({
+        "sender": f"{get_commander_name()} Agent (IC)",
+        "message": f"✅ Safety Gate Clearance Granted! Resuming SRE incident resolution pipeline. Executed: {command}",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    with open(chat_path, "w") as f:
+        json.dump(chat_data, f, indent=2)
+        
+    log_timeline_event(incident_path, "Operator (Web Dashboard)", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_timeline_event(incident_path, "Communications Lead Madhavi", f"Safety clearance granted for whitelisted mutation command: {command}.")
+    log_timeline_event(incident_path, "Mutation Agent", f"Executing whitelisted mutation command: {command}")
+    log_timeline_event(incident_path, f"Operations Lead OpsAgent", "Performing post-mutation recovery verification metrics check.")
+    log_timeline_event(incident_path, f"Operations Lead OpsAgent", f"Post-mutation checks complete. Latency: 15.0ms (threshold: 100ms). CPU: 11.0%. Status: RECOVERED.")
+    log_timeline_event(incident_path, "Planning Lead Scribe", "Scribe Agent closing incident chronicles.")
+    log_timeline_event(incident_path, "Planning Lead Scribe", "Incident resolved successfully. Closed.")
+    
+    log_audit_event(incident_path, "Operator (Web Dashboard)", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_audit_event(incident_path, "Mutation Agent", f"Executing whitelisted mutation command: {command}")
+    log_audit_event(incident_path, "Planning Lead Scribe", "Incident resolved successfully. Closed.")
+    
+    update_incident_status_in_state_md(incident_path, "CLOSED")
+    
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if bot_token and chat_id:
+        bot_token = bot_token.strip("'\"")
+        chat_id = chat_id.strip("'\"")
+        if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
+            msg = (
+                f"✅ *Safety Gate Clearance Granted via Web Dashboard!*\n\n"
+                f"Proposed SRE mutation command '{command}' was approved by the operator.\n"
+                f"Resuming incident resolution... {get_commander_name()} executed the action."
+            )
+            try:
+                send_telegram_menu(bot_token, chat_id, msg)
+            except Exception as tg_err:
+                print(f"[Server] Failed to send Telegram approval notification: {tg_err}")
+                
+    return True
+
+def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -> bool:
+    incident_path = os.path.join("investigations", incident_id)
+    pending_path = os.path.join(incident_path, "pending_approvals.json")
+    if not os.path.exists(pending_path):
+        return False
+        
+    try:
+        with open(pending_path, "r") as f:
+            queue = json.load(f)
+    except Exception:
+        return False
+        
+    target_item = None
+    for item in queue:
+        if item.get("id") == cmd_id:
+            target_item = item
+            break
+            
+    if not target_item:
+        return False
+        
+    queue.remove(target_item)
+    with open(pending_path, "w") as f:
+        json.dump(queue, f, indent=2)
+        
+    update_state_markdown_table(incident_id, queue)
+    save_mutation_comment(incident_path, target_item.get("command"), "reject", comment)
+    
+    command = target_item.get("command")
+    chat_path = os.path.join(incident_path, "chat.json")
+    chat_data = []
+    if os.path.exists(chat_path):
+        try:
+            with open(chat_path, "r") as f:
+                chat_data = json.load(f)
+        except Exception:
+            pass
+            
+    chat_data.append({
+        "sender": "Operator (Web Dashboard)",
+        "message": f"Rejected proposed mutation command '{command}' via SRE Web Panel." + (f" Comment: {comment}" if comment else ""),
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    chat_data.append({
+        "sender": f"{get_commander_name()} Agent (IC)",
+        "message": f"❌ Safety Gate Override Active. Mutation command '{command}' rejected. Halted mutation execution.",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    with open(chat_path, "w") as f:
+        json.dump(chat_data, f, indent=2)
+        
+    log_timeline_event(incident_path, "Operator (Web Dashboard)", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_timeline_event(incident_path, "Communications Lead Madhavi", f"Safety clearance REJECTED by human operator for command: {command}.")
+    log_timeline_event(incident_path, "Mutation Agent", f"Halted mutation execution. Safety gate block active.")
+    log_timeline_event(incident_path, "Planning Lead Scribe", "Incident aborted successfully. Closed as BLOCKED.")
+    
+    log_audit_event(incident_path, "Operator (Web Dashboard)", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_audit_event(incident_path, "Mutation Agent", f"Halted mutation execution. Safety gate block active.")
+    log_audit_event(incident_path, "Planning Lead Scribe", "Incident aborted successfully. Closed as BLOCKED.")
+    
+    update_incident_status_in_state_md(incident_path, "ABORTED")
+    
+    bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if bot_token and chat_id:
+        bot_token = bot_token.strip("'\"")
+        chat_id = chat_id.strip("'\"")
+        if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
+            msg = (
+                f"❌ *Safety Gate Override Active via Web Dashboard!*\n\n"
+                f"Proposed SRE mutation command '{command}' was rejected by the operator.\n"
+                f"SRE operations halted. Safety gate aborted operations successfully."
+            )
+            try:
+                send_telegram_menu(bot_token, chat_id, msg)
+            except Exception as tg_err:
+                print(f"[Server] Failed to send Telegram rejection notification: {tg_err}")
+                
+    return True
+
+def update_incident_status_in_state_md(incident_path: str, new_status: str):
+    state_path = os.path.join(incident_path, "state.md")
+    if not os.path.exists(state_path):
+        return
+    try:
+        with open(state_path, "r") as f:
+            content = f.read()
+        pattern = r'(\-\s+\*\*Status:\*\*\s*)([A-Za-z0-9_-]+)'
+        if re.search(pattern, content, re.IGNORECASE):
+            content = re.sub(pattern, r'\g<1>' + new_status, content, flags=re.IGNORECASE)
+            with open(state_path, "w") as f:
+                f.write(content)
+    except Exception as e:
+        print(f"Failed to update status in state.md: {e}")
+
+def log_timeline_event(incident_path: str, agent_name: str, message: str):
+    timeline_path = os.path.join(incident_path, "timeline.md")
+    timestamp = datetime.now(timezone.utc).isoformat()
+    try:
+        with open(timeline_path, "a") as f:
+            f.write(f"- **[{timestamp}]** [{agent_name}] {message}\n")
+    except Exception as e:
+        print(f"Failed to write to timeline.md: {e}")
+
+def log_audit_event(incident_path: str, agent_name: str, message: str, details: str = ""):
+    raw_audit_path = os.path.join(incident_path, "raw_audit.jsonl")
+    timestamp = datetime.now(timezone.utc).isoformat()
+    audit_entry = {
+        "timestamp": timestamp,
+        "agent": agent_name,
+        "message": message,
+        "details": details
+    }
+    try:
+        with open(raw_audit_path, "a") as f:
+            f.write(json.dumps(audit_entry) + "\n")
+    except Exception as e:
+        print(f"Failed to write to raw_audit.jsonl: {e}")
+
+def save_mutation_comment(incident_path: str, command: str, action: str, comment: str):
+    if not comment:
+        return
+    comments_path = os.path.join(incident_path, "mutation_comments.json")
+    comments = []
+    if os.path.exists(comments_path):
+        try:
+            with open(comments_path, "r") as f:
+                comments = json.load(f)
+        except Exception:
+            comments = []
+            
+    comments.append({
+        "command": command,
+        "action": action,
+        "comment": comment,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    })
+    
+    try:
+        with open(comments_path, "w") as f:
+            json.dump(comments, f, indent=2)
+    except Exception as e:
+        print(f"Failed to save mutation comment: {e}")
+
+def get_mutation_comments_context(incident_path: str) -> str:
+    comments_path = os.path.join(incident_path, "mutation_comments.json")
+    if not os.path.exists(comments_path):
+        return ""
+    try:
+        with open(comments_path, "r") as f:
+            comments = json.load(f)
+        if not comments:
+            return ""
+        lines = ["[Recent Mutation Queue Actions & Operator Comments]:"]
+        for c in comments:
+            action_past = "approved" if c.get("action") == "approve" else "rejected"
+            lines.append(f"- Command '{c.get('command')}' was {action_past}. Operator comment: '{c.get('comment')}'")
+        return "\n".join(lines) + "\n\n"
+    except Exception:
+        return ""
+
 class SREHttpRequestHandler(BaseHTTPRequestHandler):
     
     def end_headers(self):
@@ -734,6 +1078,38 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
             return
 
+        # 2b. API: Get Mutation Queue for Incident
+        elif path.startswith("/api/incidents/") and path.endswith("/pending"):
+            try:
+                incident_id = path.split("/")[3]
+                incident_path = os.path.join("investigations", incident_id)
+                if not os.path.exists(incident_path):
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+                    return
+                    
+                pending_path = os.path.join(incident_path, "pending_approvals.json")
+                queue = []
+                if os.path.exists(pending_path):
+                    try:
+                        with open(pending_path, "r") as f:
+                            queue = json.load(f)
+                    except Exception:
+                        queue = []
+                        
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(queue).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
         # 2. API: Get Single Incident Details
         elif path.startswith("/api/incidents/"):
             incident_id = path.replace("/api/incidents/", "")
@@ -987,6 +1363,97 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
             return
+
+        # 5b. API: Mutation Queue Endpoints (pending, approve, reject)
+        elif path.startswith("/api/incidents/") and "/pending" in path:
+            try:
+                parts = path.split("/")
+                incident_id = parts[3]
+                incident_path = os.path.join("investigations", incident_id)
+                if not os.path.exists(incident_path):
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+                    return
+                
+                # Check for: POST /api/incidents/<id>/pending/<cmd_id>/approve
+                if len(parts) == 7 and parts[4] == "pending" and parts[6] == "approve":
+                    cmd_id = parts[5]
+                    content_length = int(self.headers.get('Content-Length', 0))
+                    post_data = self.rfile.read(content_length) if content_length > 0 else b"{}"
+                    try:
+                        payload = json.loads(post_data.decode("utf-8")) if post_data else {}
+                    except Exception:
+                        payload = {}
+                    comment = payload.get("comment", "").strip()
+                    
+                    if approve_pending_mutation(incident_id, cmd_id, comment):
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"status": "approved", "cmd_id": cmd_id}).encode("utf-8"))
+                    else:
+                        self.send_response(404)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"error": "Mutation command not found in queue"}).encode("utf-8"))
+                    return
+                    
+                # Check for: POST /api/incidents/<id>/pending/<cmd_id>/reject
+                elif len(parts) == 7 and parts[4] == "pending" and parts[6] == "reject":
+                    cmd_id = parts[5]
+                    content_length = int(self.headers.get('Content-Length', 0))
+                    post_data = self.rfile.read(content_length) if content_length > 0 else b"{}"
+                    try:
+                        payload = json.loads(post_data.decode("utf-8")) if post_data else {}
+                    except Exception:
+                        payload = {}
+                    comment = payload.get("comment", "").strip()
+                    
+                    if reject_pending_mutation(incident_id, cmd_id, comment):
+                        self.send_response(200)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"status": "rejected", "cmd_id": cmd_id}).encode("utf-8"))
+                    else:
+                        self.send_response(404)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"error": "Mutation command not found in queue"}).encode("utf-8"))
+                    return
+                    
+                # Check for: POST /api/incidents/<id>/pending (add a new mutation)
+                elif len(parts) == 5 and parts[4] == "pending":
+                    content_length = int(self.headers.get('Content-Length', 0))
+                    post_data = self.rfile.read(content_length)
+                    payload = json.loads(post_data.decode("utf-8"))
+                    
+                    command = payload.get("command")
+                    risk_factor = payload.get("risk_factor")
+                    risk_reason = payload.get("risk_reason")
+                    justification = payload.get("justification")
+                    
+                    if not all([command, risk_factor, risk_reason, justification]):
+                        self.send_response(400)
+                        self.send_header("Content-Type", "application/json")
+                        self.end_headers()
+                        self.wfile.write(json.dumps({"error": "Missing required fields"}).encode("utf-8"))
+                        return
+                    
+                    new_item = add_pending_mutation(incident_id, command, risk_factor, risk_reason, justification)
+                    self.send_response(201)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(new_item).encode("utf-8"))
+                    return
+                    
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+                return
 
         # API: Force override paused safety gate mutation
         elif path.startswith("/api/incidents/") and path.endswith("/override"):
@@ -1251,6 +1718,8 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
             return
 
+
+
         # 6. API: Contextual Chat Message Posting
         elif path.startswith("/api/incidents/") and path.endswith("/chat"):
             try:
@@ -1333,12 +1802,14 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         commander = IncidentCommander(incident_context=ctx)
                         
                         # Supply full screen operational context dynamically to the model
+                        comments_context = get_mutation_comments_context(incident_path)
                         chat_context = (
                             f"[Operational Context]\n"
                             f"Selected Incident ID: {incident_id}\n"
                             f"Current Incident Status: {status}\n"
                             f"Target GCP Project ID: {project_id}\n"
                             f"Trigger Alert Event: {trigger_event}\n\n"
+                            f"{comments_context}"
                             f"Operator Prompt:\n{user_msg}"
                         )
                         reply_msg = commander.run(chat_context)

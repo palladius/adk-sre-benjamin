@@ -5,21 +5,21 @@ This document maps out the implementation phases, atomic tasks, and test-driven 
 ---
 
 ## Phase 1: Shared JSON Persistence & REST Endpoints
-- [ ] Task: TDD - Write Backend Tests for Mutation Queue API
-    - [ ] Create `tests/test_mutation_queue.py`
-    - [ ] Test `GET /api/incidents/<id>/pending` returns empty list originally
-    - [ ] Test `POST /api/incidents/<id>/pending` queues a mutation with schema validation (risk emoji, justification, risk reason)
-    - [ ] Test `POST /api/incidents/<id>/pending/<cmd_id>/approve` triggers mock execution and removes from queue
-    - [ ] Test `POST /api/incidents/<id>/pending/<cmd_id>/approve` with a non-mandatory `"comment"` payload, asserting it is logged and parsed into the timeline
-    - [ ] Test `POST /api/incidents/<id>/pending/<cmd_id>/reject` with a `"comment"` payload to redirect agent strategies
-- [ ] Task: Implement Mutation Queue Backend in `src/server.py`
-    - [ ] Create data schema helper and file loader/writer for `<incident_folder>/pending_approvals.json`
-    - [ ] Implement automatic Markdown table compiler to visually append pending queue inside `state.md`
-    - [ ] Implement `GET` and `POST` handlers under `/api/incidents/<id>/pending`
-    - [ ] Implement approval/rejection endpoints with timeline, audit logger, and comment parsing hookups
-    - [ ] Implement prompt injection helper that "piggybacks" the operator's comment back into the active agent conversation context
-    - [ ] Verify test suite passes (`uv run pytest tests/test_mutation_queue.py`)
-- [ ] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
+- [x] Task: TDD - Write Backend Tests for Mutation Queue API
+    - [x] Create `tests/test_mutation_queue.py`
+    - [x] Test `GET /api/incidents/<id>/pending` returns empty list originally
+    - [x] Test `POST /api/incidents/<id>/pending` queues a mutation with schema validation (risk emoji, justification, risk reason)
+    - [x] Test `POST /api/incidents/<id>/pending/<cmd_id>/approve` triggers mock execution and removes from queue
+    - [x] Test `POST /api/incidents/<id>/pending/<cmd_id>/approve` with a non-mandatory `"comment"` payload, asserting it is logged and parsed into the timeline
+    - [x] Test `POST /api/incidents/<id>/pending/<cmd_id>/reject` with a `"comment"` payload to redirect agent strategies
+- [x] Task: Implement Mutation Queue Backend in `src/server.py`
+    - [x] Create data schema helper and file loader/writer for `<incident_folder>/pending_approvals.json`
+    - [x] Implement automatic Markdown table compiler to visually append pending queue inside `state.md`
+    - [x] Implement `GET` and `POST` handlers under `/api/incidents/<id>/pending`
+    - [x] Implement approval/rejection endpoints with timeline, audit logger, and comment parsing hookups
+    - [x] Implement prompt injection helper that "piggybacks" the operator's comment back into the active agent conversation context
+    - [x] Verify test suite passes (`uv run pytest tests/test_mutation_queue.py`)
+- [x] Task: Conductor - User Manual Verification 'Phase 1' (Protocol in workflow.md)
 
 ---
 

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Whitelisted Mutations via Compute SSH**: Configured SRE Mutation Agent to execute whitelisted Compute commands via `gcloud compute ssh` under `SRE_MODE=LIVE`, using secure subprocess execution.
 - **Human-in-the-Loop Override Panel**: Implemented manual override force-approval button on the visual dashboard panel to override safety gates for high-risk commands.
 - **Security Validation Tests**: Added pytest test suite validating whitelisted VM commands and MutationAgent execution logic.
+- **Pending Mutations Queue (Phase 1)**: Added shared JSON persistence for pending mutations queue inside `<incident_folder>/pending_approvals.json` and compiled Markdown tables inside `state.md`. Exposed GET/POST `/api/incidents/<id>/pending` and approve/reject POST endpoints. Integrated operator comment piggybacking to the LLM agent prompt.
 
 ## [1.2.9] - 2026-06-16
 ### Added

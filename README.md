@@ -57,7 +57,9 @@ Integrates a fully interactive SRE terminal console directly via Telegram (`@SRE
 - **Structured Keyboard Menus**: Triage active incident status, projects, and incidents list instantly using mobile-friendly navigation menus.
 - **Interactive Inline Selectors**: Features 4 core context-switching primitives (`/incidents`, `/projects`, `/incident <id>`, `/project <id>`) with dynamic inline keyboard buttons displaying incident status emojis (`🟢` active vs `⚪` resolved).
 - **Gemini STT Voice Commands**: Send audio or voice notes to auto-transcribe and dispatch complex SRE commands on-the-fly.
-- **Human-in-the-Loop Safety Gate Approvals**: Safeguard mutations with interactive validation buttons (`✅ Yes, I am sure` and `❌ No, abort mutation`). It automatically synchronizes states across mobile and web platforms, maintaining flawless audit logging within `chat.json` and Scribe's Git version-controlled history.
+- **Human-in-the-Loop Safety Gate Approvals**: Safeguard mutations with interactive validation confirmation dialogs and Telegram reply options.
+- **Structured Pending Mutation Queue**: Supports queuing multiple proposed mutations with safety risk level indicators (🟢, 🟡, 🟠, 🔴), risk reasoning, and action justifications. Operators can selectively approve/reject queue items via API, and provide feedback comments that are dynamically piggybacked into the Incident Commander prompt context.
+- **Git Version-Controlled Chronicles**: Scribe Agent automatically commits all SRE chat interactions, timelines, and metadata states to git history, appending unique Git Notes to incident check-ins.
 
 ### 5. 🌐 Premium Project Explorer Workspace
 Provides a high-fidelity visual workspace for auditing discovered GCP project assets:
@@ -76,7 +78,7 @@ Provides a high-fidelity visual workspace for auditing discovered GCP project as
 
 All features are implemented following a strict **Test-Driven Development (TDD)** and **Behavior-Driven Development (BDD)** workflow. Full specifications can be reviewed in [doc/bdd.md](file:///home/riccardo/git/adk-sre-benjamin/doc/bdd.md).
 
-The automated test deck consists of **43 high-fidelity unit and integration tests** verifying 100% of the dynamic loading, renaming, prompt loading, telemetry servers, and safety risk gate behaviors.
+The automated test deck consists of **93 high-fidelity unit and integration tests** verifying 100% of the dynamic loading, renaming, prompt loading, telemetry servers, and safety risk gate behaviors.
 
 ### Run tests with `uv`:
 ```bash
