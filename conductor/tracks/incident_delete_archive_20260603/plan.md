@@ -1,17 +1,17 @@
 # Implementation Plan - Incident Archival & Deletion (Track: incident_delete_archive_20260603)
 
 ## Phase 1: State & Endpoint Updates
-- [ ] Task: Extend Incident properties
-  - [ ] Add `archived` attribute in JSON incidents.
-  - [ ] Filter active incidents endpoint.
+- [x] 79173ae Task: Extend Incident properties
+  - [x] Add `archived` attribute in JSON incidents.
+  - [x] Filter active incidents endpoint.
 
 ## Phase 2: UI Buttons & Modals
-- [ ] Task: Sidebar & Chat UI
-  - [ ] Add Archive button inside list item.
-  - [ ] Add Delete button showing confirmation dialog before calling DELETE endpoint.
-- [ ] Task: Telegram Bot Command
-  - [ ] Support `/archive` command.
+- [x] 79173ae Task: Sidebar & Chat UI
+  - [x] Add Archive button inside list item.
+  - [x] Add Delete button showing confirmation dialog before calling DELETE endpoint.
+- [x] 79173ae Task: Telegram Bot Command
+  - [x] Support `/archive` command.
 
 ## Phase 3: Auto-Archival Scheduler
-- [ ] Task: Cron Auto-Archive
-  - [ ] Write a clean auto-archive check running daily.
+- [x] 79173ae Task: Cron Auto-Archive
+  - [x] Write a clean auto-archive check running daily.
