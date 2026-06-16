@@ -152,6 +152,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     fetchIncidentDetails(state.incident_id);
                 }
             }
+            
+            // Fetch/render pending mutations on each poll tick
+            activeIncidentId = state.incident_id;
+            if (activeIncidentId && activeIncidentId !== "None") {
+                fetchAndRenderMutationQueue(activeIncidentId);
+            } else {
+                fetchAndRenderMutationQueue(null);
+            }
         } catch (err) {
             console.error("[Poll Active State] Error:", err);
         }
@@ -584,6 +592,135 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    async function fetchAndRenderMutationQueue(incidentId) {
+        if (!incidentId || incidentId === "None") {
+            const container = document.getElementById("mutation-queue-container");
+            if (container) {
+                container.innerHTML = `<p class="empty-queue-message">No pending SRE mutations to authorize.</p>`;
+            }
+            return;
+        }
+        try {
+            const res = await fetch(`/api/incidents/${incidentId}/pending`);
+            if (!res.ok) return;
+            const queue = await res.json();
+            renderMutationQueue(queue, incidentId);
+        } catch (err) {
+            console.error("Failed to fetch pending mutations:", err);
+        }
+    }
+
+    function renderMutationQueue(queue, incidentId) {
+        const container = document.getElementById("mutation-queue-container");
+        if (!container) return;
+        
+        if (!queue || queue.length === 0) {
+            container.innerHTML = `<p class="empty-queue-message">No pending SRE mutations to authorize.</p>`;
+            return;
+        }
+        
+        container.innerHTML = "";
+        queue.forEach(item => {
+            const card = document.createElement("div");
+            card.className = "mutation-item glassmorphic-card";
+            
+            const cleanRisk = (item.risk_factor || "LOW").toUpperCase();
+            let badgeClass = "badge-low";
+            if (cleanRisk.includes("MEDIUM")) badgeClass = "badge-med";
+            else if (cleanRisk.includes("HIGH")) badgeClass = "badge-high";
+            else if (cleanRisk.includes("CRITICAL")) badgeClass = "badge-high";
+            
+            card.innerHTML = `
+                <div class="mutation-item-header">
+                    <span class="mutation-id code-font">${escapeHtml(item.id)}</span>
+                    <span class="mutation-risk risk-badge ${badgeClass}">${escapeHtml(item.risk_factor)}</span>
+                </div>
+                <div class="mutation-item-body">
+                    <div class="mutation-field">
+                        <span class="field-label">Proposed Command</span>
+                        <span class="field-value code-font">${escapeHtml(item.command)}</span>
+                    </div>
+                    <div class="mutation-field">
+                        <span class="field-label">Risk Reason</span>
+                        <span class="field-value">${escapeHtml(item.risk_reason || 'N/A')}</span>
+                    </div>
+                    <div class="mutation-field">
+                        <span class="field-label">Justification</span>
+                        <span class="field-value">${escapeHtml(item.justification || 'N/A')}</span>
+                    </div>
+                </div>
+                <div class="mutation-item-actions">
+                    <input type="text" placeholder="Operator comment (optional)..." id="comment-${item.id}" class="operator-comment-input">
+                    <div class="action-buttons">
+                        <button class="btn-approve" data-id="${item.id}">💥 Approve</button>
+                        <button class="btn-reject" data-id="${item.id}">Reject</button>
+                    </div>
+                </div>
+            `;
+            
+            const btnApprove = card.querySelector(".btn-approve");
+            const btnReject = card.querySelector(".btn-reject");
+            
+            btnApprove.addEventListener("click", () => {
+                const commentInput = card.querySelector(`#comment-${item.id}`);
+                const comment = commentInput ? commentInput.value.trim() : "";
+                approvePendingMutation(incidentId, item.id, comment);
+            });
+            
+            btnReject.addEventListener("click", () => {
+                const commentInput = card.querySelector(`#comment-${item.id}`);
+                const comment = commentInput ? commentInput.value.trim() : "";
+                rejectPendingMutation(incidentId, item.id, comment);
+            });
+            
+            container.appendChild(card);
+        });
+    }
+
+    async function approvePendingMutation(incidentId, cmdId, comment) {
+        try {
+            const res = await fetch(`/api/incidents/${incidentId}/pending/${cmdId}/approve`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ comment })
+            });
+            if (res.ok) {
+                fetchIncidentDetails(incidentId);
+            } else {
+                alert("Failed to approve mutation.");
+            }
+        } catch (err) {
+            console.error("Error approving pending mutation:", err);
+        }
+    }
+
+    async function rejectPendingMutation(incidentId, cmdId, comment) {
+        try {
+            const res = await fetch(`/api/incidents/${incidentId}/pending/${cmdId}/reject`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ comment })
+            });
+            if (res.ok) {
+                fetchIncidentDetails(incidentId);
+            } else {
+                alert("Failed to reject mutation.");
+            }
+        } catch (err) {
+            console.error("Error rejecting pending mutation:", err);
+        }
+    }
+
     // 2. Fetch Single Incident Details
     async function fetchIncidentDetails(id) {
         activeIncidentId = id;
@@ -591,6 +728,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch(`/api/incidents/${id}`);
             const data = await res.json();
             renderIncident(data);
+            fetchAndRenderMutationQueue(id);
         } catch (err) {
             console.error("Failed to fetch incident details:", err);
         }

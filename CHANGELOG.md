@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.11] - 2026-06-16
+### Added
+- **Telegram Bot Mutation Approvals (Phase 2)**: Added interactive inline keyboard buttons to approve or reject pending commands, handled `/pending` command and `📥 Pending Approvals` reply button dynamically when incident context is active, and added support for reply-to-comment inputs.
+- **Web UI Mutation Queue Widget (Phase 3)**: Implemented a glowing glassmorphic grid list widget in the main dashboard displaying proposed commands, risk status, risk reasons, justifications, operator comment input fields, and action buttons (Approve/Reject) with real-time poll cycle updates.
+
 ## [1.2.10] - 2026-06-16
 ### Added
 - **Pending Mutations Queue (Phase 1)**: Added shared JSON persistence for pending mutations queue inside `<incident_folder>/pending_approvals.json` and compiled Markdown tables inside `state.md`. Exposed GET/POST `/api/incidents/<id>/pending` and approve/reject POST endpoints. Integrated operator comment piggybacking to the LLM agent prompt.

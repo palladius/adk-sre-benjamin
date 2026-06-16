@@ -376,7 +376,7 @@ def update_state_markdown_table(incident_id: str, queue: list[dict]):
     except Exception as e:
         print(f"[Server] Failed to update state.md with mutation queue: {e}")
 
-def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -> bool:
+def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", sender: str = "Web Dashboard") -> bool:
     incident_path = os.path.join("investigations", incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     if not os.path.exists(pending_path):
@@ -415,8 +415,8 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
             pass
             
     chat_data.append({
-        "sender": "Operator (Web Dashboard)",
-        "message": f"Approved proposed mutation command '{command}' via SRE Web Panel." + (f" Comment: {comment}" if comment else ""),
+        "sender": f"Operator ({sender})",
+        "message": f"Approved proposed mutation command '{command}' via SRE {sender}." + (f" Comment: {comment}" if comment else ""),
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     chat_data.append({
@@ -428,7 +428,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
     with open(chat_path, "w") as f:
         json.dump(chat_data, f, indent=2)
         
-    log_timeline_event(incident_path, "Operator (Web Dashboard)", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_timeline_event(incident_path, f"Operator ({sender})", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_timeline_event(incident_path, "Communications Lead Madhavi", f"Safety clearance granted for whitelisted mutation command: {command}.")
     log_timeline_event(incident_path, "Mutation Agent", f"Executing whitelisted mutation command: {command}")
     log_timeline_event(incident_path, f"Operations Lead OpsAgent", "Performing post-mutation recovery verification metrics check.")
@@ -436,7 +436,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
     log_timeline_event(incident_path, "Planning Lead Scribe", "Scribe Agent closing incident chronicles.")
     log_timeline_event(incident_path, "Planning Lead Scribe", "Incident resolved successfully. Closed.")
     
-    log_audit_event(incident_path, "Operator (Web Dashboard)", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_audit_event(incident_path, f"Operator ({sender})", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_audit_event(incident_path, "Mutation Agent", f"Executing whitelisted mutation command: {command}")
     log_audit_event(incident_path, "Planning Lead Scribe", "Incident resolved successfully. Closed.")
     
@@ -449,7 +449,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
         chat_id = chat_id.strip("'\"")
         if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
             msg = (
-                f"✅ *Safety Gate Clearance Granted via Web Dashboard!*\n\n"
+                f"✅ *Safety Gate Clearance Granted via {sender}!*\n\n"
                 f"Proposed SRE mutation command '{command}' was approved by the operator.\n"
                 f"Resuming incident resolution... {get_commander_name()} executed the action."
             )
@@ -460,7 +460,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
                 
     return True
 
-def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -> bool:
+def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", sender: str = "Web Dashboard") -> bool:
     incident_path = os.path.join("investigations", incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     if not os.path.exists(pending_path):
@@ -499,8 +499,8 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") ->
             pass
             
     chat_data.append({
-        "sender": "Operator (Web Dashboard)",
-        "message": f"Rejected proposed mutation command '{command}' via SRE Web Panel." + (f" Comment: {comment}" if comment else ""),
+        "sender": f"Operator ({sender})",
+        "message": f"Rejected proposed mutation command '{command}' via SRE {sender}." + (f" Comment: {comment}" if comment else ""),
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     chat_data.append({
@@ -512,12 +512,12 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") ->
     with open(chat_path, "w") as f:
         json.dump(chat_data, f, indent=2)
         
-    log_timeline_event(incident_path, "Operator (Web Dashboard)", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_timeline_event(incident_path, f"Operator ({sender})", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_timeline_event(incident_path, "Communications Lead Madhavi", f"Safety clearance REJECTED by human operator for command: {command}.")
     log_timeline_event(incident_path, "Mutation Agent", f"Halted mutation execution. Safety gate block active.")
     log_timeline_event(incident_path, "Planning Lead Scribe", "Incident aborted successfully. Closed as BLOCKED.")
     
-    log_audit_event(incident_path, "Operator (Web Dashboard)", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_audit_event(incident_path, f"Operator ({sender})", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_audit_event(incident_path, "Mutation Agent", f"Halted mutation execution. Safety gate block active.")
     log_audit_event(incident_path, "Planning Lead Scribe", "Incident aborted successfully. Closed as BLOCKED.")
     
@@ -530,7 +530,7 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") ->
         chat_id = chat_id.strip("'\"")
         if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
             msg = (
-                f"❌ *Safety Gate Override Active via Web Dashboard!*\n\n"
+                f"❌ *Safety Gate Override Active via {sender}!*\n\n"
                 f"Proposed SRE mutation command '{command}' was rejected by the operator.\n"
                 f"SRE operations halted. Safety gate aborted operations successfully."
             )
@@ -1990,11 +1990,21 @@ def send_telegram_menu(bot_token: str, chat_id: str, message: str):
     import json
     try:
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+        
+        # Check if there is an active incident context
+        state = get_active_state()
+        incident_id = state.get("incident_id")
+        
+        keyboard_rows = [
+            [{"text": "🚨 Status Check"}, {"text": "📋 List Incidents"}],
+            [{"text": "☁️ List Projects"}, {"text": "🆔 Select Incident"}]
+        ]
+        
+        if incident_id and incident_id != "None":
+            keyboard_rows.append([{"text": "📥 Pending Approvals"}])
+            
         keyboard = {
-            "keyboard": [
-                [{"text": "🚨 Status Check"}, {"text": "📋 List Incidents"}],
-                [{"text": "☁️ List Projects"}, {"text": "🆔 Select Incident"}]
-            ],
+            "keyboard": keyboard_rows,
             "resize_keyboard": True,
             "one_time_keyboard": False
         }
@@ -2158,6 +2168,32 @@ def start_telegram_bot():
                                             
                                     answer_telegram_callback_query(bot_token, callback_id, f"Project set to {proj_id}")
                                     edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to project:* `{proj_id}`")
+                                    
+                                elif cb_data.startswith("approve_mut:"):
+                                    cmd_id = cb_data.replace("approve_mut:", "").strip()
+                                    state = get_active_state()
+                                    inc_id = state.get("incident_id")
+                                    if inc_id and inc_id != "None":
+                                        if approve_pending_mutation(inc_id, cmd_id, comment="Approved via Telegram Bot", sender="Telegram Bot"):
+                                            answer_telegram_callback_query(bot_token, callback_id, f"Approved {cmd_id}")
+                                            edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Mutation approved:* `{cmd_id}`")
+                                        else:
+                                            answer_telegram_callback_query(bot_token, callback_id, f"Failed to approve {cmd_id}")
+                                    else:
+                                        answer_telegram_callback_query(bot_token, callback_id, "No active incident context")
+                                        
+                                elif cb_data.startswith("reject_mut:"):
+                                    cmd_id = cb_data.replace("reject_mut:", "").strip()
+                                    state = get_active_state()
+                                    inc_id = state.get("incident_id")
+                                    if inc_id and inc_id != "None":
+                                        if reject_pending_mutation(inc_id, cmd_id, comment="Rejected via Telegram Bot", sender="Telegram Bot"):
+                                            answer_telegram_callback_query(bot_token, callback_id, f"Rejected {cmd_id}")
+                                            edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"❌ *Mutation rejected:* `{cmd_id}`")
+                                        else:
+                                            answer_telegram_callback_query(bot_token, callback_id, f"Failed to reject {cmd_id}")
+                                    else:
+                                        answer_telegram_callback_query(bot_token, callback_id, "No active incident context")
                             continue
                         
                         message = update.get("message")
@@ -2207,6 +2243,37 @@ def start_telegram_bot():
                         if not msg_text:
                             continue
                             
+                        # Handle reply messages for pending approvals comment mapping
+                        reply_to = message.get("reply_to_message")
+                        if reply_to:
+                            reply_text = reply_to.get("text", "")
+                            if "Pending SRE Mutation Actions Queue" in reply_text:
+                                import re
+                                match = re.match(r'^(approve|reject)\s+(cmd-\d+)(?:\s*:\s*|\s+)?(.*)$', msg_text, re.IGNORECASE)
+                                if match:
+                                    action = match.group(1).lower()
+                                    cmd_id = match.group(2).strip()
+                                    comment = match.group(3).strip()
+                                    
+                                    if not comment:
+                                        comment = f"{action.capitalize()}d via reply comment."
+                                        
+                                    if not selected_incident_id or selected_incident_id == "None":
+                                        send_raw_telegram_message(bot_token, chat_id, "❌ No active SRE incident selected.")
+                                        continue
+                                        
+                                    if action == "approve":
+                                        if approve_pending_mutation(selected_incident_id, cmd_id, comment, sender="Telegram Bot"):
+                                            send_telegram_menu(bot_token, chat_id, f"✅ *Mutation approved:* `{cmd_id}`\n💬 *Comment:* \"{comment}\"")
+                                        else:
+                                            send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to approve `{cmd_id}`.")
+                                    else:
+                                        if reject_pending_mutation(selected_incident_id, cmd_id, comment, sender="Telegram Bot"):
+                                            send_telegram_menu(bot_token, chat_id, f"❌ *Mutation rejected:* `{cmd_id}`\n💬 *Comment:* \"{comment}\"")
+                                        else:
+                                            send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to reject `{cmd_id}`.")
+                                    continue
+                            
                         # 2. Check for menu selections and command shortcuts
                         # Clean and check if it is a shortcut format for mobile forgiveness
                         clean_text = msg_text.lstrip("#").strip()
@@ -2238,6 +2305,74 @@ def start_telegram_bot():
                                 "text or audio note to direct SRE Commander Benjamin!"
                             )
                             send_telegram_menu(bot_token, chat_id, welcome_msg)
+                            continue
+                            
+                        elif msg_text == "📥 Pending Approvals" or msg_text.startswith("/pending"):
+                            if not selected_incident_id or selected_incident_id == "None":
+                                send_raw_telegram_message(bot_token, chat_id, "❌ No active SRE incident selected.")
+                                continue
+                            
+                            pending_path = os.path.join("investigations", selected_incident_id, "pending_approvals.json")
+                            queue = []
+                            if os.path.exists(pending_path):
+                                try:
+                                    with open(pending_path, "r") as f:
+                                        queue = json.load(f)
+                                except Exception:
+                                    pass
+                            
+                            if not queue:
+                                send_raw_telegram_message(bot_token, chat_id, f"📥 *Pending SRE Mutation Actions Queue*\n\nNo pending mutations for incident `{selected_incident_id}`.")
+                                continue
+                                
+                            text = f"📥 *Pending SRE Mutation Actions Queue* [Incident: `{selected_incident_id}`]\n\n"
+                            buttons = []
+                            for idx, item in enumerate(queue, 1):
+                                cmd_id = item.get("id")
+                                cmd_text = item.get("command")
+                                risk = item.get("risk_factor", "🟢 LOW")
+                                reason = item.get("risk_reason", "")
+                                justification = item.get("justification", "")
+                                
+                                text += (
+                                    f"*{idx}. Command ID:* `{cmd_id}`\n"
+                                    f"• *Command:* `{cmd_text}`\n"
+                                    f"• *Risk Factor:* {risk}\n"
+                                    f"• *Risk Reason:* {reason}\n"
+                                    f"• *Justification:* {justification}\n\n"
+                                )
+                                buttons.append([
+                                    {"text": f"💥 Approve {cmd_id}", "callback_data": f"approve_mut:{cmd_id}"},
+                                    {"text": f"❌ Reject {cmd_id}", "callback_data": f"reject_mut:{cmd_id}"}
+                                ])
+                            
+                            send_telegram_inline_keyboard(bot_token, chat_id, text.strip(), buttons)
+                            continue
+                            
+                        elif msg_text.lower().startswith("/approve") or msg_text.lower().startswith("/reject"):
+                            parts = msg_text.split(" ", 2)
+                            action = "approve" if msg_text.lower().startswith("/approve") else "reject"
+                            if len(parts) < 2:
+                                send_raw_telegram_message(bot_token, chat_id, f"❌ Usage: `/{action} <cmd_id> [comment]`\nExample: `/{action} cmd-01 Justification comment`")
+                                continue
+                            
+                            cmd_id = parts[1].strip()
+                            comment = parts[2].strip() if len(parts) > 2 else f"{action.capitalize()}d via Telegram command."
+                            
+                            if not selected_incident_id or selected_incident_id == "None":
+                                send_raw_telegram_message(bot_token, chat_id, "❌ No active SRE incident selected.")
+                                continue
+                                
+                            if action == "approve":
+                                if approve_pending_mutation(selected_incident_id, cmd_id, comment, sender="Telegram Bot"):
+                                    send_telegram_menu(bot_token, chat_id, f"✅ *Mutation approved:* `{cmd_id}`\n💬 *Comment:* \"{comment}\"")
+                                else:
+                                    send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to approve `{cmd_id}`. Please verify the Command ID is correct.")
+                            else:
+                                if reject_pending_mutation(selected_incident_id, cmd_id, comment, sender="Telegram Bot"):
+                                    send_telegram_menu(bot_token, chat_id, f"❌ *Mutation rejected:* `{cmd_id}`\n💬 *Comment:* \"{comment}\"")
+                                else:
+                                    send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to reject `{cmd_id}`. Please verify the Command ID is correct.")
                             continue
                             
                         elif msg_text == "🚨 Status Check":
