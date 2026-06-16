@@ -1,0 +1,8 @@
+{
+  "track_id": "disable_mock_fallback_dev_20260616",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2026-06-16T14:55:00Z",
+  "updated_at": "2026-06-16T14:55:00Z",
+  "description": "There's a BUG: track as GHI. ⚠️ DEMO / MOCK DATA ACTIVATED: The application is running in mock/demo mode because MOCK_TOOLING=true or live discovery failed/lacks permissions. I said i do NOT want MOCK DATA AT ALL when im working in development unless its in TEST. Check .env is mock anywhere? if not, this should be changed!!!"
+}

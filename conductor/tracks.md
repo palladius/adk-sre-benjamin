@@ -154,3 +154,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
+- [ ] **Track: Disable silent mock fallback in development mode** (Issue #31)
+*Link: [./tracks/disable_mock_fallback_dev_20260616/](./tracks/disable_mock_fallback_dev_20260616/)*
+
