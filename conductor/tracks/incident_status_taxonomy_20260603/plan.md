@@ -1,9 +1,9 @@
 # Implementation Plan - Incident Status Taxonomy (Track: incident_status_taxonomy_20260603)
 
 ## Phase 1: Database & Model Updates
-- [ ] Task: Schema validation
-  - [ ] Update incident JSON structure to enforce status enums.
-  - [ ] Introduce fields: `status`, `substatus_rca`, `substatus_mitigated`, `substatus_fixed`, `substatus_verified`.
+- [x] c2957dd Task: Schema validation
+  - [x] Update incident JSON structure to enforce status enums.
+  - [x] Introduce fields: `status`, `substatus_rca`, `substatus_mitigated`, `substatus_fixed`, `substatus_verified`.
 
 ## Phase 2: Timeline Transition Logging
 - [ ] Task: Log State Transitions
