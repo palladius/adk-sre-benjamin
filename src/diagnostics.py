@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, timezone
 
 def _get_execution_mode() -> str:
     """Reads execution mode from environment variables, defaulting to MOCK."""
-    return os.getenv("SRE_MODE", "MOCK").upper()
+    return os.getenv("SRE_MODE", "LIVE").upper()
 
 def query_logs(project_id: str, query: str) -> str:
     """Queries SRE log streams, dynamically switching between mock and live modes."""

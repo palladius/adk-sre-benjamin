@@ -2,7 +2,7 @@
 
 ## Metadata
 - **Status:** AWAITING_APPROVAL
-- **Target Project:** `test-project-123`
+- **Target Project:** `sre-next`
 - **Trigger Event:** `frontend_latency_slo_violated`
 - **Incident Commander:** Benjamin
 - **Safety Level:** MEDIUM Risk

@@ -169,3 +169,13 @@ Project Benjamin ships with several automation scripts configured in the project
 | `PYTHONPATH=. uv run python3 src/cli.py telegram set <ID> <TOKEN>` | **Telegram Connect** | Connects and saves Telegram credentials to `.env` |
 | `PYTHONPATH=. uv run python3 src/cli.py telegram send "<MSG>"` | **Telegram Send** | Sends a live, direct alert message to Telegram |
 | `./bin/telegram-send "<MSG>"` | **Telegram Send Shortcut** | Shorthand script to send a live Telegram alert message |
+
+---
+
+## 🌐 7. Mocking vs. Live SRE Mode
+
+By default, the SRE platform operates in **LIVE Mode** to query real-time GCP resource catalogs, logs, and monitoring metrics from Google Cloud. If needed for offline development or local verification, Mocking can be toggled using environment variables:
+* **`MOCK_TOOLING=false`** (Default): Enables live GCP API and `gcloud` subprocess calls using active credentials.
+* **`SRE_MODE=LIVE`** (Default): Directs diagnostics pipeline queries (`query_logs`, `query_metrics`) to read from live GCP logging and monitoring APIs.
+* **`PROJECT_ID=sre-next`** (Default): The target Google Cloud project ID for resource crawls.
+

@@ -8,7 +8,7 @@ def discover_project_resources(project_id: str) -> str:
     persists results to discover/gcp-project/<project_id>.json, 
     and compiles a Markdown index at discover/gcp-project/<project_id>.md.
     """
-    mock_tooling = os.getenv("MOCK_TOOLING", "true").lower() == "true"
+    mock_tooling = os.getenv("MOCK_TOOLING", "false").lower() == "true"
     resources = []
     
     # We will generate mock resources list so we have it handy for mock mode or live mode fallback

@@ -182,7 +182,7 @@ def test_server_endpoints():
 def temp_active_state(tmp_path):
     temp_file = tmp_path / "active_state.json"
     default_state = {
-        "project_id": "test-project-123",
+        "project_id": "sre-next-dev",
         "incident_id": "None",
         "incident_status": "UNKNOWN"
     }

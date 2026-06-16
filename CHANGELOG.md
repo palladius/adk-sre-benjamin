@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.10] - 2026-06-16
+### Changed
+- **Remove test-project-123 & Disable Mocking**: Removed all occurrences and environment configuration traces of `test-project-123` across dev, prod, and mocking, replaced them with `sre-next` and `sre-next-dev` respectively. Set default configurations for `MOCK_TOOLING` and `SRE_MODE` to `false` and `LIVE` respectively to disable mocking.
+
 ## [1.2.9] - 2026-06-16
 ### Added
 - **Incident Archival & Deletion**: Added a status metadata attribute `Archived` to SRE incident states. Active incidents are filtered out by default in UI/API list views. Added Archive and Delete action buttons to incident list item panels. Added Telegram bot `/archive` command. Added background scheduler to auto-archive CLOSED incidents older than 3 days.
