@@ -24,29 +24,29 @@ This document maps out the implementation phases, atomic tasks, and test-driven 
 ---
 
 ## Phase 2: Telegram Command `/pending` and Inline Buttons
-- [ ] Task: TDD - Write Tests for Telegram Bot Mutation Queue Integration
-    - [ ] Assert `/pending` bot action returns structured text with risk emojis
-    - [ ] Assert callback button dispatches execute approval API calls with feedback routing
-    - [ ] Assert `📥 Pending Approvals` is present in the reply keyboard when incident state is active
-- [ ] Task: Implement `/pending` bot command and inline keyboards in `src/server.py`
-    - [ ] Handle `/pending` command to query `/api/incidents/<id>/pending` and render a formatted text response with 🟢, 🟡, 🟠, 🔴 indicators
-    - [ ] Attach interactive inline keyboard markup for quick approvals/rejections of each item
-    - [ ] Wire callback update listeners to approve or reject items in real-time, supporting reply-to-comment inputs
-    - [ ] Update the `send_telegram_menu` keyboard layout to dynamically include the **`📥 Pending Approvals`** reply button once the incident context/state is active/consolidated
-    - [ ] Verify test suite passes (`uv run pytest`)
-- [ ] Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
+- [x] (eae86c3) Task: TDD - Write Tests for Telegram Bot Mutation Queue Integration
+    - [x] Assert `/pending` bot action returns structured text with risk emojis
+    - [x] Assert callback button dispatches execute approval API calls with feedback routing
+    - [x] Assert `📥 Pending Approvals` is present in the reply keyboard when incident state is active
+- [x] (eae86c3) Task: Implement `/pending` bot command and inline keyboards in `src/server.py`
+    - [x] Handle `/pending` command to query `/api/incidents/<id>/pending` and render a formatted text response with 🟢, 🟡, 🟠, 🔴 indicators
+    - [x] Attach interactive inline keyboard markup for quick approvals/rejections of each item
+    - [x] Wire callback update listeners to approve or reject items in real-time, supporting reply-to-comment inputs
+    - [x] Update the `send_telegram_menu` keyboard layout to dynamically include the **`📥 Pending Approvals`** reply button once the incident context/state is active/consolidated
+    - [x] Verify test suite passes (`uv run pytest`)
+- [x] (eae86c3) Task: Conductor - User Manual Verification 'Phase 2' (Protocol in workflow.md)
 
 ---
 
 ## Phase 3: Web UI dashboard Mutations Queue Widget
-- [ ] Task: Design and Implement SRE Mutations Queue Widget in HTML & CSS
-    - [ ] Modify `src/static/index.html` to add a new sidebar or workspace card called "Pending SRE Mutation Actions Queue"
-    - [ ] Style glowing glassmorphic grid list elements showing proposed commands, risk status, risk reasons, and justifications in Outfit font
-    - [ ] Add a non-mandatory Operator Comment Text Input field next to the action buttons for each command
-    - [ ] Add styled "Approve" (with explosion emoji `💥`) and "Reject" buttons
-- [ ] Task: Implement Interactive Frontend Logic in `src/static/index.js`
-    - [ ] Update frontend poll cycles to fetch `/api/incidents/<id>/pending` and render list items dynamically
-    - [ ] Bind click handlers to extract input comments and POST them as JSON body to approval/rejection REST endpoints
-    - [ ] Trigger real-time workspace workspace refresh upon successful mutation approval or rejection
-    - [ ] Run full test suite validation (`uv run pytest`)
-- [ ] Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
+- [x] (eae86c3) Task: Design and Implement SRE Mutations Queue Widget in HTML & CSS
+    - [x] Modify `src/static/index.html` to add a new sidebar or workspace card called "Pending SRE Mutation Actions Queue"
+    - [x] Style glowing glassmorphic grid list elements showing proposed commands, risk status, risk reasons, and justifications in Outfit font
+    - [x] Add a non-mandatory Operator Comment Text Input field next to the action buttons for each command
+    - [x] Add styled "Approve" (with explosion emoji `💥`) and "Reject" buttons
+- [x] (eae86c3) Task: Implement Interactive Frontend Logic in `src/static/index.js`
+    - [x] Update frontend poll cycles to fetch `/api/incidents/<id>/pending` and render list items dynamically
+    - [x] Bind click handlers to extract input comments and POST them as JSON body to approval/rejection REST endpoints
+    - [x] Trigger real-time workspace workspace refresh upon successful mutation approval or rejection
+    - [x] Run full test suite validation (`uv run pytest`)
+- [x] (eae86c3) Task: Conductor - User Manual Verification 'Phase 3' (Protocol in workflow.md)
