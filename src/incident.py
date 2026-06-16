@@ -1,5 +1,17 @@
+import os
+import uuid
 from enum import Enum
 from typing import Any, Dict
+
+def get_investigations_dir() -> str:
+    env = os.getenv("SRE_ENV") or os.getenv("RAILS_ENV") or "development"
+    env = env.lower().strip()
+    if env in ("prod", "production"):
+        return "investigations/prod"
+    elif env in ("test", "testing"):
+        return "investigations/test"
+    else:
+        return "investigations/dev"
 
 class IncidentStatus(str, Enum):
     NEW = "NEW"
@@ -74,3 +86,10 @@ class IncidentMetadata:
             substatus_fixed=data.get("substatus_fixed", False),
             substatus_verified=data.get("substatus_verified", False)
         )
+
+class IncidentContext:
+    """Shared context for the SRE incident lifecycle, maintaining correlation identifiers."""
+    def __init__(self, incident_uuid: str = None, **kwargs):
+        self.incident_uuid = incident_uuid or str(uuid.uuid4())
+        self.metadata = kwargs
+        self.metadata["incident_uuid"] = self.incident_uuid

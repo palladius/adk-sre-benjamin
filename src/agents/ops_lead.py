@@ -13,13 +13,14 @@ except ImportError:
             self.instruction = instruction
             self.model = model or os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
             self.kwargs = kwargs
+            self.metadata = kwargs.get("metadata") or {}
 
 from src.prompt_loader import load_prompt
 
 import os
 
 class OperationsLead:
-    def __init__(self, model_name: str = None, loaded_skills: list[dict] = None, **kwargs):
+    def __init__(self, model_name: str = None, loaded_skills: list[dict] = None, incident_context = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         ops_name = os.getenv("OPS_LEAD_NAME") or os.getenv("OPERATIONS_LEAD_NAME") or os.getenv("OPS_AGENT_NAME") or "OpsAgent"
@@ -55,12 +56,19 @@ class OperationsLead:
             for skill in loaded_skills:
                 system_instruction += f"\n\n### LOADED SRE SKILL: {skill['name']}\n{skill['instructions']}"
 
+        self.metadata = kwargs.get("metadata") or {}
+        if incident_context is not None:
+            self.metadata["incident_uuid"] = incident_context.incident_uuid
+        elif "incident_uuid" in kwargs:
+            self.metadata["incident_uuid"] = kwargs["incident_uuid"]
         
         self.agent = LlmAgent(
             name=ops_name,
             instruction=system_instruction,
-            model=model_name
+            model=model_name,
+            metadata=self.metadata
         )
+        self.agent.metadata = self.metadata
         
     def run(self, prompt: str) -> str:
         """Runs or chats with the Operations Lead agent."""

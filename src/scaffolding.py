@@ -3,18 +3,23 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 import secrets
 from src.trigger import Trigger
+from src.incident import IncidentContext
 
 @dataclass
 class Incident:
     incident_id: str
     folder_path: str
     trigger: Trigger
+    incident_context: IncidentContext = None
 
-def scaffold_incident(trigger: Trigger, base_dir: str = "investigations") -> Incident:
+def scaffold_incident(trigger: Trigger, base_dir: str = "investigations", incident_context: IncidentContext = None) -> Incident:
     # Incident ID generation using UTC time to match SRE standards
     date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     rand_hex = secrets.token_hex(2)
     incident_id = f"INC-{date_str}-{rand_hex}"
+    
+    if incident_context is None:
+        incident_context = IncidentContext()
     
     folder_path = os.path.join(base_dir, incident_id)
     os.makedirs(folder_path, exist_ok=True)
@@ -29,4 +34,9 @@ def scaffold_incident(trigger: Trigger, base_dir: str = "investigations") -> Inc
         with open(file_path, "a") as f:
             pass
             
-    return Incident(incident_id=incident_id, folder_path=folder_path, trigger=trigger)
+    return Incident(
+        incident_id=incident_id,
+        folder_path=folder_path,
+        trigger=trigger,
+        incident_context=incident_context
+    )
