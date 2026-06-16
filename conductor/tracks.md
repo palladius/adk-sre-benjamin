@@ -117,3 +117,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] **Track: Remove test-project-123 and disable MOCKING** [checkpoint: 7db10ba]
 *Link: [./tracks/remove_test_project_123_20260616/](./tracks/remove_test_project_123_20260616/)*
 
+---
+
+- [ ] **Track: Make sense of state in multiple environments (local vs cloud)**
+*Link: [./tracks/multi_env_state_management_20260616/](./tracks/multi_env_state_management_20260616/)*
