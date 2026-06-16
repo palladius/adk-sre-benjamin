@@ -8,11 +8,11 @@
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Globally Unique Incident Identifiers (UUIDv4)' (Protocol in workflow.md)
 
 ## Phase 2: Multi-Agent Unified Logging
-- [~] Task: Implement Local and Google Cloud Logging
-    - [ ] Write unit tests for local JSONL logging schema and text fallback outputs
-    - [ ] Implement local JSONL logging with configurable path and log rotation/fallbacks
-    - [ ] Write unit tests for Google Cloud Logging client integration using ADC
-    - [ ] Implement GCP Cloud Logging integration with structured JSON payloads
+- [x] Task: Implement Local and Google Cloud Logging (e42e59e)
+    - [x] Write unit tests for local JSONL logging schema and text fallback outputs
+    - [x] Implement local JSONL logging with configurable path and log rotation/fallbacks
+    - [x] Write unit tests for Google Cloud Logging client integration using ADC
+    - [x] Implement GCP Cloud Logging integration with structured JSON payloads
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Multi-Agent Unified Logging' (Protocol in workflow.md)
 
 ## Phase 3: Discord Incident War-Rooms & Human Steering
