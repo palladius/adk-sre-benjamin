@@ -37,6 +37,11 @@ def _save_registry(incident_folder: str, registry_data: list[dict]):
     registry_path = os.path.join(incident_folder, "artifacts_registry.json")
     with open(registry_path, "w") as f:
         json.dump(registry_data, f, indent=2)
+    try:
+        from src.server import parse_incident_folder
+        parse_incident_folder(incident_folder)
+    except Exception:
+        pass
 
 def add_artifact_to_registry(
     incident_folder: str,
