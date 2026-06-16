@@ -53,6 +53,13 @@ class FileStateManager(BaseStateManager):
             "substatus_verified": False
         }
         
+        try:
+            import src.db as db
+            if db.is_db_active():
+                return db.get_active_state(default_state)
+        except Exception as e:
+            print(f"[Active State DB] Failed to read active state from DB: {e}")
+
         active_state_file = self.get_state_file_path()
         if os.path.exists(active_state_file):
             try:
@@ -70,6 +77,13 @@ class FileStateManager(BaseStateManager):
 
     def save_active_state(self, state: Dict[str, Any]) -> None:
         """Saves updated active state coordinates to the active state json file."""
+        try:
+            import src.db as db
+            if db.is_db_active():
+                db.save_active_state(state)
+        except Exception as e:
+            print(f"[Active State DB] Failed to save active state to DB: {e}")
+
         active_state_file = self.get_state_file_path()
         dir_name = os.path.dirname(active_state_file)
         if dir_name:

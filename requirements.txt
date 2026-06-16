@@ -9,3 +9,4 @@ opentelemetry-sdk>=1.20.0
 opentelemetry-exporter-otlp>=1.20.0
 opentelemetry-exporter-gcp-trace>=1.6.0
 
+psycopg2-binary>=2.9.0

@@ -8,7 +8,7 @@ from run_simulation import run_simulation, resume_simulation
 from src.orchestrator import run_incident_flow
 from src.incident import get_investigations_dir, get_discover_dir
 
-def parse_incident_folder(folder_path: str) -> dict:
+def parse_incident_filesystem(folder_path: str) -> dict:
     """Parses Scribe files inside an incident folder to return structured JSON."""
     incident_id = os.path.basename(folder_path)
     state_path = os.path.join(folder_path, "state.md")
@@ -156,6 +156,28 @@ def parse_incident_folder(folder_path: str) -> dict:
         "archived": archived
     }
 
+def parse_incident_folder(folder_path: str) -> dict:
+    """Parses Scribe files inside an incident folder to return structured JSON, with DB caching/sync."""
+    import src.db as db
+    incident_id = os.path.basename(folder_path)
+    
+    # 1. Parse filesystem version
+    details = parse_incident_filesystem(folder_path)
+    
+    # 2. If DB is active, sync filesystem version to DB and return DB version (canonical)
+    if db.is_db_active():
+        try:
+            db.save_incident(details)
+            db_details = db.get_incident(incident_id)
+            if db_details:
+                # Add folder_path to details as it is not stored in DB but required by server logic
+                db_details["folder_path"] = folder_path
+                return db_details
+        except Exception as e:
+            print(f"[Incident DB] Failed to sync incident to DB: {e}")
+            
+    return details
+
 def set_incident_archived(folder_path: str, archived: bool = True) -> bool:
     """Updates the 'Archived' metadata property in the incident's state.md file."""
     state_path = os.path.join(folder_path, "state.md")
@@ -256,6 +278,43 @@ def save_active_state(state: dict):
     """Saves updated active state coordinates to the active state json file."""
     from src.storage import get_state_manager
     get_state_manager().save_active_state(state)
+
+def load_chat_data(incident_id: str, incident_path: str) -> list:
+    try:
+        import src.db as db
+        if db.is_db_active():
+            msgs = db.get_chat_messages(incident_id)
+            if msgs is not None:
+                return msgs
+    except Exception as e:
+        print(f"[Chat DB] Failed to load chat from DB: {e}")
+        
+    chat_path = os.path.join(incident_path, "chat.json")
+    chat_data = []
+    if os.path.exists(chat_path):
+        try:
+            with open(chat_path, "r") as f:
+                chat_data = json.load(f)
+        except Exception:
+            pass
+    return chat_data
+
+def save_chat_data(incident_id: str, incident_path: str, chat_data: list):
+    try:
+        import src.db as db
+        if db.is_db_active():
+            if db.save_chat_messages(incident_id, chat_data):
+                return
+    except Exception as e:
+        print(f"[Chat DB] Failed to save chat to DB: {e}")
+        
+    chat_path = os.path.join(incident_path, "chat.json")
+    try:
+        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
+        with open(chat_path, "w") as f:
+            json.dump(chat_data, f, indent=2)
+    except Exception as e:
+        print(f"[Server] Failed to write chat log to chat.json: {e}")
 
 # Mutation Queue Backend Helper Functions
 def add_pending_mutation(incident_id: str, command: str, risk_factor: str, risk_reason: str, justification: str) -> dict:
@@ -384,14 +443,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
     save_mutation_comment(incident_path, target_item.get("command"), "approve", comment)
     
     command = target_item.get("command")
-    chat_path = os.path.join(incident_path, "chat.json")
-    chat_data = []
-    if os.path.exists(chat_path):
-        try:
-            with open(chat_path, "r") as f:
-                chat_data = json.load(f)
-        except Exception:
-            pass
+    chat_data = load_chat_data(incident_id, incident_path)
             
     chat_data.append({
         "sender": "Operator (Web Dashboard)",
@@ -404,8 +456,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     
-    with open(chat_path, "w") as f:
-        json.dump(chat_data, f, indent=2)
+    save_chat_data(incident_id, incident_path, chat_data)
         
     log_timeline_event(incident_path, "Operator (Web Dashboard)", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_timeline_event(incident_path, "Communications Lead Madhavi", f"Safety clearance granted for whitelisted mutation command: {command}.")
@@ -1025,12 +1076,8 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 incident_id = path.split("/")[3]
                 incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path):
-                    chat_path = os.path.join(incident_path, "chat.json")
-                    chat_data = []
-                    if os.path.exists(chat_path):
-                        with open(chat_path, "r") as f:
-                            chat_data = json.load(f)
-                    else:
+                    chat_data = load_chat_data(incident_id, incident_path)
+                    if not chat_data:
                         details = parse_incident_folder(incident_path)
                         chat_data = [
                             {
@@ -1039,6 +1086,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                                 "timestamp": datetime.now(timezone.utc).isoformat()
                             }
                         ]
+                        save_chat_data(incident_id, incident_path, chat_data)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
@@ -1442,14 +1490,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     
                     # 1. Sync operator's response in chat.json
                     try:
-                        chat_path = os.path.join(incident_path, "chat.json")
-                        chat_data = []
-                        if os.path.exists(chat_path):
-                            try:
-                                with open(chat_path, "r") as f:
-                                    chat_data = json.load(f)
-                            except Exception:
-                                pass
+                        chat_data = load_chat_data(incident_id, incident_path)
                         chat_data.append({
                             "sender": "Operator (Web Dashboard)",
                             "message": "⚠️ FORCE OVERRIDDEN and Approved proposed mutation command via SRE Web Panel.",
@@ -1460,11 +1501,9 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             "message": "⚠️ Safety Gate FORCE OVERRIDE Granted! Resuming SRE incident resolution pipeline.",
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
-                        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
-                        with open(chat_path, "w") as f:
-                            json.dump(chat_data, f, indent=2)
+                        save_chat_data(incident_id, incident_path, chat_data)
                     except Exception as chat_err:
-                        print(f"[Server] Failed to write chat log to chat.json: {chat_err}")
+                        print(f"[Server] Failed to write chat log: {chat_err}")
                         
                     # 2. Reset Telegram bot keyboard to standard navigation
                     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -1507,14 +1546,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     
                     # 1. Sync operator's response in chat.json
                     try:
-                        chat_path = os.path.join(incident_path, "chat.json")
-                        chat_data = []
-                        if os.path.exists(chat_path):
-                            try:
-                                with open(chat_path, "r") as f:
-                                    chat_data = json.load(f)
-                            except Exception:
-                                pass
+                        chat_data = load_chat_data(incident_id, incident_path)
                         chat_data.append({
                             "sender": "Operator (Web Dashboard)",
                             "message": "Approved proposed mutation command via SRE Web Panel.",
@@ -1525,11 +1557,9 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             "message": "✅ Safety Gate Clearance Granted! Resuming SRE incident resolution pipeline.",
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
-                        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
-                        with open(chat_path, "w") as f:
-                            json.dump(chat_data, f, indent=2)
+                        save_chat_data(incident_id, incident_path, chat_data)
                     except Exception as chat_err:
-                        print(f"[Server] Failed to write chat log to chat.json: {chat_err}")
+                        print(f"[Server] Failed to write chat log: {chat_err}")
                         
                     # 2. Reset Telegram bot keyboard to standard navigation
                     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -1571,14 +1601,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     
                     # 1. Sync operator's response in chat.json
                     try:
-                        chat_path = os.path.join(incident_path, "chat.json")
-                        chat_data = []
-                        if os.path.exists(chat_path):
-                            try:
-                                with open(chat_path, "r") as f:
-                                    chat_data = json.load(f)
-                            except Exception:
-                                pass
+                        chat_data = load_chat_data(incident_id, incident_path)
                         chat_data.append({
                             "sender": "Operator (Web Dashboard)",
                             "message": "Rejected/Aborted proposed mutation command via SRE Web Panel.",
@@ -1589,11 +1612,9 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             "message": "❌ Safety Gate Override Active. SRE operations halted.",
                             "timestamp": datetime.now(timezone.utc).isoformat()
                         })
-                        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
-                        with open(chat_path, "w") as f:
-                            json.dump(chat_data, f, indent=2)
+                        save_chat_data(incident_id, incident_path, chat_data)
                     except Exception as chat_err:
-                        print(f"[Server] Failed to write chat log to chat.json: {chat_err}")
+                        print(f"[Server] Failed to write chat log: {chat_err}")
                         
                     # 2. Reset Telegram bot keyboard to standard navigation
                     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -1714,12 +1735,8 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         self.wfile.write(json.dumps({"error": "Empty message"}).encode("utf-8"))
                         return
                     
-                    chat_path = os.path.join(incident_path, "chat.json")
-                    chat_data = []
-                    if os.path.exists(chat_path):
-                        with open(chat_path, "r") as f:
-                            chat_data = json.load(f)
-                    else:
+                    chat_data = load_chat_data(incident_id, incident_path)
+                    if not chat_data:
                         details = parse_incident_folder(incident_path)
                         
                         # Detect if Telegram variables are configured
@@ -1807,8 +1824,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                                 print(f"[Server] Failed to push commander reply to Telegram: {tg_err}")
                     
                     # Save updated chat log
-                    with open(chat_path, "w") as f:
-                        json.dump(chat_data, f, indent=2)
+                    save_chat_data(incident_id, incident_path, chat_data)
                         
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
@@ -1831,6 +1847,9 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
 
 def get_incidents_list() -> list[dict]:
     """Helper to query all active and historical incidents inside investigations/ directory."""
+    import src.db as db
+    if db.is_db_active():
+        return db.list_incidents()
     import os
     incidents = []
     if os.path.exists(get_investigations_dir()):
@@ -1946,6 +1965,11 @@ def get_discovered_projects() -> list[str]:
 
 def get_top_5_incidents() -> list[dict]:
     """Helper to query the 5 most recent active (non-archived) incidents inside investigations/ directory."""
+    import src.db as db
+    if db.is_db_active():
+        res = db.get_top_5_incidents()
+        if res is not None:
+            return res
     incidents = []
     incidents_dir = get_investigations_dir()
     if os.path.exists(incidents_dir):
@@ -2822,14 +2846,7 @@ def start_telegram_bot():
                                 
                                 # Sync operator's response in chat.json
                                 try:
-                                    chat_path = os.path.join(incident_path, "chat.json")
-                                    chat_data = []
-                                    if os.path.exists(chat_path):
-                                        try:
-                                            with open(chat_path, "r") as f:
-                                                chat_data = json.load(f)
-                                        except Exception:
-                                            pass
+                                    chat_data = load_chat_data(selected_incident_id, incident_path)
                                     chat_data.append({
                                         "sender": "Operator (Telegram)",
                                         "message": msg_text,
@@ -2840,11 +2857,9 @@ def start_telegram_bot():
                                         "message": reply_msg,
                                         "timestamp": datetime.now(timezone.utc).isoformat()
                                     })
-                                    os.makedirs(os.path.dirname(chat_path), exist_ok=True)
-                                    with open(chat_path, "w") as f:
-                                        json.dump(chat_data, f, indent=2)
+                                    save_chat_data(selected_incident_id, incident_path, chat_data)
                                 except Exception as chat_err:
-                                    print(f"[Telegram Bot] Failed to write chat log to chat.json: {chat_err}")
+                                    print(f"[Telegram Bot] Failed to write chat log: {chat_err}")
                                 continue
                                 
                             elif msg_text == "❌ No, abort mutation":
@@ -2863,14 +2878,7 @@ def start_telegram_bot():
                                 
                                 # Sync operator's response in chat.json
                                 try:
-                                    chat_path = os.path.join(incident_path, "chat.json")
-                                    chat_data = []
-                                    if os.path.exists(chat_path):
-                                        try:
-                                            with open(chat_path, "r") as f:
-                                                chat_data = json.load(f)
-                                        except Exception:
-                                            pass
+                                    chat_data = load_chat_data(selected_incident_id, incident_path)
                                     chat_data.append({
                                         "sender": "Operator (Telegram)",
                                         "message": msg_text,
@@ -2881,11 +2889,9 @@ def start_telegram_bot():
                                         "message": reply_msg,
                                         "timestamp": datetime.now(timezone.utc).isoformat()
                                     })
-                                    os.makedirs(os.path.dirname(chat_path), exist_ok=True)
-                                    with open(chat_path, "w") as f:
-                                        json.dump(chat_data, f, indent=2)
+                                    save_chat_data(selected_incident_id, incident_path, chat_data)
                                 except Exception as chat_err:
-                                    print(f"[Telegram Bot] Failed to write chat log to chat.json: {chat_err}")
+                                    print(f"[Telegram Bot] Failed to write chat log: {chat_err}")
                                 continue
                                 
                             else:
@@ -2933,29 +2939,21 @@ def start_telegram_bot():
                             reply_msg = f"[System Alert] SRE chat logic failed: {e}"
                             
                         # Log message exchange in chat.json to mirror on the Web Dashboard
-                        chat_path = os.path.join(incident_path, "chat.json")
-                        chat_data = []
-                        if os.path.exists(chat_path):
-                            try:
-                                with open(chat_path, "r") as f:
-                                    chat_data = json.load(f)
-                            except Exception:
-                                pass
-                                
-                        chat_data.append({
-                            "sender": "Operator (Telegram)",
-                            "message": msg_text,
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        })
-                        chat_data.append({
-                            "sender": f"{get_commander_name()} Agent (IC)",
-                            "message": reply_msg,
-                            "timestamp": datetime.now(timezone.utc).isoformat()
-                        })
-                        
-                        os.makedirs(os.path.dirname(chat_path), exist_ok=True)
-                        with open(chat_path, "w") as f:
-                            json.dump(chat_data, f, indent=2)
+                        try:
+                            chat_data = load_chat_data(selected_incident_id, incident_path)
+                            chat_data.append({
+                                "sender": "Operator (Telegram)",
+                                "message": msg_text,
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            })
+                            chat_data.append({
+                                "sender": f"{get_commander_name()} Agent (IC)",
+                                "message": reply_msg,
+                                "timestamp": datetime.now(timezone.utc).isoformat()
+                            })
+                            save_chat_data(selected_incident_id, incident_path, chat_data)
+                        except Exception as chat_err:
+                            print(f"[Telegram Bot] Failed to write chat log: {chat_err}")
                             
                         send_raw_telegram_message(bot_token, chat_id, f"🏰 *{get_commander_name()} (IC):*\n{reply_msg}")
                         
@@ -2977,6 +2975,11 @@ def run_auto_archive_loop():
         time.sleep(interval)
 
 def run_server(port=8080):
+    try:
+        from src.db import init_db
+        init_db()
+    except Exception as e:
+        print(f"[Database Startup] Failed to initialize DB pool: {e}")
     try:
         from src.observability import instrument_agents
         instrument_agents()
