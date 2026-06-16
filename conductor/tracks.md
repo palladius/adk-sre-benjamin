@@ -149,7 +149,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [ ] **Track: Fuse-mount discovery folder on GCS** (Issue #11)
+- [x] **Track: Fuse-mount discovery folder on GCS** (Issue #11)
 *Link: [./tracks/fuse_mount_gcs_discovery_20260616/](./tracks/fuse_mount_gcs_discovery_20260616/)*
 
 ---
