@@ -315,6 +315,43 @@ body {
     text-overflow: ellipsis;
 }
 
+.incident-item-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+}
+
+.btn-archive-inc, .btn-delete-inc {
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text-primary);
+    transition: var(--transition-smooth);
+}
+
+.btn-archive-inc {
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    background: rgba(0, 255, 255, 0.05);
+}
+
+.btn-archive-inc:hover {
+    background: rgba(0, 255, 255, 0.2);
+    border-color: var(--neon-cyan);
+}
+
+.btn-delete-inc {
+    border: 1px solid rgba(255, 49, 49, 0.3);
+    background: rgba(255, 49, 49, 0.05);
+}
+
+.btn-delete-inc:hover {
+    background: rgba(255, 49, 49, 0.2);
+    border-color: var(--neon-red);
+}
+
 .loading-placeholder {
     color: var(--text-secondary);
     font-size: 13px;
