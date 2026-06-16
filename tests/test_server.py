@@ -122,6 +122,20 @@ def test_server_integration():
                 data_reject = json.loads(resp_reject.read().decode('utf-8'))
                 assert data_reject["status"] == "ABORTED"
                 mock_resume.assert_called_once_with("INC-MOCK-123", approved=False)
+
+        # Test POST /api/incidents/INC-MOCK-123/override (mocked)
+        with patch("src.server.resume_simulation") as mock_resume, \
+             patch("src.server.parse_incident_folder") as mock_parse, \
+             patch("os.path.exists") as mock_exists:
+            mock_exists.return_value = True
+            mock_parse.return_value = {"incident_id": "INC-MOCK-123", "status": "CLOSED"}
+            url_override = f"http://localhost:{port}/api/incidents/INC-MOCK-123/override"
+            req_override = urllib.request.Request(url_override, data=b"", method="POST")
+            with urllib.request.urlopen(req_override) as resp_override:
+                assert resp_override.status == 200
+                data_override = json.loads(resp_override.read().decode('utf-8'))
+                assert data_override["status"] == "CLOSED"
+                mock_resume.assert_called_once_with("INC-MOCK-123", approved=True)
             
         # Test GET /api/incidents/INC-MOCK-123/chat (mocked)
         with patch("os.path.exists") as mock_exists, \

@@ -104,3 +104,75 @@ class OperationsLead:
             asset=asset,
             expected_outcome=expected_outcome
         )
+
+def validate_mutation_command(command: str) -> tuple[bool, str]:
+    """Ensures a command is strictly limited to whitelisted VM operations."""
+    cmd_clean = command.strip().lower()
+    
+    # Strip leading sudo if present
+    if cmd_clean.startswith("sudo "):
+        cmd_clean = cmd_clean[5:].strip()
+        
+    import re
+    # Match against whitelisted patterns
+    allowed_pattern = r"^systemctl (restart|start|stop) (mysql|postgresql|nginx|apache2)$"
+    if not re.match(allowed_pattern, cmd_clean):
+        return False, f"Command '{command}' is not in the whitelist of approved VM operations."
+        
+    return True, ""
+
+class MutationAgent:
+    """Agent that executes whitelisted system mutations via gcloud compute ssh."""
+    
+    def __init__(self, project_id: str = None):
+        self.project_id = project_id or os.getenv("GCP_PROJECT_ID") or "sre-next"
+        
+    def execute_mutation(self, command: str, instance_name: str = None, zone: str = None) -> tuple[bool, str]:
+        """Validates and executes a mutation command on a VM instance using gcloud compute ssh."""
+        # 1. Security validation
+        is_valid, err_msg = validate_mutation_command(command)
+        if not is_valid:
+            return False, f"Blocked: {err_msg}"
+            
+        sre_mode = os.getenv("SRE_MODE", "MOCK").upper()
+        if sre_mode != "LIVE":
+            return True, f"Mock execution successful for command: {command}"
+            
+        # 2. Target VM discovery
+        import subprocess
+        import json
+        if not instance_name or not zone:
+            try:
+                cmd = ["gcloud", "compute", "instances", "list", f"--project={self.project_id}", "--format=json"]
+                res = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                vms = json.loads(res.stdout)
+                for vm in vms:
+                    if vm.get("status") == "RUNNING":
+                        instance_name = vm.get("name")
+                        zone = vm.get("zone", "").split("/")[-1]
+                        break
+            except Exception as e:
+                print(f"[MutationAgent Warning] Live VM list query failed: {e}")
+                
+        # Fallbacks if discovery failed
+        if not instance_name:
+            if self.project_id == "sre-next":
+                instance_name = "frontend-vm"
+                zone = "us-central1-a"
+            else:
+                instance_name = "internal-db-vm"
+                zone = "us-central1-a"
+                
+        # 3. Construct gcloud compute ssh command
+        ssh_cmd = [
+            "gcloud", "compute", "ssh", instance_name,
+            f"--zone={zone}",
+            f"--project={self.project_id}",
+            f"--command=sudo {command}"
+        ]
+        
+        try:
+            res = subprocess.run(ssh_cmd, capture_output=True, text=True, check=True)
+            return True, res.stdout or f"Command '{command}' executed successfully on {instance_name}."
+        except subprocess.CalledProcessError as e:
+            return False, f"Execution failed: {e.stderr}"
