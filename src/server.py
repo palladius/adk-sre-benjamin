@@ -5,6 +5,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import datetime, timezone
 import urllib.parse
 from run_simulation import run_simulation, resume_simulation
+from src.orchestrator import run_incident_flow
+
 
 def parse_incident_folder(folder_path: str) -> dict:
     """Parses Scribe files inside an incident folder to return structured JSON."""
@@ -236,6 +238,8 @@ def get_commander_name() -> str:
     return os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
 
 ACTIVE_STATE_FILE = "investigations/active_state.json"
+session_states = {}
+
 
 def get_active_state() -> dict:
     """Loads active state coordinates from the state file, falling back to defaults."""
@@ -2223,7 +2227,48 @@ def start_telegram_bot():
                                             
                                     answer_telegram_callback_query(bot_token, callback_id, f"Project set to {proj_id}")
                                     edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to project:* `{proj_id}`")
+                                    
+                                elif cb_data.startswith("resolve_project:"):
+                                    proj_id = cb_data.replace("resolve_project:", "").strip()
+                                    answer_telegram_callback_query(bot_token, callback_id, f"Resolved to {proj_id}")
+                                    edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Project resolved to:* `{proj_id}`")
+                                    
+                                    session = session_states.get(chat_id, {})
+                                    event_type = session.get("event_type", "manual_alert")
+                                    description = session.get("description", "Manual incident declaration")
+                                    
+                                    if chat_id in session_states:
+                                        del session_states[chat_id]
+                                        
+                                    payload = {
+                                        "event_type": event_type,
+                                        "project_id": proj_id
+                                    }
+                                    inc_id, inc_folder = run_incident_flow(payload)
+                                    
+                                    state_md_path = os.path.join(inc_folder, "state.md")
+                                    if os.path.exists(state_md_path):
+                                        try:
+                                            with open(state_md_path, "a") as sf:
+                                                sf.write(f"\n## Description\n{description}\n")
+                                        except Exception:
+                                            pass
+                                            
+                                    state = get_active_state()
+                                    state["incident_id"] = inc_id
+                                    state["project_id"] = proj_id
+                                    state["incident_status"] = "ACTIVE"
+                                    save_active_state(state)
+                                    
+                                    conf_msg = (
+                                        f"✅ *SRE Investigation Started: {inc_id}*\n\n"
+                                        f"• *Event Type:* `{event_type}`\n"
+                                        f"• *Project ID:* `{proj_id}`\n"
+                                        f"• *Description:* {description}"
+                                    )
+                                    send_telegram_menu(bot_token, chat_id, conf_msg)
                             continue
+
                         
                         message = update.get("message")
                         if not message:
@@ -2271,6 +2316,98 @@ def start_telegram_bot():
                                 
                         if not msg_text:
                             continue
+                            
+                        # Check wizard state: AWAITING_DESCRIPTION
+                        session = session_states.get(chat_id, {})
+                        if session.get("state") == "AWAITING_DESCRIPTION":
+                            msg_text = f"/newincident {msg_text}"
+                            if chat_id in session_states:
+                                del session_states[chat_id]
+                                
+                        # Handle /newincident command or passive listening
+                        is_new_incident_cmd = msg_text.lower().startswith("/newincident")
+                        is_command_or_menu = msg_text.startswith(("/", "🚨", "📋", "☁️", "🆔", "💥", "❌"))
+                        
+                        parsed_res = None
+                        if is_new_incident_cmd:
+                            desc = msg_text[len("/newincident"):].strip()
+                            if not desc:
+                                session_states[chat_id] = {"state": "AWAITING_DESCRIPTION"}
+                                send_raw_telegram_message(
+                                    bot_token, chat_id,
+                                    "📝 Please describe the incident (e.g. 'GKE cluster down in us-central1')"
+                                )
+                                continue
+                            from src.declaration import parse_declaration_intent
+                            parsed_res = parse_declaration_intent(desc)
+                        elif not is_command_or_menu:
+                            from src.declaration import parse_declaration_intent
+                            parsed_res = parse_declaration_intent(msg_text)
+                            if not parsed_res.get("is_incident_declaration"):
+                                parsed_res = None
+                                
+                        if parsed_res:
+                            event_type = parsed_res.get("event_type", "manual_alert")
+                            project_id = parsed_res.get("project_id")
+                            description = parsed_res.get("description", msg_text)
+                            
+                            discovered = get_discovered_projects()
+                            resolved_proj = None
+                            if project_id:
+                                for p in discovered:
+                                    if p.lower() == project_id.lower():
+                                        resolved_proj = p
+                                        break
+                                        
+                            if resolved_proj:
+                                payload = {
+                                    "event_type": event_type,
+                                    "project_id": resolved_proj
+                                }
+                                inc_id, inc_folder = run_incident_flow(payload)
+                                
+                                state_md_path = os.path.join(inc_folder, "state.md")
+                                if os.path.exists(state_md_path):
+                                    try:
+                                        with open(state_md_path, "a") as sf:
+                                            sf.write(f"\n## Description\n{description}\n")
+                                    except Exception:
+                                        pass
+                                        
+                                state = get_active_state()
+                                state["incident_id"] = inc_id
+                                state["project_id"] = resolved_proj
+                                state["incident_status"] = "ACTIVE"
+                                save_active_state(state)
+                                
+                                conf_msg = (
+                                    f"✅ *SRE Investigation Started: {inc_id}*\n\n"
+                                    f"• *Event Type:* `{event_type}`\n"
+                                    f"• *Project ID:* `{resolved_proj}`\n"
+                                    f"• *Description:* {description}"
+                                )
+                                send_telegram_menu(bot_token, chat_id, conf_msg)
+                                continue
+                            else:
+                                session_states[chat_id] = {
+                                    "state": "AWAITING_PROJECT_RESOLUTION",
+                                    "event_type": event_type,
+                                    "description": description
+                                }
+                                
+                                inline_buttons = []
+                                for proj in discovered:
+                                    inline_buttons.append([{
+                                        "text": f"☁️ {proj}",
+                                        "callback_data": f"resolve_project:{proj}"
+                                    }])
+                                    
+                                send_telegram_inline_keyboard(
+                                    bot_token, chat_id,
+                                    "🔍 I could not resolve the target project. Please select from the active project registry below to proceed:",
+                                    inline_buttons
+                                )
+                                continue
                             
                         # 2. Check for menu selections and command shortcuts
                         # Clean and check if it is a shortcut format for mobile forgiveness
