@@ -460,9 +460,10 @@
                 <!-- Top Castle Header -->
                 <header class="dashboard-header">
                 <div class="header-title">
-                    <div class="status-indicator-container">
+                    <div class="status-indicator-container" style="display: inline-flex; align-items: center; gap: 8px;">
                         <span id="active-status-badge" class="status-badge status-active">ACTIVE</span>
                         <div class="pulse-ring"></div>
+                        <span id="active-substatus-badges" style="display: inline-flex; gap: 4px;"></span>
                     </div>
                     <h2 id="active-incident-title">INC-20260601-244e</h2>
                     <p id="active-incident-meta">Target: <strong>prod-db-999</strong> | Trigger: <strong>frontend_latency_slo_violated</strong></p>
