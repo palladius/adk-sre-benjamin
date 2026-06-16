@@ -594,8 +594,6 @@ def discover_project_resources(project_id: str) -> str:
     os.makedirs(cache_dir, exist_ok=True)
     
     json_path = os.path.join(cache_dir, "discover.json")
-    with open(json_path, "w") as f:
-        json.dump(resources, f, indent=2)
         
     md_path = os.path.join(cache_dir, "wiki.md")
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
@@ -645,7 +643,7 @@ def discover_project_resources(project_id: str) -> str:
         md_lines.append(json.dumps(r["metadata"], indent=4).replace("\n", "\n  "))
         md_lines.append("  ```")
         
-    with open(md_path, "w") as f:
-        f.write("\n".join(md_lines))
+    from src.storage import get_discovery_storage
+    get_discovery_storage().save_discovery(project_id, resources, "\n".join(md_lines))
         
     return json_path
