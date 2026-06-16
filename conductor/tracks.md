@@ -112,3 +112,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [ ] **Track: Unified Incident Lifecycle & Multi-Agent Observability (UUIDs, Cloud Logging, and Discord Interactive Chat)**
 *Link: [./tracks/unified_incident_lifecycle_observability_20260607/](./tracks/unified_incident_lifecycle_observability_20260607/)*
 
+---
+
+- [x] **Track: Remove test-project-123 and disable MOCKING** [checkpoint: 7db10ba]
+*Link: [./tracks/remove_test_project_123_20260616/](./tracks/remove_test_project_123_20260616/)*
+
