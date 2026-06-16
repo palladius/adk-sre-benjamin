@@ -9,7 +9,7 @@
     - [ ] Verify test suite runs successfully in `test` environment
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Environment-Specific Directory Routing' (Protocol in workflow.md)
 
-## Phase 2: Pluggable Abstractions for Active State & Discovery Storage
+## Phase 2: Pluggable Abstractions for Active State & Discovery Storage [checkpoint: fd32643]
 - [x] Task: Design pluggable abstraction interface for Active State and Discovery Storage [2a3d2c7]
     - [x] Create interface/abstract classes or config toggles for StateManager and DiscoveryStorage [2a3d2c7]
     - [x] Implement local filesystem backend for StateManager and DiscoveryStorage [2a3d2c7]
