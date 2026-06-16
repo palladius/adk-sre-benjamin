@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.13] - 2026-06-16
+### Added
+- **Pluggable Abstractions for Active State & Discovery Storage**: Implemented `BaseStateManager` and `BaseDiscoveryStorage` abstract base classes in `src/storage.py` alongside local filesystem backends `FileStateManager` and `FileDiscoveryStorage` to support dynamically toggleable local/cloud state tracking.
+
+### Fixed
+- **State Abstraction Test Environment Dependency**: Updated `test_file_state_manager` in `tests/test_state_abstractions.py` to use `monkeypatch` to delete `PROJECT_ID` and `GCP_PROJECT_ID` environment variable overrides, ensuring predictable default project resolution during pytest runs.
+
 ## [1.2.12] - 2026-06-16
 ### Added
 - **Telegram Bot /pending Command & Callbacks (Phase 2)**: Added Telegram bot listener for `/pending` command to show pending mutation queue formatted with risk indicator emojis (🟢, 🟡, 🟠, 🔴). Added inline keyboards with Approve and Reject callback buttons. Implemented callback listeners with reply-to-comment prompts to capture operator comment inputs for approvals and rejections.
