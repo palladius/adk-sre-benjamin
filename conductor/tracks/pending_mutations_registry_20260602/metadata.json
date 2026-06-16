@@ -4,5 +4,10 @@
   "status": "new",
   "created_at": "2026-06-02T08:54:00Z",
   "updated_at": "2026-06-02T08:54:00Z",
-  "description": "If system has a conjecture to fix things which requires a mutaton (which for now requires explicit human approval from operatior), i'd like these things to stick, check the SRE Extension, this should be an array of 'pending approvals'. every APPROVAL should have: 1. propose command, like 'kubectl drain service', 2. timestamp, 3. risk factor (emoji green, yellow, orange red) 4. Reason for the risk . 5. reason for this action, why do we believe its going to save the day."
+  "description": "If system has a conjecture to fix things which requires a mutaton (which for now requires explicit human approval from operatior), i'd like these things to stick, check the SRE Extension, this should be an array of 'pending approvals'. every APPROVAL should have: 1. propose command, like 'kubectl drain service', 2. timestamp, 3. risk factor (emoji green, yellow, orange red) 4. Reason for the risk . 5. reason for this action, why do we believe its going to save the day.",
+  "github_issue": {
+    "number": 28,
+    "url": "https://github.com/palladius/adk-sre-benjamin/issues/28"
+  },
+  "github_issue_url": "https://github.com/palladius/adk-sre-benjamin/issues/28"
 }

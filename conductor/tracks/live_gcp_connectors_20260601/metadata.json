@@ -4,5 +4,10 @@
   "status": "new",
   "created_at": "2026-06-01T21:04:30Z",
   "updated_at": "2026-06-01T21:04:30Z",
-  "description": "Initialize Live GCP Connectors Track to connect SRE agents to authentic GCP logging and compute SSH instances."
+  "description": "Initialize Live GCP Connectors Track to connect SRE agents to authentic GCP logging and compute SSH instances.",
+  "github_issue": {
+    "number": 27,
+    "url": "https://github.com/palladius/adk-sre-benjamin/issues/27"
+  },
+  "github_issue_url": "https://github.com/palladius/adk-sre-benjamin/issues/27"
 }
