@@ -183,7 +183,16 @@ def run_cli(args_list=None) -> int:
         }
         
         if agent_name_lower in agent_map:
-            agent_instance = agent_map[agent_name_lower]()
+            import re
+            from src.incident import IncidentContext
+            incident_uuid = None
+            state_content = hydration_vars.get("state")
+            if state_content:
+                uuid_match = re.search(r'\-\s+\*\*Incident UUID:\*\*\s*`?([^`\n]+)`?', state_content, re.IGNORECASE)
+                if uuid_match:
+                    incident_uuid = uuid_match.group(1).strip()
+            ctx = IncidentContext(incident_uuid=incident_uuid) if incident_uuid else None
+            agent_instance = agent_map[agent_name_lower](incident_context=ctx)
             response = agent_instance.run(query_msg)
             print(f"Response:\n{response}")
         else:

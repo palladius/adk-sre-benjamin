@@ -13,13 +13,14 @@ except ImportError:
             self.instruction = instruction
             self.model = model or os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
             self.kwargs = kwargs
+            self.metadata = kwargs.get("metadata") or {}
 
 from src.prompt_loader import load_prompt
 
 import os
 
 class LogisticsLead:
-    def __init__(self, model_name: str = None, **kwargs):
+    def __init__(self, model_name: str = None, incident_context = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
         logistics_name = os.getenv("LOGISTICS_LEAD_NAME") or os.getenv("LOGISTICS_AGENT_NAME") or "LogisticsAgent"
@@ -31,11 +32,19 @@ class LogisticsLead:
             system_instruction = system_instruction.replace("Logistics Agent", logistics_name)
             system_instruction = system_instruction.replace("LogisticsAgent", logistics_name)
             
+        self.metadata = kwargs.get("metadata") or {}
+        if incident_context is not None:
+            self.metadata["incident_uuid"] = incident_context.incident_uuid
+        elif "incident_uuid" in kwargs:
+            self.metadata["incident_uuid"] = kwargs["incident_uuid"]
+            
         self.agent = LlmAgent(
             name=logistics_name,
             instruction=system_instruction,
-            model=model_name
+            model=model_name,
+            metadata=self.metadata
         )
+        self.agent.metadata = self.metadata
         
     def run(self, prompt: str) -> str:
         """Runs or chats with the Logistics Lead agent."""
