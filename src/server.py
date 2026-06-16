@@ -414,7 +414,7 @@ def update_state_markdown_table(incident_id: str, queue: list[dict]):
     except Exception as e:
         print(f"[Server] Failed to update state.md with mutation queue: {e}")
 
-def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -> bool:
+def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", sender: str = "Web Dashboard") -> bool:
     incident_path = os.path.join(get_investigations_dir(), incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     if not os.path.exists(pending_path):
@@ -446,8 +446,8 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
     chat_data = load_chat_data(incident_id, incident_path)
             
     chat_data.append({
-        "sender": "Operator (Web Dashboard)",
-        "message": f"Approved proposed mutation command '{command}' via SRE Web Panel." + (f" Comment: {comment}" if comment else ""),
+        "sender": f"Operator ({sender})",
+        "message": f"Approved proposed mutation command '{command}' via SRE {sender}." + (f" Comment: {comment}" if comment else ""),
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     chat_data.append({
@@ -458,7 +458,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
     
     save_chat_data(incident_id, incident_path, chat_data)
         
-    log_timeline_event(incident_path, "Operator (Web Dashboard)", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_timeline_event(incident_path, f"Operator ({sender})", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_timeline_event(incident_path, "Communications Lead Madhavi", f"Safety clearance granted for whitelisted mutation command: {command}.")
     log_timeline_event(incident_path, "Mutation Agent", f"Executing whitelisted mutation command: {command}")
     log_timeline_event(incident_path, f"Operations Lead OpsAgent", "Performing post-mutation recovery verification metrics check.")
@@ -466,7 +466,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
     log_timeline_event(incident_path, "Planning Lead Scribe", "Scribe Agent closing incident chronicles.")
     log_timeline_event(incident_path, "Planning Lead Scribe", "Incident resolved successfully. Closed.")
     
-    log_audit_event(incident_path, "Operator (Web Dashboard)", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_audit_event(incident_path, f"Operator ({sender})", f"Approved proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_audit_event(incident_path, "Mutation Agent", f"Executing whitelisted mutation command: {command}")
     log_audit_event(incident_path, "Planning Lead Scribe", "Incident resolved successfully. Closed.")
     
@@ -479,7 +479,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
         chat_id = chat_id.strip("'\"")
         if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
             msg = (
-                f"✅ *Safety Gate Clearance Granted via Web Dashboard!*\n\n"
+                f"✅ *Safety Gate Clearance Granted via {sender}!*\n\n"
                 f"Proposed SRE mutation command '{command}' was approved by the operator.\n"
                 f"Resuming incident resolution... {get_commander_name()} executed the action."
             )
@@ -490,7 +490,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -
                 
     return True
 
-def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") -> bool:
+def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", sender: str = "Web Dashboard") -> bool:
     incident_path = os.path.join(get_investigations_dir(), incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     if not os.path.exists(pending_path):
@@ -529,8 +529,8 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") ->
             pass
             
     chat_data.append({
-        "sender": "Operator (Web Dashboard)",
-        "message": f"Rejected proposed mutation command '{command}' via SRE Web Panel." + (f" Comment: {comment}" if comment else ""),
+        "sender": f"Operator ({sender})",
+        "message": f"Rejected proposed mutation command '{command}' via SRE {sender}." + (f" Comment: {comment}" if comment else ""),
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     chat_data.append({
@@ -542,12 +542,12 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") ->
     with open(chat_path, "w") as f:
         json.dump(chat_data, f, indent=2)
         
-    log_timeline_event(incident_path, "Operator (Web Dashboard)", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_timeline_event(incident_path, f"Operator ({sender})", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_timeline_event(incident_path, "Communications Lead Madhavi", f"Safety clearance REJECTED by human operator for command: {command}.")
     log_timeline_event(incident_path, "Mutation Agent", f"Halted mutation execution. Safety gate block active.")
     log_timeline_event(incident_path, "Planning Lead Scribe", "Incident aborted successfully. Closed as BLOCKED.")
     
-    log_audit_event(incident_path, "Operator (Web Dashboard)", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
+    log_audit_event(incident_path, f"Operator ({sender})", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_audit_event(incident_path, "Mutation Agent", f"Halted mutation execution. Safety gate block active.")
     log_audit_event(incident_path, "Planning Lead Scribe", "Incident aborted successfully. Closed as BLOCKED.")
     
@@ -560,7 +560,7 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "") ->
         chat_id = chat_id.strip("'\"")
         if "ENTER_BOT" not in bot_token and "ENTER_CHAT" not in chat_id:
             msg = (
-                f"❌ *Safety Gate Override Active via Web Dashboard!*\n\n"
+                f"❌ *Safety Gate Override Active via {sender}!*\n\n"
                 f"Proposed SRE mutation command '{command}' was rejected by the operator.\n"
                 f"SRE operations halted. Safety gate aborted operations successfully."
             )
@@ -2246,7 +2246,6 @@ def start_telegram_bot():
                                             
                                     answer_telegram_callback_query(bot_token, callback_id, f"Project set to {proj_id}")
                                     edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to project:* `{proj_id}`")
-                                    
                                 elif cb_data.startswith("approve_mutation:"):
                                     cmd_id = cb_data.replace("approve_mutation:", "").strip()
                                     session_states[chat_id] = {
