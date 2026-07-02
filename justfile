@@ -105,11 +105,11 @@ telegram-send-test-message:
 ricc-setup:
   git-privatize sync
 conductor-status:
-	~/git/ricclife-with-gemini-pvt/work/articles/20260605-worktree-multiagent-dev-flow/subtasks/20260616-adk-sre-benjamin/conductor-worktree-hitl/scripts/conductor-inspector . --open --short
+	python3 conductor/bin/conductor-inspector . --open --short
 conductor-status-all:
-	~/git/gemini-cli-custom-commands/skills/conductor-worktree-hitl/scripts/conductor-inspector . --all --short
+	python3 conductor/bin/conductor-inspector . --all --short
 
 poll-ghi-questions:
-	python3 ~/git/ricclife-with-gemini-pvt/work/articles/20260605-worktree-multiagent-dev-flow/subtasks/20260616-adk-sre-benjamin/conductor-worktree-hitl/scripts/poll_ghi_questions.py
+	python3 conductor/bin/poll_ghi_questions.py
 
 

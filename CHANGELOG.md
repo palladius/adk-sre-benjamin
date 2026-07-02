@@ -4,6 +4,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.16] - 2026-07-02
+### Fixed
+- **Conductor Status Targets**: Copied `conductor-inspector`, `inject-ghi`, and `poll_ghi_questions.py` to local `conductor/bin/` folder. Updated `justfile` targets (`conductor-status`, `conductor-status-all`, `poll-ghi-questions`) to run locally.
+
 ## [1.2.15] - 2026-06-16
 ### Added
 - **Discord Bot Channel Creation**: Implemented dynamic Discord channel creation in Communications Lead (Madhavi) using `discord.py` client/REST APIs, with a local file mock mode fallback.
