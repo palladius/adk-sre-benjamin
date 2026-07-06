@@ -5,7 +5,7 @@ Never check in .env in git!!
 
 ## Coding
 
-* Use worktree to work on GH Issue and work in parallel.
+* Use worktree to work on GH Issue and work in parallel in .worktrees/ . Use worktree HITL Conductor skill if available.
 * Use conductor for features.
 * When adding features, keep `CHANGELOG.md` updated and bump versions by 0.0.1 each time so we can track in the UI
   the progress. Bump by 010 and 100 for major and breaking changes (SemVer).

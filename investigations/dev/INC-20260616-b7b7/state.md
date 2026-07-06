@@ -1,6 +1,7 @@
 # Active SRE Incident State: INC-20260616-b7b7
 
 ## Metadata
+- **Archived:** true
 - **Status:** CLOSED
 - **Target Project:** `sre-next-dev`
 - **Trigger Event:** `frontend_latency_slo_violated`
