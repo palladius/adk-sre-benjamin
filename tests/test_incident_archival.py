@@ -67,11 +67,13 @@ def test_auto_archival_logic(tmp_path):
          patch("os.listdir") as mock_listdir:
          
          mock_exists.return_value = True
-         mock_isdir.return_value = True
+         # Use dates relative to current execution date for time-invariance
+         recent_date = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y%m%d")
+         old_date = (datetime.now(timezone.utc) - timedelta(days=10)).strftime("%Y%m%d")
          mock_listdir.return_value = [
-             "INC-20260601-old",  # Older than 3 days
-             "INC-20260615-new",  # Newer than 3 days
-             "INC-20260601-notclosed"
+             f"INC-{old_date}-old",  # Older than 3 days
+             f"INC-{recent_date}-new",  # Newer than 3 days
+             f"INC-{old_date}-notclosed"
          ]
          
          # Mocking parse results
