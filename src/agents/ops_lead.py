@@ -4,6 +4,11 @@ try:
 except ImportError:
     pass
 
+import os
+import re
+from src.agents.utils import sanitize_agent_name
+from src.prompt_loader import load_prompt
+
 try:
     from google.adk.agents import LlmAgent
 except ImportError:
@@ -12,25 +17,19 @@ except ImportError:
             self.name = name
             self.instruction = instruction
             self.model = model or os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
-            self.kwargs = kwargs
-            self.metadata = kwargs.get("metadata") or {}
-
-from src.prompt_loader import load_prompt
-
-import os
 
 class OperationsLead:
     def __init__(self, model_name: str = None, loaded_skills: list[dict] = None, incident_context = None, **kwargs):
         if model_name is None:
             model_name = os.getenv("DEFAULT_GEMINI_MODEL", "gemini-3.1-flash-lite").strip("'\"")
-        ops_name = os.getenv("OPS_LEAD_NAME") or os.getenv("OPERATIONS_LEAD_NAME") or os.getenv("OPS_AGENT_NAME") or "OpsAgent"
+        raw_name = os.getenv("OPS_LEAD_NAME") or os.getenv("OPERATIONS_LEAD_NAME") or os.getenv("OPS_AGENT_NAME") or "OpsAgent"
         
-        kwargs.setdefault("ops_name", ops_name)
+        kwargs.setdefault("ops_name", raw_name)
         system_instruction = load_prompt("ops_agent", prompt_key="system_instruction", **kwargs)
         
-        if ops_name != "OpsAgent":
-            system_instruction = system_instruction.replace("Ops Agent", ops_name)
-            system_instruction = system_instruction.replace("OpsAgent", ops_name)
+        if raw_name != "OpsAgent":
+            system_instruction = system_instruction.replace("Ops Agent", raw_name)
+            system_instruction = system_instruction.replace("OpsAgent", raw_name)
             
         from src.skills_adapter import SkillAdapter
         if loaded_skills is None:
@@ -66,22 +65,47 @@ class OperationsLead:
         if "incident_id" in kwargs:
             self.metadata["incident_id"] = kwargs["incident_id"]
         
+        safe_name = sanitize_agent_name(raw_name)
         self.agent = LlmAgent(
-            name=ops_name,
+            name=safe_name,
             instruction=system_instruction,
-            model=model_name,
-            metadata=self.metadata
+            model=model_name
         )
-        self.agent.metadata = self.metadata
+        self.raw_name = raw_name
         
     def run(self, prompt: str) -> str:
         """Runs or chats with the Operations Lead agent."""
-        if hasattr(self.agent, "run"):
+        api_key = os.getenv("GEMINI_API_KEY")
+        if api_key or os.getenv("SRE_MODE") == "LIVE":
             try:
-                return self.agent.run(prompt)
+                import asyncio
+                from google.adk.runners import InMemoryRunner
+                from google.adk.sessions import InMemorySessionService
+                from google.genai import types
+
+                async def _execute():
+                    session_service = InMemorySessionService()
+                    await session_service.create_session(app_name="sre_benjamin", user_id="sre_operator", session_id="s1")
+                    runner = InMemoryRunner(agent=self.agent, app_name="sre_benjamin", session_service=session_service)
+                    res_text = ""
+                    async for event in runner.run_async(
+                        user_id="sre_operator",
+                        session_id="s1",
+                        new_message=types.Content(role="user", parts=[types.Part.from_text(text=prompt)])
+                    ):
+                        if event.is_final_response() and event.content and event.content.parts:
+                            for part in event.content.parts:
+                                if hasattr(part, "text") and part.text:
+                                    res_text += part.text
+                    return res_text.strip()
+
+                result = asyncio.run(_execute())
+                if result:
+                    return result
             except Exception:
                 pass
-        name = self.agent.name
+
+        name = self.raw_name
         if "hello" in prompt.lower() or "hi" in prompt.lower():
             return f"Hello. I am {name}, your Operations Lead. I drive the tactical investigation and mitigation loops."
         elif "status" in prompt.lower() or "triage" in prompt.lower():
@@ -113,12 +137,9 @@ def validate_mutation_command(command: str) -> tuple[bool, str]:
     """Ensures a command is strictly limited to whitelisted VM operations."""
     cmd_clean = command.strip().lower()
     
-    # Strip leading sudo if present
     if cmd_clean.startswith("sudo "):
         cmd_clean = cmd_clean[5:].strip()
         
-    import re
-    # Match against whitelisted patterns
     allowed_pattern = r"^systemctl (restart|start|stop) (mysql|postgresql|nginx|apache2)$"
     if not re.match(allowed_pattern, cmd_clean):
         return False, f"Command '{command}' is not in the whitelist of approved VM operations."
@@ -133,7 +154,6 @@ class MutationAgent:
         
     def execute_mutation(self, command: str, instance_name: str = None, zone: str = None) -> tuple[bool, str]:
         """Validates and executes a mutation command on a VM instance using gcloud compute ssh."""
-        # 1. Security validation
         is_valid, err_msg = validate_mutation_command(command)
         if not is_valid:
             return False, f"Blocked: {err_msg}"
@@ -142,7 +162,6 @@ class MutationAgent:
         if sre_mode != "LIVE":
             return True, f"Mock execution successful for command: {command}"
             
-        # 2. Target VM discovery
         import subprocess
         import json
         if not instance_name or not zone:
@@ -158,7 +177,6 @@ class MutationAgent:
             except Exception as e:
                 print(f"[MutationAgent Warning] Live VM list query failed: {e}")
                 
-        # Fallbacks if discovery failed
         if not instance_name:
             if self.project_id == "sre-next":
                 instance_name = "frontend-vm"
@@ -167,7 +185,6 @@ class MutationAgent:
                 instance_name = "internal-db-vm"
                 zone = "us-central1-a"
                 
-        # 3. Construct gcloud compute ssh command
         ssh_cmd = [
             "gcloud", "compute", "ssh", instance_name,
             f"--zone={zone}",
