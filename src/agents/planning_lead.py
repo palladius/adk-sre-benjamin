@@ -61,6 +61,7 @@ class PlanningLead:
             instruction=system_instruction,
             model=model_name
         )
+        object.__setattr__(self.agent, "metadata", self.metadata)
         self.raw_name = raw_name
         
     def run(self, prompt: str) -> str:
@@ -96,12 +97,13 @@ class PlanningLead:
                 pass
 
         name = self.raw_name
+        safe_name = self.agent.name
         if "hello" in prompt.lower() or "hi" in prompt.lower():
-            return f"Hello. I am {name}, your Planning Lead. I compile timeline logs, index historical postmortems via Memento, and scan GCP asset safety postures."
+            return f"Hello. I am {name} ({safe_name}), your Planning Lead. I compile timeline logs, index historical postmortems via Memento, and scan GCP asset safety postures."
         elif "status" in prompt.lower() or "memory" in prompt.lower():
-            return f"[{name}] Standing by. I can search past incidents, generate runbook insights, and chronicle state changes with safe Git annotations."
+            return f"[{name}] ({safe_name}) Standing by. I can search past incidents, generate runbook insights, and chronicle state changes with safe Git annotations."
         else:
-            return f"[{name}] Planning directive: '{prompt}'. Running historical checks and updating incident record."
+            return f"[{name}] ({safe_name}) Planning directive: '{prompt}'. Running historical checks and updating incident record."
         
     def scribe_commit(self, action_summary: str, commit_hash: str) -> str:
         """Generates timeline chronicle details for git note attachments."""

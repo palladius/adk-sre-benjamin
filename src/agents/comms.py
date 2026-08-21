@@ -62,6 +62,7 @@ class CommunicationsLead:
             instruction=system_instruction,
             model=model_name
         )
+        object.__setattr__(self.agent, "metadata", self.metadata)
         self.raw_name = raw_name
         
     def run(self, prompt: str) -> str:
@@ -97,12 +98,13 @@ class CommunicationsLead:
                 pass
 
         name = self.raw_name
+        safe_name = self.agent.name
         if "hello" in prompt.lower() or "hi" in prompt.lower():
-            return f"Hello! I am {name}, your Communications Lead for Project Benjamin. How can I assist you with public SRE channel broadcasts?"
+            return f"Hello! I am {name} ({safe_name}), your Communications Lead for Project Benjamin. How can I assist you with public SRE channel broadcasts?"
         elif "status" in prompt.lower() or "incident" in prompt.lower():
-            return f"[{name}] Standing by. I can broadcast incident status updates, manage human-in-the-loop escalations, and sync with GitHub/ServiceNow."
+            return f"[{name}] ({safe_name}) Standing by. I can broadcast incident status updates, manage human-in-the-loop escalations, and sync with GitHub/ServiceNow."
         else:
-            return f"[{name}] Factual SRE dispatch update: Received instructions '{prompt}'. All notification routes are active."
+            return f"[{name}] ({safe_name}) Factual SRE dispatch update: Received instructions '{prompt}'. All notification routes are active."
         
     def broadcast_incident(self, incident_id: str, incident_status: str, project_id: str, summary_text: str) -> str:
         """Broadcasts active incident reports to channels."""

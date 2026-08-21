@@ -46,6 +46,7 @@ class LogisticsLead:
             instruction=system_instruction,
             model=model_name
         )
+        object.__setattr__(self.agent, "metadata", self.metadata)
         self.raw_name = raw_name
         
     def run(self, prompt: str) -> str:
@@ -81,12 +82,13 @@ class LogisticsLead:
                 pass
 
         name = self.raw_name
+        safe_name = self.agent.name
         if "hello" in prompt.lower() or "hi" in prompt.lower():
-            return f"Hello. I am {name}, your Logistics Lead. I verify credentials, check quotas, and assess risk gates for proposed mutations."
+            return f"Hello. I am {name} ({safe_name}), your Logistics Lead. I verify credentials, check quotas, and assess risk gates for proposed mutations."
         elif "status" in prompt.lower() or "safety" in prompt.lower():
-            return f"[{name}] Standing by. I can decompose dangerous commands, calculate risk coefficients, and audit API limits."
+            return f"[{name}] ({safe_name}) Standing by. I can decompose dangerous commands, calculate risk coefficients, and audit API limits."
         else:
-            return f"[{name}] Logistics audit: '{prompt}'. Running security checks and credentials scan."
+            return f"[{name}] ({safe_name}) Logistics audit: '{prompt}'. Running security checks and credentials scan."
         
     def command_evaluation(
         self, 

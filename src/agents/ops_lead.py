@@ -71,6 +71,7 @@ class OperationsLead:
             instruction=system_instruction,
             model=model_name
         )
+        object.__setattr__(self.agent, "metadata", self.metadata)
         self.raw_name = raw_name
         
     def run(self, prompt: str) -> str:
@@ -106,12 +107,13 @@ class OperationsLead:
                 pass
 
         name = self.raw_name
+        safe_name = self.agent.name
         if "hello" in prompt.lower() or "hi" in prompt.lower():
-            return f"Hello. I am {name}, your Operations Lead. I drive the tactical investigation and mitigation loops."
+            return f"Hello. I am {name} ({safe_name}), your Operations Lead. I drive the tactical investigation and mitigation loops."
         elif "status" in prompt.lower() or "triage" in prompt.lower():
-            return f"[{name}] Standing by. I can run diagnostic checks, parse logs, query monitoring metrics, and execute recovery actions once cleared by safety."
+            return f"[{name}] ({safe_name}) Standing by. I can run diagnostic checks, parse logs, query monitoring metrics, and execute recovery actions once cleared by safety."
         else:
-            return f"[{name}] Investigation directive: '{prompt}'. Executing targeted diagnostic checks."
+            return f"[{name}] ({safe_name}) Investigation directive: '{prompt}'. Executing targeted diagnostic checks."
         
     def triage_metric(self, metric_name: str, value: float, threshold: float) -> str:
         """Triggers dynamic metric polling diagnostics."""

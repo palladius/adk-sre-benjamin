@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.17] - 2026-08-21
+### Added
+- **ADK Native Evaluation Harness & ROUGE Benchmarks**: Implemented `tests/eval/eval_runner.py` with ROUGE-1, ROUGE-2, and ROUGE-L evaluation metrics and ADK criteria configuration (`tests/eval/eval_config.json`).
+- **Isolated SRE Agent Evalsets**: Authored 5 dedicated ADK evalsets in `tests/eval/evalsets/` covering IncidentCommander, CommunicationsLead, OperationsLead, PlanningLead, and LogisticsLead.
+- **Multi-Turn Integration Scenario**: Added `integration_evalset.json` testing full 5-turn SRE incident orchestration across all leads.
+- **Justfile `just eval` Recipe**: Added `eval` target to `justfile` running all ADK agent evaluations and ROUGE benchmark scoring.
+- **ADK Pydantic Schema Compatibility**: Refactored agent wrapper classes to use `sanitize_agent_name` for valid Pydantic identifier names and `object.__setattr__` for metadata access.
+
 ## [1.2.16] - 2026-07-02
 ### Fixed
 - **Conductor Status Targets**: Copied `conductor-inspector`, `inject-ghi`, and `poll_ghi_questions.py` to local `conductor/bin/` folder. Updated `justfile` targets (`conductor-status`, `conductor-status-all`, `poll-ghi-questions`) to run locally.

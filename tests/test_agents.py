@@ -74,7 +74,8 @@ def test_planning_lead(monkeypatch):
     monkeypatch.delenv("PLANNING_LEAD_NAME", raising=False)
     monkeypatch.delenv("PLANNING_AGENT_NAME", raising=False)
     pl = PlanningLead()
-    assert pl.agent.name == "Scrivano Fossati"
+    assert pl.raw_name == "Scrivano Fossati"
+    assert pl.agent.name == "Scrivano_Fossati"
     
     commit = pl.scribe_commit("State updated", "sha123")
     assert "sha123" in commit
@@ -86,6 +87,7 @@ def test_logistics_lead(monkeypatch):
     monkeypatch.delenv("LOGISTICS_LEAD_NAME", raising=False)
     monkeypatch.delenv("LOGISTICS_AGENT_NAME", raising=False)
     ll = LogisticsLead()
+    assert ll.raw_name == "LogisticsAgent"
     assert ll.agent.name == "LogisticsAgent"
     
     eval_msg = ll.command_evaluation("rm -rf", ["rm", "rf"], "HIGH", "BLOCKED", ["Destructive"])
@@ -108,11 +110,17 @@ def test_all_agents_dynamic_renaming(monkeypatch):
     pl = PlanningLead()
     ll = LogisticsLead()
     
-    assert ic.agent.name == "Ben Treno"
-    assert cl.agent.name == "Lucia Treno"
-    assert ol.agent.name == "Gigi Mutatore"
-    assert pl.agent.name == "Scrivano Reale"
-    assert ll.agent.name == "Fornitore Quota"
+    assert ic.raw_name == "Ben Treno"
+    assert cl.raw_name == "Lucia Treno"
+    assert ol.raw_name == "Gigi Mutatore"
+    assert pl.raw_name == "Scrivano Reale"
+    assert ll.raw_name == "Fornitore Quota"
+
+    assert ic.agent.name == "Ben_Treno"
+    assert cl.agent.name == "Lucia_Treno"
+    assert ol.agent.name == "Gigi_Mutatore"
+    assert pl.agent.name == "Scrivano_Reale"
+    assert ll.agent.name == "Fornitore_Quota"
     
     assert "Ben Treno" in ic.agent.instruction
     assert "Lucia Treno" in cl.agent.instruction

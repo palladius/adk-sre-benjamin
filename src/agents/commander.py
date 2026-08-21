@@ -46,6 +46,7 @@ class IncidentCommander:
             instruction=system_instruction,
             model=model_name
         )
+        object.__setattr__(self.agent, "metadata", self.metadata)
         self.raw_name = raw_name
         
     def run(self, prompt: str) -> str:
@@ -81,12 +82,13 @@ class IncidentCommander:
                 pass
                 
         name = self.raw_name
+        safe_name = self.agent.name
         if "hello" in prompt.lower() or "hi" in prompt.lower():
-            return f"Hello, SRE. I am Incident Commander {name}. I coordinate all functional leads according to Google's strict IMAG ICS command hierarchy."
+            return f"Hello, SRE. I am Incident Commander {name} ({safe_name}). I coordinate all functional leads according to Google's strict IMAG ICS command hierarchy."
         elif "status" in prompt.lower() or "active" in prompt.lower():
-            return f"[{name}] Standing by. I can declare SRE incidents active, configure the response context, and oversee mitigation."
+            return f"[{name}] ({safe_name}) Standing by. I can declare SRE incidents active, configure the response context, and oversee mitigation."
         else:
-            return f"[{name}] Operational command noted: '{prompt}'. Ready to guide SRE leads to resolution."
+            return f"[{name}] ({safe_name}) Operational command noted: '{prompt}'. Ready to guide SRE leads to resolution."
 
     def declare_incident(self, alert_event: str, project_id: str, incident_id: str) -> str:
         """Declares an incident active and formats the notification payload."""
