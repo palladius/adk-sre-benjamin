@@ -1,0 +1,53 @@
+{
+  "eval_set_id": "integration_evalset",
+  "name": "SRE Incident Response Multi-Turn Integration Scenario Evalset",
+  "description": "Tests full multi-turn top-down IMAG Incident Command System (ICS) orchestration across all 5 functional SRE leads.",
+  "eval_cases": [
+    {
+      "eval_id": "e2e_slo_violation_scenario",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Trigger alert: frontend_latency_slo_violated on project prod-db-999" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Incident ACTIVE - Incident Commander Benjamin declared: SLO violation alert detected! Declared ACTIVE." }]
+          }
+        },
+        {
+          "invocation_id": "inv_2",
+          "user_content": { "parts": [{ "text": "Communications & Logistics status check" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Incident Broadcasted - Madhavi dispatched channel alerts. Credentials and monitoring quota verified by Logistics." }]
+          }
+        },
+        {
+          "invocation_id": "inv_3",
+          "user_content": { "parts": [{ "text": "Operations Lead metric and log triage" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Triage diagnostic strategy formulated by Operations. Scraped metrics and MySQL query log artifacts." }]
+          }
+        },
+        {
+          "invocation_id": "inv_4",
+          "user_content": { "parts": [{ "text": "Operations Lead propose mutation: systemctl restart mysql" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Command risk assessment complete. Status: APPROVED. Risk level: HIGH. Safety gate holds proposed command: systemctl restart mysql. Awaiting Human-in-the-Loop operator authorization." }]
+          }
+        },
+        {
+          "invocation_id": "inv_5",
+          "user_content": { "parts": [{ "text": "Operator grants safety clearance for systemctl restart mysql" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Mutation executed successfully. Post-mutation checks complete. Status: RECOVERED. Incident resolved successfully. Closed." }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    }
+  ]
+}
