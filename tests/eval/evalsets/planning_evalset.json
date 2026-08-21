@@ -1,0 +1,35 @@
+{
+  "eval_set_id": "planning_evalset",
+  "name": "Planning Lead Evaluation Set",
+  "description": "Tests Planning Lead timeline compilation, postmortem indexing, and git chronicle scribe operations.",
+  "eval_cases": [
+    {
+      "eval_id": "planning_greeting",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Hello Scrivano Fossati" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Hello. I am Scrivano Fossati, your Planning Lead. I compile timeline logs, index historical postmortems via Memento, and scan GCP asset safety postures." }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    },
+    {
+      "eval_id": "planning_memory_query",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "What is your memory status?" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "[Scrivano Fossati] Standing by. I can search past incidents, generate runbook insights, and chronicle state changes with safe Git annotations." }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    }
+  ]
+}

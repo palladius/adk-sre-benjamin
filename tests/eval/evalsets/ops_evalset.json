@@ -1,0 +1,35 @@
+{
+  "eval_set_id": "ops_evalset",
+  "name": "Operations Lead Evaluation Set",
+  "description": "Tests Operations Lead diagnostic triage, log/metric scraping, and mutation proposal logic.",
+  "eval_cases": [
+    {
+      "eval_id": "ops_greeting",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Hello OpsAgent" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Hello. I am OpsAgent, your Operations Lead. I drive the tactical investigation and mitigation loops." }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    },
+    {
+      "eval_id": "ops_triage_query",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "What is your triage status?" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "[OpsAgent] Standing by. I can run diagnostic checks, parse logs, query monitoring metrics, and execute recovery actions once cleared by safety." }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "eval_set_id": "comms_evalset",
+  "name": "Communications Lead Evaluation Set",
+  "description": "Tests Communications Lead status broadcasting, HITL approval formatting, and war-room setup.",
+  "eval_cases": [
+    {
+      "eval_id": "comms_greeting",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Hello Madhavi" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Hello! I am Madhavi, your Communications Lead for Project Benjamin. How can I assist you with public SRE channel broadcasts?" }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    },
+    {
+      "eval_id": "comms_status_query",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Report active channel status" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "[Madhavi] Standing by. I can broadcast incident status updates, manage human-in-the-loop escalations, and sync with GitHub/ServiceNow." }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    }
+  ]
+}

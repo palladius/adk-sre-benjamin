@@ -1,0 +1,35 @@
+{
+  "eval_set_id": "logistics_evalset",
+  "name": "Logistics Lead Evaluation Set",
+  "description": "Tests Logistics Lead command evaluation, safety gate risk assessment, and quota checks.",
+  "eval_cases": [
+    {
+      "eval_id": "logistics_greeting",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Hello LogisticsAgent" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "Hello. I am LogisticsAgent, your Logistics Lead. I verify credentials, check quotas, and assess risk gates for proposed mutations." }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    },
+    {
+      "eval_id": "logistics_safety_query",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Report safety audit status" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "[LogisticsAgent] Standing by. I can decompose dangerous commands, calculate risk coefficients, and audit API limits." }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "sre_benjamin", "user_id": "sre_operator", "state": {} }
+    }
+  ]
+}
