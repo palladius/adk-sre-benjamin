@@ -93,8 +93,8 @@ def test_auto_archival_logic(tmp_path):
          auto_archive_incidents()
          
          # Should archive the old closed incident only
-         # We expect mock_archive to be called with: (os.path.join(get_investigations_dir(), "INC-20260601-old"), True)
-         expected_call_path = os.path.join(get_investigations_dir(), "INC-20260601-old")
+         # We expect mock_archive to be called with: (os.path.join(get_investigations_dir(), f"INC-{old_date}-old"), True)
+         expected_call_path = os.path.join(get_investigations_dir(), f"INC-{old_date}-old")
          mock_archive.assert_any_call(expected_call_path, True)
          assert mock_archive.call_count == 1
 
