@@ -37,6 +37,90 @@ graph TD
 
 ---
 
+## 📐 Evaluation Strategy: Isolation vs. Integration
+
+When designing evaluation test cases, use this decision framework:
+
+| Evaluation Type | Target Location | What is Tested? | When to Use? |
+|---|---|---|---|
+| **Single-Agent Isolation** | `eval/configs/*.eval.json` | Individual LLM prompts, tool execution accuracy, output parsing for **one specific role**. | Use when tweaking prompt instructions for a single lead (e.g. Madhavi/Comms, Ops Lead) or testing specific tool calls. |
+| **End-to-End Investigation** | `eval/scenarios/*.eval.json` | Multi-turn collaboration, IMAG ICS role handoffs, state transitions, and overall incident resolution. | Use when reproducing a **real production outage / failure mode** involving multiple leads acting sequentially. |
+
+---
+
+## 🎓 Tutorial for Riccardo & Madhavi: Converting a Failure Mode to an Eval JSON
+
+Follow this 4-step tutorial whenever you encounter a new production outage or agent failure mode:
+
+### Step 1: Document the Failure Mode
+Identify what went wrong in the real incident or simulation:
+- *Example Outage*: A frontend latency spike occurred because a Cloud SQL connection pool hit 100% saturation.
+- *Failure Mode to Guard Against*: Ops Lead skipped log analysis and recommended restarting the frontend pods instead of the DB connection pool.
+
+### Step 2: Define Initial Alert & Expected Outcome
+Specify the incoming alert payload and what state the incident should reach when resolved:
+- `target_project`: `"sre-next"`
+- `expected_outcome`: `"CLOSED"`
+
+### Step 3: Map the Hand-Off Steps & Tool Assertions
+Break down the ideal step-by-step resolution trajectory into structured JSON step objects:
+
+```json
+{
+  "scenario_id": "my_new_outage_scenario",
+  "name": "Cloud SQL Connection Pool Exhaustion Investigation",
+  "target_project": "sre-next",
+  "initial_alert": {
+    "alert_id": "ALT-12345",
+    "metric": "cloudsql.googleapis.com/database/threads_connected",
+    "threshold_ms": 100,
+    "severity": "CRITICAL"
+  },
+  "steps": [
+    {
+      "step_number": 1,
+      "agent": "commander",
+      "action": "declare_incident",
+      "expected_tool": "create_incident_record",
+      "expected_state": "ACTIVE"
+    },
+    {
+      "step_number": 2,
+      "agent": "ops",
+      "action": "query_diagnostics",
+      "expected_tools": ["query_metrics", "query_logs"],
+      "expected_root_cause": "connection_pool_starvation"
+    },
+    {
+      "step_number": 3,
+      "agent": "logistics",
+      "action": "evaluate_risk",
+      "expected_risk_score": "MEDIUM",
+      "expected_decision": "APPROVED"
+    },
+    {
+      "step_number": 4,
+      "agent": "commander",
+      "action": "close_incident",
+      "expected_outcome": "CLOSED"
+    }
+  ],
+  "autorater_rubric": {
+    "tool_call_correctness": 1.0,
+    "multi_turn_trajectory_quality": 0.95,
+    "max_duration_seconds": 60
+  },
+  "expected_outcome": "CLOSED"
+}
+```
+
+### Step 4: Save & Run Verification
+1. Save your file in `eval/scenarios/<your_scenario_name>.eval.json`.
+2. Run `just eval` to verify that the scenario passes cleanly.
+3. Export results to an output folder: `uv run python3 -m eval.runner --output-dir out/$(date +%Y%m%d-%H%M)-eval`.
+
+---
+
 ## 🛠️ Running Local Evaluations (`just eval`)
 
 Run both single-agent isolation evaluations and end-to-end incident integration scenarios with a single command:
@@ -44,19 +128,6 @@ Run both single-agent isolation evaluations and end-to-end incident integration 
 ```bash
 just eval
 ```
-
-### Evaluation Architecture
-
-- **Single Agent Isolation Evals** (`eval/configs/`):
-  - `commander.eval.json`: Incident declaration & role delegation accuracy.
-  - `ops.eval.json`: High-frequency metric collection & DB log scraping.
-  - `logistics.eval.json`: Risk assessment gate & credential auditing.
-  - `planning.eval.json`: Mitigation plan formulation & rollback readiness.
-  - `comms.eval.json`: Status feed accuracy across Telegram and Slack.
-
-- **End-to-End Incident Integration Evals** (`eval/scenarios/`):
-  - `latency_incident.eval.json`: Full workflow for SLO latency alert resolution.
-  - `database_deadlock.eval.json`: Full workflow for MySQL connection pool deadlock resolution.
 
 ---
 

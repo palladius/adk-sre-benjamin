@@ -2,12 +2,53 @@
   "scenario_id": "latency_incident",
   "name": "Frontend Latency SLO Violation Investigation",
   "target_project": "sre-next",
+  "initial_alert": {
+    "alert_id": "ALT-90210",
+    "metric": "custom.googleapis.com/frontend/latency_p99",
+    "threshold_ms": 1500,
+    "current_value_ms": 4200,
+    "severity": "CRITICAL"
+  },
   "steps": [
-    "Alert received by Incident Commander",
-    "Comms broadcast sent",
-    "Ops Lead metrics & DB logs audit",
-    "Logistics Lead risk gate assessment",
-    "Mutation execution & incident resolution"
+    {
+      "step_number": 1,
+      "agent": "commander",
+      "action": "declare_incident",
+      "expected_tool": "create_incident_record",
+      "expected_state": "ACTIVE"
+    },
+    {
+      "step_number": 2,
+      "agent": "comms",
+      "action": "broadcast_status",
+      "expected_tool": "telegram_send_message",
+      "must_contain": ["INC-", "CRITICAL", "sre-next"]
+    },
+    {
+      "step_number": 3,
+      "agent": "ops",
+      "action": "query_diagnostics",
+      "expected_tools": ["query_metrics", "query_logs"],
+      "expected_root_cause": "connection_pool_starvation"
+    },
+    {
+      "step_number": 4,
+      "agent": "logistics",
+      "action": "evaluate_risk",
+      "expected_risk_score": "MEDIUM",
+      "expected_decision": "APPROVED"
+    },
+    {
+      "step_number": 5,
+      "agent": "commander",
+      "action": "close_incident",
+      "expected_outcome": "CLOSED"
+    }
   ],
+  "autorater_rubric": {
+    "tool_call_correctness": 1.0,
+    "multi_turn_trajectory_quality": 0.95,
+    "max_duration_seconds": 60
+  },
   "expected_outcome": "CLOSED"
 }
