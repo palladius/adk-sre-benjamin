@@ -10,9 +10,9 @@ Strict adherence to `conductor/workflow.md` (TDD, red-green-refactor, phase veri
 
 ## Phase 1: Local Flywheel Skills Installation & Setup
 
-- [ ] Task: Install `google-agents-cli-eval` and `agent-platform-eval-flywheel` skills locally into `.agents/skills/`
-- [ ] Task: Verify skill file structures and catalog registration
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Install `google-agents-cli-eval` and `agent-platform-eval-flywheel` skills locally into `.agents/skills/`
+- [x] Task: Verify skill file structures and catalog registration
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ---
 
