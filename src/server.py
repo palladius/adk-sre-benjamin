@@ -669,7 +669,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # 1. Check Identity-Aware Proxy (IAP) authorization
         gcloud_identity = os.environ.get("GCLOUD_IDENTITY")
         if gcloud_identity:
-            iap_email = self.headers.get("x-goog-authenticated-user-email")
+            iap_email = (
+                self.headers.get("x-goog-authenticated-user-email") or
+                self.headers.get("X-Goog-Authenticated-User-Email") or
+                self.headers.get("X-GOOG-AUTHENTICATED-USER-EMAIL")
+            )
             if iap_email:
                 email = iap_email
                 if ":" in iap_email:
@@ -1162,7 +1166,8 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 
             # Serve from src/static directory
             static_dir = os.path.join(os.path.dirname(__file__), "static")
-            safe_path = os.path.abspath(os.path.join(static_dir, path.lstrip("/")))
+            rel_path = path[8:] if path.startswith("/static/") else path.lstrip("/")
+            safe_path = os.path.abspath(os.path.join(static_dir, rel_path))
             
             # Prevent directory traversal attacks
             if safe_path.startswith(os.path.abspath(static_dir)) and os.path.exists(safe_path) and os.path.isfile(safe_path):
@@ -1179,6 +1184,10 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                 elif safe_path.endswith(".png"):
                     self.send_header("Content-Type", "image/png")
+                elif safe_path.endswith(".ico"):
+                    self.send_header("Content-Type", "image/x-icon")
+                elif safe_path.endswith(".svg"):
+                    self.send_header("Content-Type", "image/svg+xml")
                 else:
                     self.send_header("Content-Type", "text/plain")
                     

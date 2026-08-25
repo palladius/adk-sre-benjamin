@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.18] - 2026-08-24
+### Fixed
+- **Static Image Asset Routing**: Fixed double `static/` prefix resolution in `src/server.py` (`rel_path = path[8:] if path.startswith("/static/") else path.lstrip("/")`), ensuring avatar PNG images (`/static/avatar_commander.png`, `/static/avatar_ops.png`, etc.) serve `image/png` binaries with HTTP 200 rather than falling back to SPA `index.html`.
+- **Case-Insensitive IAP Header Check**: Made `x-goog-authenticated-user-email` lookup case-insensitive in `src/server.py`.
+- **Test Suite Auth Environment Isolation**: Isolated active state test fixtures in `tests/test_active_state.py` to prevent auth 403 blocks during pytest execution.
+
 ## [1.2.17] - 2026-08-21
 ### Added
 - **ADK Native Evaluation Harness & ROUGE Benchmarks**: Implemented `tests/eval/eval_runner.py` with ROUGE-1, ROUGE-2, and ROUGE-L evaluation metrics and ADK criteria configuration (`tests/eval/eval_config.json`).

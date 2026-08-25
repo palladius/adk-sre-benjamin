@@ -12,17 +12,15 @@ def test_active_state_api(tmp_path):
     # Setup temporary file path for the active state json
     temp_active_state_file = tmp_path / "active_state.json"
     
-    # Start the server on a free port
-    server = HTTPServer(('localhost', 0), SREHttpRequestHandler)
-    port = server.server_port
-    
-    # Spin up server thread
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.daemon = True
-    
-    # We patch ACTIVE_STATE_FILE inside src.server and clear/set os.environ to avoid test pollution
     with patch("src.server.ACTIVE_STATE_FILE", str(temp_active_state_file)), \
-         patch.dict(os.environ, {"PROJECT_ID": "sre-next"}):
+         patch.dict(os.environ, {"PROJECT_ID": "sre-next"}, clear=True):
+        # Start the server on a free port
+        server = HTTPServer(('localhost', 0), SREHttpRequestHandler)
+        port = server.server_port
+        
+        # Spin up server thread
+        server_thread = threading.Thread(target=server.serve_forever)
+        server_thread.daemon = True
         server_thread.start()
         
         try:
@@ -58,7 +56,8 @@ def test_active_state_api(tmp_path):
                 assert data_post["substatus_rca"] is True
                 
             # 3. Test GET /api/active-state again (to verify persistence)
-            with urllib.request.urlopen(req) as response_get2:
+            req_get2 = urllib.request.Request(url)
+            with urllib.request.urlopen(req_get2) as response_get2:
                 assert response_get2.status == 200
                 data_get2 = json.loads(response_get2.read().decode('utf-8'))
                 assert data_get2["project_id"] == "sre-next-dev"
