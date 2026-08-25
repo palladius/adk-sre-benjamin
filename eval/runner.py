@@ -4,10 +4,12 @@ Implements single-agent isolation evaluations and end-to-end incident investigat
 scenarios for all Benjamin ADK agents.
 """
 
+import argparse
 import json
 import os
 import sys
 from pathlib import Path
+from datetime import datetime
 
 EVAL_DIR = Path(__file__).parent
 CONFIGS_DIR = EVAL_DIR / "configs"
@@ -67,7 +69,7 @@ def run_integration_evals() -> dict:
     }
 
 
-def run_all_evals() -> dict:
+def run_all_evals(output_dir: str = None) -> dict:
     """Execute complete evaluation suite (isolation + integration)."""
     print("=" * 60)
     print("🚀 Running Benjamin Agent Quality Flywheel Evaluation Suite")
@@ -86,11 +88,42 @@ def run_all_evals() -> dict:
         print(f"  [{status}] Scenario: {res.get('name')} | Project: {res.get('target_project')}")
         
     summary = {
+        "timestamp": datetime.now().isoformat(),
         "status": "SUCCESS",
         "isolation": isolation_results,
         "integration": integration_results
     }
     
+    if output_dir:
+        out_path = Path(output_dir)
+        out_path.mkdir(parents=True, exist_ok=True)
+        
+        # Write results.json
+        json_file = out_path / "results.json"
+        with open(json_file, "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
+            
+        # Write report.md
+        report_file = out_path / "report.md"
+        with open(report_file, "w", encoding="utf-8") as f:
+            f.write(f"# Agent Quality Flywheel Evaluation Report\n\n")
+            f.write(f"- **Timestamp**: {summary['timestamp']}\n")
+            f.write(f"- **Overall Status**: {summary['status']}\n\n")
+            f.write(f"## 1. Single Agent Isolation Benchmarks\n\n")
+            f.write(f"| Agent | Status | Score | Test Cases | Evaluated Metrics |\n")
+            f.write(f"|---|---|---|---|---|\n")
+            for agent, res in isolation_results.items():
+                st = "PASS" if res['passed'] else "FAIL"
+                metrics = ", ".join(res.get('metrics_evaluated', []))
+                f.write(f"| `{agent}` | {st} | {res['score']:.2f} | {res['cases_run']} | `{metrics}` |\n")
+            f.write(f"\n## 2. End-to-End Incident Integration Scenarios\n\n")
+            f.write(f"| Scenario ID | Scenario Name | Target Project | Verified Steps | Outcome |\n")
+            f.write(f"|---|---|---|---|---|\n")
+            for s_id, res in integration_results.get("scenarios", {}).items():
+                f.write(f"| `{s_id}` | {res['name']} | `{res['target_project']}` | {res['steps_verified']} | `{res['outcome']}` |\n")
+                
+        print(f"\n💾 Results exported to: {out_path.resolve()}")
+
     print("\n" + "=" * 60)
     print("🎉 Evaluation Complete: All ADK Agents Verified!")
     print("=" * 60)
@@ -98,5 +131,9 @@ def run_all_evals() -> dict:
 
 
 if __name__ == "__main__":
-    res = run_all_evals()
+    parser = argparse.ArgumentParser(description="Run ADK Agent Quality Flywheel evaluations")
+    parser.add_argument("--output-dir", type=str, default=os.environ.get("EVAL_OUTPUT_DIR"), help="Directory to save output results")
+    args = parser.parse_args()
+    
+    res = run_all_evals(output_dir=args.output_dir)
     sys.exit(0 if res.get("status") == "SUCCESS" else 1)
