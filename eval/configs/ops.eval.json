@@ -1,0 +1,11 @@
+{
+  "agent_name": "ops",
+  "metrics": ["metrics_collection_accuracy", "log_scraping_completeness"],
+  "test_cases": [
+    {
+      "id": "ops_01",
+      "prompt": "Collect high-frequency metrics for target project sre-next.",
+      "expected_outputs": ["CPU saturation", "database pool deadlock"]
+    }
+  ]
+}

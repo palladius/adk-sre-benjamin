@@ -1,0 +1,11 @@
+{
+  "agent_name": "planning",
+  "metrics": ["mitigation_plan_soundness", "rollback_readiness"],
+  "test_cases": [
+    {
+      "id": "plan_01",
+      "prompt": "Formulate recovery strategy for database deadlock.",
+      "expected_outputs": ["restart mysql service", "verify connections"]
+    }
+  ]
+}

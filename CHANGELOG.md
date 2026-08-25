@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.19] - 2026-08-25
+### Added
+- **5-Stage Agent Quality Flywheel Skills**: Installed `.agents/skills/google-agents-cli-eval` and `.agents/skills/agent-platform-eval-flywheel` skills locally based on Google Developers Blog.
+- **ADK Agent Isolation & E2E Integration Suite**: Implemented `eval/runner.py`, `eval/configs/*.eval.json` (for all 5 SRE agent roles), and `eval/scenarios/*.eval.json` (for end-to-end incident investigation scenarios).
+- **`just eval` CLI Integration**: Connected `eval` recipe in `justfile` to run both single-agent isolation benchmarks and end-to-end incident scenarios.
+- **Documentation & User Action Items**: Created `doc/eval.md` (linked in `README.md`) and `TODO_RICC.md` detailing concrete action items for Riccardo.
+
 ## [1.2.18] - 2026-08-24
 ### Fixed
 - **Static Image Asset Routing**: Fixed double `static/` prefix resolution in `src/server.py` (`rel_path = path[8:] if path.startswith("/static/") else path.lstrip("/")`), ensuring avatar PNG images (`/static/avatar_commander.png`, `/static/avatar_ops.png`, etc.) serve `image/png` binaries with HTTP 200 rather than falling back to SPA `index.html`.

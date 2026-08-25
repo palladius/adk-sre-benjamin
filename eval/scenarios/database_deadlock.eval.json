@@ -1,0 +1,12 @@
+{
+  "scenario_id": "database_deadlock",
+  "name": "MySQL Connection Pool Deadlock Investigation",
+  "target_project": "sre-next",
+  "steps": [
+    "Ops Lead identifies DB lock in log streams",
+    "Planning Lead proposes service restart",
+    "Logistics Lead approves risk score",
+    "Incident Commander closes incident"
+  ],
+  "expected_outcome": "CLOSED"
+}

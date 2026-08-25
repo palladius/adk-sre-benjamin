@@ -1,0 +1,11 @@
+{
+  "agent_name": "logistics",
+  "metrics": ["risk_assessment_accuracy", "credential_audit"],
+  "test_cases": [
+    {
+      "id": "logistics_01",
+      "prompt": "Assess risk for proposed mutation: systemctl restart mysql",
+      "expected_outputs": ["APPROVED", "MEDIUM"]
+    }
+  ]
+}

@@ -102,6 +102,20 @@ just coverage
 
 ---
 
+## 📊 Agent Quality Flywheel & Evaluation Suite
+
+Project Benjamin implements the **5-Stage Agent Quality Flywheel** (Prepare Data → Run Inference → Grade → Analyze Failures → Optimize & Iterate) as described in the [Google Developers Blog](https://developers.googleblog.com/driving-the-agent-quality-flywheel-from-your-coding-agent/).
+
+For complete details on evaluation architecture, single-agent isolation benchmarks, and E2E incident scenarios, see:
+👉 [Agent Quality Flywheel & Evaluation Guide (doc/eval.md)](doc/eval.md)
+
+### Run all agent evaluations:
+```bash
+just eval
+```
+
+---
+
 ## 🚀 Getting Started
 
 Ensure you have [uv](https://github.com/astral-sh/uv) installed, then execute the following tasks:

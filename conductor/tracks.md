@@ -159,7 +159,7 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Agent Quality Flywheel & ADK EVAL Sanity Integration**
+- [x] **Track: Agent Quality Flywheel & ADK EVAL Sanity Integration**
 *Link: [./tracks/eval_flywheel_sanity_20260825/index.md](./tracks/eval_flywheel_sanity_20260825/index.md)*
 
 

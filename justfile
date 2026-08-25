@@ -23,9 +23,9 @@ simulate:
 test:
     @nice -n 19 systemd-run --user --scope -p MemoryMax=4G -p CPUQuota=80% uv run pytest
 
-# Run all ADK isolated agent evaluations, ROUGE benchmarks, and integration scenarios
+# Run all ADK isolated agent evaluations, Flywheel metrics, and integration scenarios
 eval:
-    @uv run python3 tests/eval/eval_runner.py
+    @uv run python3 -m eval.runner
 
 # Relaunch the SRE dashboard web server on port 10042
 web:

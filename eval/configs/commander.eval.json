@@ -1,0 +1,11 @@
+{
+  "agent_name": "commander",
+  "metrics": ["incident_declaration_accuracy", "role_delegation_completeness"],
+  "test_cases": [
+    {
+      "id": "cmd_01",
+      "prompt": "Alert received: frontend_latency_slo_violated. Declare incident.",
+      "expected_outputs": ["INC-", "frontend_latency_slo_violated"]
+    }
+  ]
+}

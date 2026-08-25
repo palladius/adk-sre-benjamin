@@ -1,0 +1,11 @@
+{
+  "agent_name": "comms",
+  "metrics": ["broadcast_reach", "status_feed_accuracy"],
+  "test_cases": [
+    {
+      "id": "comms_01",
+      "prompt": "Broadcast incident declaration to Telegram and Slack feeds.",
+      "expected_outputs": ["sent to Telegram", "Slack"]
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "scenario_id": "latency_incident",
+  "name": "Frontend Latency SLO Violation Investigation",
+  "target_project": "sre-next",
+  "steps": [
+    "Alert received by Incident Commander",
+    "Comms broadcast sent",
+    "Ops Lead metrics & DB logs audit",
+    "Logistics Lead risk gate assessment",
+    "Mutation execution & incident resolution"
+  ],
+  "expected_outcome": "CLOSED"
+}

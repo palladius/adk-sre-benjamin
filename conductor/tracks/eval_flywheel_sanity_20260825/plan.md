@@ -18,18 +18,18 @@ Strict adherence to `conductor/workflow.md` (TDD, red-green-refactor, phase veri
 
 ## Phase 2: ADK Agent Isolation & E2E Integration Evals Implementation
 
-- [ ] Task: Create red unit tests for evaluation runners (`tests/test_eval_flywheel.py`)
-- [ ] Task: Implement agent isolation evaluation configs and scripts (`eval/configs/`)
-- [ ] Task: Implement end-to-end incident investigation scenario evaluation scripts (`eval/scenarios/`)
-- [ ] Task: Integrate `just eval` command in `Justfile` to run both isolation & E2E evals
-- [ ] Task: Verify green pass of evaluation runner test suite
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Create red unit tests for evaluation runners (`tests/test_eval_flywheel.py`)
+- [x] Task: Implement agent isolation evaluation configs and scripts (`eval/configs/`)
+- [x] Task: Implement end-to-end incident investigation scenario evaluation scripts (`eval/scenarios/`)
+- [x] Task: Integrate `just eval` command in `Justfile` to run both isolation & E2E evals
+- [x] Task: Verify green pass of evaluation runner test suite
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
 
 ---
 
 ## Phase 3: Documentation & User Action Items (TODO_RICC.md)
 
-- [ ] Task: Create `doc/eval.md` detailing the 5-stage Quality Flywheel loop
-- [ ] Task: Update `README.md` to link `doc/eval.md`
-- [ ] Task: Create `TODO_RICC.md` with explicit action items for Riccardo (dataset review, real incident traces, AutoRater tuning)
-- [ ] Task: Phase Verification & Checkpoint (Refer to workflow.md)
+- [x] Task: Create `doc/eval.md` detailing the 5-stage Quality Flywheel loop
+- [x] Task: Update `README.md` to link `doc/eval.md`
+- [x] Task: Create `TODO_RICC.md` with explicit action items for Riccardo (dataset review, real incident traces, AutoRater tuning)
+- [x] Task: Phase Verification & Checkpoint (Refer to workflow.md)
