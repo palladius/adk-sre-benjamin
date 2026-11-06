@@ -1380,12 +1380,22 @@ document.addEventListener("DOMContentLoaded", () => {
             const res = await fetch(url);
             const data = await res.json();
             
-            if (data.error) {
-                const errMsg = `<p class="loading-placeholder text-danger">Error: ${data.error}</p>`;
+            if (!res.ok || data.error) {
+                const errorMsg = data.error || `HTTP error ${res.status}`;
+                const errMsg = `<p class="loading-placeholder text-danger">Error: ${escapeHTML(errorMsg)}</p>`;
                 if (assetsListVm) assetsListVm.innerHTML = errMsg;
                 if (assetsListRun) assetsListRun.innerHTML = errMsg;
                 if (assetsListGke) assetsListGke.innerHTML = errMsg;
                 if (assetsListSql) assetsListSql.innerHTML = errMsg;
+                if (assetsListBucket) assetsListBucket.innerHTML = errMsg;
+                if (assetsListNetwork) assetsListNetwork.innerHTML = errMsg;
+
+                const projectStatusBanner = document.getElementById("project-status-banner");
+                if (projectStatusBanner) {
+                    projectStatusBanner.style.display = "flex";
+                    projectStatusBanner.className = "project-status-banner mock-active";
+                    projectStatusBanner.innerHTML = `<span>🚨 LIVE DISCOVERY FAILED: ${escapeHTML(errorMsg)}. Mock fallback is disabled.</span>`;
+                }
                 return;
             }
             
@@ -1426,6 +1436,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (assetsListRun) assetsListRun.innerHTML = errMsg;
             if (assetsListGke) assetsListGke.innerHTML = errMsg;
             if (assetsListSql) assetsListSql.innerHTML = errMsg;
+            if (assetsListBucket) assetsListBucket.innerHTML = errMsg;
+            if (assetsListNetwork) assetsListNetwork.innerHTML = errMsg;
+
+            const projectStatusBanner = document.getElementById("project-status-banner");
+            if (projectStatusBanner) {
+                projectStatusBanner.style.display = "flex";
+                projectStatusBanner.className = "project-status-banner mock-active";
+                projectStatusBanner.innerHTML = `<span>🚨 LIVE DISCOVERY FAILED: Failed to connect to discovery server.</span>`;
+            }
         }
     }
     
@@ -1532,10 +1551,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const projectStatusBanner = document.getElementById("project-status-banner");
         if (projectStatusBanner) {
             const hasMock = resources.some(r => r.is_mock === true);
-            if (hasMock || resources.length === 0) {
+            if (hasMock) {
                 projectStatusBanner.style.display = "flex";
                 projectStatusBanner.className = "project-status-banner mock-active";
-                projectStatusBanner.innerHTML = `<span>⚠️ DEMO / MOCK DATA ACTIVATED: The application is running in mock/demo mode because MOCK_TOOLING=true or live discovery failed/lacks permissions.</span>`;
+                projectStatusBanner.innerHTML = `<span>⚠️ DEMO / MOCK DATA ACTIVATED: The application is running in mock/demo mode (MOCK_TOOLING=true).</span>`;
             } else {
                 projectStatusBanner.style.display = "flex";
                 projectStatusBanner.className = "project-status-banner live-active";
