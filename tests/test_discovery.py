@@ -213,3 +213,92 @@ def test_cli_discover_subcommand():
             os.remove(json_path)
         if os.path.exists(md_path):
             os.remove(md_path)
+
+def test_discover_live_failure_raises_in_development():
+    """Verify that in development mode with MOCK_TOOLING=false, empty/failing live discovery
+    raises RuntimeError instead of silently falling back to mock data."""
+    project_id = "non-existent-project-xyz"
+    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
+    json_path = os.path.join(cache_dir, "discover.json")
+    md_path = os.path.join(cache_dir, "wiki.md")
+    
+    if os.path.exists(json_path):
+        os.remove(json_path)
+    if os.path.exists(md_path):
+        os.remove(md_path)
+
+    try:
+        def failing_subprocess_run(*args, **kwargs):
+            raise subprocess.CalledProcessError(returncode=1, cmd=args[0], output="Error: project not found or lack permissions")
+
+        with patch.dict(os.environ, {"MOCK_TOOLING": "false", "SRE_ENV": "development"}), \
+             patch("subprocess.run", side_effect=failing_subprocess_run):
+            with pytest.raises(RuntimeError) as exc_info:
+                discover_project_resources(project_id)
+            assert "Silent fallback to mock data is disabled in development mode" in str(exc_info.value)
+            assert project_id in str(exc_info.value)
+            # Ensure mock data was NOT written to disk
+            assert not os.path.exists(json_path)
+    finally:
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        if os.path.exists(md_path):
+            os.remove(md_path)
+
+def test_discover_mock_resources_sre_next():
+    """Verify that MOCK_TOOLING=true properly uses mock resources for sre-next."""
+    project_id = "sre-next"
+    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
+    json_path = os.path.join(cache_dir, "discover.json")
+    md_path = os.path.join(cache_dir, "wiki.md")
+    
+    if os.path.exists(json_path):
+        os.remove(json_path)
+    if os.path.exists(md_path):
+        os.remove(md_path)
+
+    try:
+        with patch.dict(os.environ, {"MOCK_TOOLING": "true"}):
+            ret_json_path = discover_project_resources(project_id)
+            assert ret_json_path == json_path
+            assert os.path.exists(json_path)
+            with open(json_path, "r") as f:
+                resources = json.load(f)
+            assert len(resources) > 0
+            assert all(r.get("is_mock") is True for r in resources)
+    finally:
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        if os.path.exists(md_path):
+            os.remove(md_path)
+
+def test_discover_mock_fallback_allowed_in_test_env():
+    """Verify that in test environment (SRE_ENV=test), fallback to mock data still functions."""
+    project_id = "test-project-fallback"
+    cache_dir = os.path.join(get_discover_dir(), "gcp-project", project_id)
+    json_path = os.path.join(cache_dir, "discover.json")
+    md_path = os.path.join(cache_dir, "wiki.md")
+    
+    if os.path.exists(json_path):
+        os.remove(json_path)
+    if os.path.exists(md_path):
+        os.remove(md_path)
+
+    try:
+        def failing_subprocess_run(*args, **kwargs):
+            raise subprocess.CalledProcessError(returncode=1, cmd=args[0], output="Error")
+
+        with patch.dict(os.environ, {"MOCK_TOOLING": "false", "SRE_ENV": "test"}), \
+             patch("subprocess.run", side_effect=failing_subprocess_run):
+            ret_json_path = discover_project_resources(project_id)
+            assert ret_json_path == json_path
+            assert os.path.exists(json_path)
+            with open(json_path, "r") as f:
+                resources = json.load(f)
+            assert len(resources) > 0
+            assert any(r.get("is_mock") is True for r in resources)
+    finally:
+        if os.path.exists(json_path):
+            os.remove(json_path)
+        if os.path.exists(md_path):
+            os.remove(md_path)

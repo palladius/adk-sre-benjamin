@@ -4,6 +4,14 @@ import subprocess
 from datetime import datetime, timezone
 from src.incident import get_discover_dir
 
+def is_test_environment() -> bool:
+    env = os.getenv("SRE_ENV")
+    if not env and "PYTEST_CURRENT_TEST" in os.environ:
+        return True
+    if not env:
+        env = os.getenv("RAILS_ENV") or "development"
+    return env.lower().strip() in ("test", "testing")
+
 def discover_project_resources(project_id: str) -> str:
     """Discovers GCP resources, audits them for vulnerabilities, 
     persists results to discover/gcp-project/<project_id>.json, 
@@ -333,7 +341,7 @@ def discover_project_resources(project_id: str) -> str:
             }
         ]
 
-    use_live = (not mock_tooling) or (project_id == "sre-next")
+    use_live = not mock_tooling
 
     # Temporarily override service account impersonation for other projects during live discovery
     original_sdk_impersonate = os.environ.get("CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT")
@@ -343,6 +351,7 @@ def discover_project_resources(project_id: str) -> str:
     if not use_live:
         resources = mock_resources
     else:
+        crawl_errors = []
         # Live gcloud subprocess commands inheriting active SA context securely
         # 1. Discover GCE VMs
         try:
@@ -388,6 +397,7 @@ def discover_project_resources(project_id: str) -> str:
                 })
         except Exception as e:
             print(f"Failed to crawl GCE VMs: {e}")
+            crawl_errors.append(f"GCE: {e}")
             
         # 2. Discover Cloud Run Services
         try:
@@ -432,6 +442,7 @@ def discover_project_resources(project_id: str) -> str:
                 })
         except Exception as e:
             print(f"Failed to crawl Cloud Run Services: {e}")
+            crawl_errors.append(f"Cloud Run: {e}")
             
         # 3. Discover GKE Clusters
         try:
@@ -471,6 +482,7 @@ def discover_project_resources(project_id: str) -> str:
                 })
         except Exception as e:
             print(f"Failed to crawl GKE Clusters: {e}")
+            crawl_errors.append(f"GKE: {e}")
             
         # 4. Discover Cloud SQL Instances
         try:
@@ -513,6 +525,7 @@ def discover_project_resources(project_id: str) -> str:
                 })
         except Exception as e:
             print(f"Failed to crawl Cloud SQL Instances: {e}")
+            crawl_errors.append(f"Cloud SQL: {e}")
             
         # 5. Discover GCS Buckets
         try:
@@ -544,6 +557,7 @@ def discover_project_resources(project_id: str) -> str:
                 })
         except Exception as e:
             print(f"Failed to crawl GCS Buckets: {e}")
+            crawl_errors.append(f"GCS: {e}")
             
         # 6. Discover VPC Networks
         try:
@@ -576,9 +590,21 @@ def discover_project_resources(project_id: str) -> str:
                 })
         except Exception as e:
             print(f"Failed to crawl VPC Networks: {e}")
+            crawl_errors.append(f"VPC: {e}")
 
         # Fallback to mock data if live discovery returned nothing (e.g. gcloud errors, no permission, no assets)
         if not resources:
+            if not is_test_environment() and not mock_tooling:
+                if project_id != "sre-next":
+                    if original_sdk_impersonate is not None:
+                        os.environ["CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT"] = original_sdk_impersonate
+                    else:
+                        os.environ.pop("CLOUDSDK_AUTH_IMPERSONATE_SERVICE_ACCOUNT", None)
+                error_detail = f" (crawl errors: {'; '.join(crawl_errors)})" if crawl_errors else ""
+                raise RuntimeError(
+                    f"Live discovery failed or returned 0 resources for project '{project_id}'{error_detail}. "
+                    f"Silent fallback to mock data is disabled in development mode."
+                )
             print(f"Live discovery returned 0 resources for project {project_id} (e.g. not logged in, no project, or no assets). Falling back to mock data.")
             resources = mock_resources
 

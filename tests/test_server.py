@@ -191,6 +191,19 @@ def test_server_integration():
                     assert os.path.exists(data_discover["cache_path"])
                     assert os.path.exists(data_discover["wiki_path"])
 
+            # Test GET /api/projects/.../discover returns HTTP 500 when discovery fails in dev mode
+            with patch.dict(os.environ, {"MOCK_TOOLING": "false", "SRE_ENV": "development"}):
+                with patch("src.discovery.discover_project_resources", side_effect=RuntimeError("Discovery failed")):
+                    url_err = f"http://localhost:{port}/api/projects/failing-project/discover?refresh=true"
+                    req_err = urllib.request.Request(url_err)
+                    try:
+                        urllib.request.urlopen(req_err)
+                        assert False, "Expected HTTP 500"
+                    except urllib.error.HTTPError as http_err:
+                        assert http_err.code == 500
+                        err_body = json.loads(http_err.read().decode('utf-8'))
+                        assert "error" in err_body
+
             # Test route rewriting fallback to index.html
             for fallback_path in ["/projects/test-project-server", "/clouds"]:
                 url_fallback = f"http://localhost:{port}{fallback_path}"

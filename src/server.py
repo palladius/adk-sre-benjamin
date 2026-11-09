@@ -763,7 +763,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             except Exception:
                 version = "1.2.4"
                 
-            project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("PROJECT_ID") or "prod-db-999"
+            project_id = os.getenv("GCP_PROJECT_ID") or os.getenv("PROJECT_ID") or "sre-next"
             config_data = {
                 "project_id": project_id,
                 "version": version,
