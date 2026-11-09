@@ -127,8 +127,48 @@ def check_env():
         print("  ⚠️ Could not query active gcloud profile. (Is gcloud CLI installed?)")
         warnings += 1
 
+    # 5. Check Terraform CLI and Configuration
+    print("\n[5] Checking Terraform CLI & Configuration...")
+    import shutil
+    terraform_bin = shutil.which("terraform")
+    if not terraform_bin:
+        print("  ⚠️ terraform binary not found in PATH. Infrastructure deployment targets will be unavailable.")
+        warnings += 1
+    else:
+        print(f"  ✅ terraform binary found at: '{terraform_bin}'")
+        if os.path.isdir("terraform"):
+            try:
+                # Ensure provider plugins exist if not already initialized
+                if not os.path.isdir("terraform/.terraform"):
+                    subprocess.run(
+                        ["terraform", "init", "-backend=false"],
+                        cwd="terraform",
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                        check=False
+                    )
+                # Run terraform validate
+                res = subprocess.run(
+                    ["terraform", "validate"],
+                    cwd="terraform",
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+                if res.returncode == 0:
+                    print("  ✅ Terraform configuration syntax is valid.")
+                else:
+                    print(f"  ❌ Terraform validate failed:\n{res.stderr.strip()}")
+                    errors += 1
+            except Exception as e:
+                print(f"  ⚠️ Could not validate Terraform configuration: {e}")
+                warnings += 1
+        else:
+            print("  ⚠️ terraform/ directory not found in repository.")
+            warnings += 1
+
     # 7. Check local Web server (FE & BE) activity
-    print("\n[5] Checking local Web server (FE & BE) activity...")
+    print("\n[6] Checking local Web server (FE & BE) activity...")
     import socket
     import urllib.request
     import urllib.error

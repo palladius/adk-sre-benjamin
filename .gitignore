@@ -35,3 +35,9 @@ tmp
 etc/gcs.yaml
 
 out/
+
+# Terraform artifacts
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
