@@ -1720,6 +1720,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const cloudsDirectoryView = document.getElementById("clouds-directory-view");
     
     function switchView(viewName) {
+        if (typeof resetEditModes === "function") {
+            resetEditModes();
+        }
         if (viewName === "clouds") {
             if (cloudsDirectoryView) cloudsDirectoryView.style.display = "flex";
             if (projectDiscoveryView) projectDiscoveryView.style.display = "none";
@@ -1816,9 +1819,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Edit/View Toggles Reset Function
     const btnEditWiki = document.getElementById("btn-edit-wiki");
+    const btnCancelWiki = document.getElementById("btn-cancel-wiki");
     const wikiPanel = document.querySelector(".wiki-panel");
     const btnEditGraph = document.getElementById("btn-edit-graph");
     const graphPanel = document.querySelector(".graph-panel");
+    let wikiOriginalContent = "";
 
     function resetEditModes() {
         if (wikiPanel) {
@@ -1843,10 +1848,28 @@ document.addEventListener("DOMContentLoaded", () => {
             if (appContainer) {
                 if (isEditing) {
                     appContainer.classList.add("wiki-edit-active");
+                    const editor = document.getElementById("wiki-editor");
+                    if (editor) {
+                        wikiOriginalContent = editor.value;
+                    }
                 } else {
                     appContainer.classList.remove("wiki-edit-active");
                 }
             }
+        });
+    }
+
+    if (btnCancelWiki && wikiPanel) {
+        btnCancelWiki.addEventListener("click", () => {
+            const editor = document.getElementById("wiki-editor");
+            const preview = document.getElementById("wiki-preview");
+            if (editor) {
+                editor.value = wikiOriginalContent;
+                if (preview && typeof renderMarkdown === "function") {
+                    preview.innerHTML = renderMarkdown(wikiOriginalContent);
+                }
+            }
+            resetEditModes();
         });
     }
 
@@ -1991,6 +2014,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const preview = document.getElementById("wiki-preview");
             if (editor && preview) {
                 editor.value = data.content || "";
+                wikiOriginalContent = data.content || "";
                 preview.innerHTML = renderMarkdown(data.content || "");
             }
         } catch (err) {
@@ -2155,6 +2179,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (statusSpan) {
                     statusSpan.textContent = "💾 Wiki Saved Successfully!";
                 }
+                wikiOriginalContent = editor.value;
                 const preview = document.getElementById("wiki-preview");
                 if (preview) {
                     preview.innerHTML = renderMarkdown(editor.value);
@@ -2165,6 +2190,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     setTimeout(pollGcsSyncStatus, 500);
                     setTimeout(pollGcsSyncStatus, 2000);
                 }
+
+                // Smoothly exit edit mode after saving
+                setTimeout(() => {
+                    resetEditModes();
+                }, 800);
             } catch (err) {
                 console.error("Failed to save wiki:", err);
                 if (statusSpan) statusSpan.textContent = "❌ Save failed";
