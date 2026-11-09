@@ -162,6 +162,20 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 fetchAndRenderMutationQueue(null);
             }
+
+            // Synchronize active context button/badge visibility
+            const btnSetActive = document.getElementById("btn-set-active-incident");
+            const badgeActiveServer = document.getElementById("badge-active-server-context");
+            if (btnSetActive && badgeActiveServer) {
+                const currentViewedId = activeIncidentTitle ? activeIncidentTitle.textContent : null;
+                if (currentViewedId && currentViewedId === state.incident_id) {
+                    btnSetActive.style.display = "none";
+                    badgeActiveServer.style.display = "inline-flex";
+                } else if (currentViewedId && currentViewedId.startsWith("INC-")) {
+                    btnSetActive.style.display = "inline-flex";
+                    badgeActiveServer.style.display = "none";
+                }
+            }
         } catch (err) {
             console.error("[Poll Active State] Error:", err);
         }
@@ -564,10 +578,28 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="incident-item-desc">${inc.trigger_event || 'SRE incident trigger'}</div>
                     ${substatusHtml ? `<div class="incident-item-substatuses" style="margin-top: 4px; display: flex; gap: 4px;">${substatusHtml}</div>` : ''}
                     <div class="incident-item-actions">
+                        <button class="btn-activate-inc" data-id="${inc.incident_id}" style="color: #00d4ff; border-color: rgba(0,212,255,0.4);">Activate</button>
                         <button class="btn-archive-inc" data-id="${inc.incident_id}">Archive</button>
                         <button class="btn-delete-inc" data-id="${inc.incident_id}">Delete</button>
                     </div>
                 `;
+                
+                // Add click handler for Activate button
+                const btnActivate = li.querySelector(".btn-activate-inc");
+                if (btnActivate) {
+                    btnActivate.addEventListener("click", async (e) => {
+                        e.stopPropagation();
+                        try {
+                            const res = await fetch(`/api/incidents/${encodeURIComponent(inc.incident_id)}/select`, { method: "POST" });
+                            if (res.ok) {
+                                pollActiveState();
+                                fetchIncidentDetails(inc.incident_id);
+                            }
+                        } catch (err) {
+                            console.error("Failed to activate incident:", err);
+                        }
+                    });
+                }
                 
                 // Add click handler for Archive button
                 const btnArchive = li.querySelector(".btn-archive-inc");
@@ -801,6 +833,34 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (activeSubstatusBadges) {
             activeSubstatusBadges.innerHTML = activeSubstatusHtml;
+        }
+
+        // Active Server Context Controls
+        const btnSetActive = document.getElementById("btn-set-active-incident");
+        const badgeActiveServer = document.getElementById("badge-active-server-context");
+        if (btnSetActive && badgeActiveServer) {
+            if (lastActiveIncident === inc.incident_id) {
+                btnSetActive.style.display = "none";
+                badgeActiveServer.style.display = "inline-flex";
+            } else {
+                btnSetActive.style.display = "inline-flex";
+                badgeActiveServer.style.display = "none";
+                btnSetActive.onclick = async () => {
+                    try {
+                        const res = await fetch(`/api/incidents/${encodeURIComponent(inc.incident_id)}/select`, {
+                            method: "POST"
+                        });
+                        if (res.ok) {
+                            lastActiveIncident = inc.incident_id;
+                            btnSetActive.style.display = "none";
+                            badgeActiveServer.style.display = "inline-flex";
+                            pollActiveState();
+                        }
+                    } catch (e) {
+                        console.error("Failed to set active incident:", e);
+                    }
+                };
+            }
         }
         
         // Handle Active Leads Badge highlights

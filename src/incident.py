@@ -3,31 +3,36 @@ import uuid
 from enum import Enum
 from typing import Any, Dict
 
-def get_investigations_dir() -> str:
-    env = os.getenv("SRE_ENV")
+def resolve_benjamin_env() -> str:
+    """Resolves active environment with priority: BENJAMIN_ENV -> SRE_ENV -> RAILS_ENV -> development."""
+    env = os.getenv("BENJAMIN_ENV") or os.getenv("SRE_ENV")
     if not env and "PYTEST_CURRENT_TEST" in os.environ:
         env = "test"
     if not env:
         env = os.getenv("RAILS_ENV") or "development"
     env = env.lower().strip()
-    print(f"DEBUG get_investigations_dir: SRE_ENV={os.getenv('SRE_ENV')}, RAILS_ENV={os.getenv('RAILS_ENV')}, resolved={env}")
     if env in ("prod", "production"):
-        return "investigations/prod"
+        return "production"
     elif env in ("test", "testing"):
+        return "test"
+    else:
+        return "development"
+
+def get_investigations_dir() -> str:
+    env = resolve_benjamin_env()
+    print(f"DEBUG get_investigations_dir: BENJAMIN_ENV={os.getenv('BENJAMIN_ENV')}, SRE_ENV={os.getenv('SRE_ENV')}, RAILS_ENV={os.getenv('RAILS_ENV')}, resolved={env}")
+    if env == "production":
+        return "investigations/prod"
+    elif env == "test":
         return "investigations/test"
     else:
         return "investigations/dev"
 
 def get_discover_dir() -> str:
-    env = os.getenv("SRE_ENV")
-    if not env and "PYTEST_CURRENT_TEST" in os.environ:
-        env = "test"
-    if not env:
-        env = os.getenv("RAILS_ENV") or "development"
-    env = env.lower().strip()
-    if env in ("prod", "production"):
+    env = resolve_benjamin_env()
+    if env == "production":
         return "discovery/prod"
-    elif env in ("test", "testing"):
+    elif env == "test":
         return "discovery/test"
     else:
         return "discovery/dev"

@@ -1268,11 +1268,35 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 payload = json.loads(post_data.decode("utf-8"))
                 
                 state = get_active_state()
+                prev_incident_id = state.get("incident_id")
+                
+                if "incident_id" in payload:
+                    inc_id = payload["incident_id"]
+                    state["incident_id"] = inc_id
+                    
+                    # Uniquely determine project_id and status from incident if not explicitly passed
+                    if inc_id and inc_id != "None":
+                        inc_path = os.path.join(get_investigations_dir(), inc_id)
+                        if os.path.exists(inc_path):
+                            details = parse_incident_folder(inc_path)
+                            inc_proj = details.get("project_id")
+                            if inc_proj and inc_proj != "UNKNOWN" and "project_id" not in payload:
+                                state["project_id"] = inc_proj
+                                os.environ["PROJECT_ID"] = inc_proj
+                            if "incident_status" not in payload:
+                                state["incident_status"] = details.get("status", "NEW")
+                            if "substatus_rca" not in payload:
+                                state["substatus_rca"] = details.get("substatus_rca", False)
+                            if "substatus_mitigated" not in payload:
+                                state["substatus_mitigated"] = details.get("substatus_mitigated", False)
+                            if "substatus_fixed" not in payload:
+                                state["substatus_fixed"] = details.get("substatus_fixed", False)
+                            if "substatus_verified" not in payload:
+                                state["substatus_verified"] = details.get("substatus_verified", False)
+                
                 if "project_id" in payload:
                     state["project_id"] = payload["project_id"]
                     os.environ["PROJECT_ID"] = payload["project_id"]
-                if "incident_id" in payload:
-                    state["incident_id"] = payload["incident_id"]
                 if "incident_status" in payload:
                     from src.incident import validate_incident_status
                     state["incident_status"] = validate_incident_status(payload["incident_status"])
@@ -1286,6 +1310,21 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     state["substatus_verified"] = bool(payload["substatus_verified"])
                 
                 save_active_state(state)
+                
+                # Notify Telegram channel if active incident changed
+                curr_incident_id = state.get("incident_id")
+                if curr_incident_id and curr_incident_id != "None" and curr_incident_id != prev_incident_id:
+                    try:
+                        from src.comms_telegram import send_telegram_alert
+                        send_telegram_alert(
+                            f"🎯 *Active Incident Switched*\n"
+                            f"• *Incident:* `{curr_incident_id}`\n"
+                            f"• *Target Project:* `{state.get('project_id')}`\n"
+                            f"• *Status:* `{state.get('incident_status')}`",
+                            curr_incident_id
+                        )
+                    except Exception as e:
+                        print(f"[Telegram Notification Error] {e}")
                 
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -1391,6 +1430,59 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except Exception as e:
+                self.send_response(500)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
+
+        # API: Select/activate an incident as server-wide active state
+        elif path.startswith("/api/incidents/") and path.endswith("/select"):
+            try:
+                incident_id = path.split("/")[3]
+                incident_id = os.path.basename(incident_id)
+                incident_path = os.path.join(get_investigations_dir(), incident_id)
+                if os.path.exists(incident_path):
+                    details = parse_incident_folder(incident_path)
+                    state = get_active_state()
+                    prev_incident_id = state.get("incident_id")
+                    
+                    state["incident_id"] = incident_id
+                    state["incident_status"] = details.get("status", "NEW")
+                    state["substatus_rca"] = details.get("substatus_rca", False)
+                    state["substatus_mitigated"] = details.get("substatus_mitigated", False)
+                    state["substatus_fixed"] = details.get("substatus_fixed", False)
+                    state["substatus_verified"] = details.get("substatus_verified", False)
+                    inc_proj = details.get("project_id")
+                    if inc_proj and inc_proj != "UNKNOWN":
+                        state["project_id"] = inc_proj
+                        os.environ["PROJECT_ID"] = inc_proj
+                        
+                    save_active_state(state)
+                    
+                    if incident_id != prev_incident_id:
+                        try:
+                            from src.comms_telegram import send_telegram_alert
+                            send_telegram_alert(
+                                f"🎯 *Active Incident Switched*\n"
+                                f"• *Incident:* `{incident_id}`\n"
+                                f"• *Target Project:* `{state.get('project_id')}`\n"
+                                f"• *Status:* `{state.get('incident_status')}`",
+                                incident_id
+                            )
+                        except Exception as e:
+                            print(f"[Telegram Notification Error] {e}")
+                            
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps(state).encode("utf-8"))
+                else:
+                    self.send_response(404)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": f"Incident {incident_id} not found"}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -2218,17 +2310,21 @@ def start_telegram_bot():
                                     state = get_active_state()
                                     state["incident_id"] = inc_id
                                     
-                                    # Fetch status
+                                    # Fetch status and map project_id
                                     incident_path = os.path.join(get_investigations_dir(), inc_id)
                                     if os.path.exists(incident_path):
                                         details = parse_incident_folder(incident_path)
                                         state["incident_status"] = details.get("status", "UNKNOWN")
+                                        inc_proj = details.get("project_id")
+                                        if inc_proj and inc_proj != "UNKNOWN":
+                                            state["project_id"] = inc_proj
+                                            os.environ["PROJECT_ID"] = inc_proj
                                     else:
                                         state["incident_status"] = "UNKNOWN"
                                     
                                     save_active_state(state)
                                     answer_telegram_callback_query(bot_token, callback_id, f"Incident set to {inc_id}")
-                                    edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to incident:* `{inc_id}`")
+                                    edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to incident:* `{inc_id}`\n☁️ *Target Project:* `{state.get('project_id')}`\n📊 *Status:* `{state.get('incident_status')}`")
                                     
                                 elif cb_data.startswith("select_project:"):
                                     proj_id = cb_data.replace("select_project:", "").strip()
@@ -2515,13 +2611,39 @@ def start_telegram_bot():
                             send_telegram_menu(bot_token, chat_id, welcome_msg)
                             continue
                             
-                        elif msg_text == "🚨 Status Check" or lower_text.startswith("/status"):
+                        elif msg_text == "🚨 Status Check" or lower_text.startswith("/status") or lower_text == "/state":
+                            active_state = get_active_state()
+                            selected_incident_id = active_state.get("incident_id")
+                            current_project_id = active_state.get("project_id") or os.getenv("PROJECT_ID", "sre-next")
+                            from src.incident import resolve_benjamin_env
+                            active_env = resolve_benjamin_env()
+                            
+                            all_incidents = get_incidents_list()
+                            on_fire_incidents = [
+                                inc for inc in all_incidents 
+                                if not inc.get("archived", False) and str(inc.get("status", "")).upper() in ("NEW", "ONGOING", "INVESTIGATING", "ACTIVE", "AWAITING_APPROVAL")
+                            ]
+                            if on_fire_incidents:
+                                fire_ids = ", ".join([f"`{i.get('id')}`" for i in on_fire_incidents[:3]])
+                                fire_summary = f"🔥 *{len(on_fire_incidents)} incident(s) on fire* ({fire_ids})"
+                            else:
+                                fire_summary = "✅ *All clear — No active incidents on fire*"
+
                             if not selected_incident_id or selected_incident_id == "None":
-                                send_raw_telegram_message(bot_token, chat_id, "❌ No active SRE incident selected.")
+                                idle_msg = (
+                                    f"🏰 *Project Benjamin SRE Status*\n"
+                                    f"• *Environment:* `{active_env}`\n"
+                                    f"• *Target Project:* `{current_project_id}`\n"
+                                    f"• *Active Incident Context:* `None (Idle)`\n"
+                                    f"• *Fire Status:* {fire_summary}\n\n"
+                                    f"Use `📋 List Incidents` or `/incident <id>` to set an active incident context."
+                                )
+                                send_raw_telegram_message(bot_token, chat_id, idle_msg)
                                 continue
+                                
                             incident_path = os.path.join(get_investigations_dir(), selected_incident_id)
-                            details = parse_incident_folder(incident_path)
-                            status_val = details.get('status', 'UNKNOWN')
+                            details = parse_incident_folder(incident_path) if os.path.exists(incident_path) else {}
+                            status_val = details.get('status', active_state.get('incident_status', 'UNKNOWN'))
                             substatus_rca = details.get('substatus_rca', False)
                             substatus_mitigated = details.get('substatus_mitigated', False)
                             substatus_fixed = details.get('substatus_fixed', False)
@@ -2529,15 +2651,17 @@ def start_telegram_bot():
                             
                             status_msg = (
                                 f"🏰 *Status for Incident:* `{selected_incident_id}`\n"
+                                f"• *Environment:* `{active_env}`\n"
                                 f"• *Status:* `{status_val}`\n"
                                 f"• *Substatuses:*\n"
                                 f"  - RCA Found: `{'Yes' if substatus_rca else 'No'}`\n"
                                 f"  - Mitigated: `{'Yes' if substatus_mitigated else 'No'}`\n"
                                 f"  - Fixed: `{'Yes' if substatus_fixed else 'No'}`\n"
                                 f"  - Verified: `{'Yes' if substatus_verified else 'No'}`\n"
-                                f"• *Target Project:* `{details.get('project_id', 'UNKNOWN')}`\n"
+                                f"• *Target Project:* `{details.get('project_id', current_project_id)}`\n"
                                 f"• *Trigger Event:* `{details.get('trigger_event', 'UNKNOWN')}`\n"
-                                f"• *Timeline entries:* {len(details.get('timeline', []))}"
+                                f"• *Timeline entries:* {len(details.get('timeline', []))}\n"
+                                f"• *Fire Status:* {fire_summary}"
                             )
                             
                             if status_val == "AWAITING_APPROVAL":
@@ -2746,6 +2870,10 @@ def start_telegram_bot():
                                 state = get_active_state()
                                 state["incident_id"] = target_inc
                                 state["incident_status"] = status_val
+                                inc_proj = details.get("project_id")
+                                if inc_proj and inc_proj != "UNKNOWN":
+                                    state["project_id"] = inc_proj
+                                    os.environ["PROJECT_ID"] = inc_proj
                                 save_active_state(state)
                                 
                                 if status_val == "AWAITING_APPROVAL":

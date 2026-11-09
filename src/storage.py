@@ -91,6 +91,40 @@ class FileStateManager(BaseStateManager):
         except Exception as e:
             print(f"[Active State] Failed to write active state file: {e}")
 
+class DatabaseStateManager(BaseStateManager):
+    """Database backend (Cloud SQL PostgreSQL) for state management with local filesystem fallback."""
+
+    def __init__(self, fallback_manager: Optional[BaseStateManager] = None):
+        self.fallback_manager = fallback_manager or FileStateManager()
+
+    def get_active_state(self) -> Dict[str, Any]:
+        default_state = {
+            "project_id": os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next",
+            "incident_id": "None",
+            "incident_status": "NEW",
+            "substatus_rca": False,
+            "substatus_mitigated": False,
+            "substatus_fixed": False,
+            "substatus_verified": False
+        }
+        try:
+            import src.db as db
+            if db.is_db_active():
+                return db.get_active_state(default_state)
+        except Exception as e:
+            print(f"[DatabaseStateManager] Failed to read active state from DB: {e}")
+        return self.fallback_manager.get_active_state()
+
+    def save_active_state(self, state: Dict[str, Any]) -> None:
+        try:
+            import src.db as db
+            if db.is_db_active():
+                db.save_active_state(state)
+        except Exception as e:
+            print(f"[DatabaseStateManager] Failed to save active state to DB: {e}")
+        # Always mirror to fallback manager for local resiliency
+        self.fallback_manager.save_active_state(state)
+
 class BaseDiscoveryStorage(ABC):
     """Abstract base class for discovery storage."""
 
@@ -175,8 +209,10 @@ def get_state_manager() -> BaseStateManager:
     global _state_manager
     if _state_manager is None:
         backend = os.getenv("STORAGE_BACKEND_STATE", "local").lower()
-        if backend == "local":
+        if backend in ("local", "file", "filesystem"):
             _state_manager = FileStateManager()
+        elif backend in ("db", "database", "postgres", "postgresql", "cloud"):
+            _state_manager = DatabaseStateManager()
         else:
             raise ValueError(f"Unknown state storage backend: {backend}")
     return _state_manager
