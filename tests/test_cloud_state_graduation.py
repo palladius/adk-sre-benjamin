@@ -358,3 +358,166 @@ def test_telegram_status_idle_and_unknown_status_warning(mock_request, mock_urlo
         sent_message2 = mock_send_msg2.call_args[0][2]
         assert "UNKNOWN status" in sent_message2
         assert "All clear" not in sent_message2
+
+
+def test_r2_1_mutation_and_action_endpoints_reject_traversal(tmp_path):
+    """R2-1: POST /api/incidents/<id>/pending, /override, /approve, /reject, /chat must reject '..' and traversal."""
+    temp_state_file = tmp_path / "active_state.json"
+    inv_dir = get_investigations_dir()
+    parent_pending = os.path.abspath(os.path.join(inv_dir, "..", "pending_approvals.json"))
+    if os.path.exists(parent_pending):
+        os.remove(parent_pending)
+
+    with patch("src.server.get_active_state_file", return_value=str(temp_state_file)), \
+         patch("src.server.ACTIVE_STATE_FILE", str(temp_state_file)):
+        for bad_id in ("..", "%2e%2e", "../outside", "active_state.json"):
+            # 1. /pending
+            h_pending = _make_handler(
+                "POST",
+                f"/api/incidents/{bad_id}/pending",
+                {
+                    "command": "rm -rf /",
+                    "risk_factor": "CRITICAL",
+                    "risk_reason": "traversal",
+                    "justification": "exploit",
+                },
+            )
+            h_pending.do_POST()
+            h_pending.send_response.assert_called_with(400)
+            assert not os.path.exists(parent_pending)
+
+            # 2. /override, /approve, /reject
+            for action in ("override", "approve", "reject"):
+                h_act = _make_handler("POST", f"/api/incidents/{bad_id}/{action}")
+                h_act.do_POST()
+                h_act.send_response.assert_called_with(400)
+
+            # 3. /chat
+            h_chat = _make_handler("POST", f"/api/incidents/{bad_id}/chat", {"message": "hello"})
+            h_chat.do_POST()
+            h_chat.send_response.assert_called_with(400)
+
+
+def test_r2_2_full_coords_phantom_incident_rejected(tmp_path, monkeypatch):
+    """R2-2: POST /api/active-state with full coordinates for a nonexistent incident must return 404."""
+    monkeypatch.delenv("TELEGRAM_BOT_TOKEN", raising=False)
+    monkeypatch.delenv("TELEGRAM_CHAT_ID", raising=False)
+    temp_state_file = tmp_path / "active_state.json"
+    ghost_dir = os.path.join(get_investigations_dir(), "INC-GHOST-FULL-COORDS")
+    if os.path.exists(ghost_dir):
+        shutil.rmtree(ghost_dir)
+
+    with patch("src.server.get_active_state_file", return_value=str(temp_state_file)), \
+         patch("src.server.ACTIVE_STATE_FILE", str(temp_state_file)):
+        h = _make_handler(
+            "POST",
+            "/api/active-state",
+            {
+                "incident_id": "INC-GHOST-FULL-COORDS",
+                "project_id": "any-proj",
+                "incident_status": "ONGOING",
+            },
+        )
+        h.do_POST()
+        h.send_response.assert_called_with(404)
+        assert not os.path.exists(ghost_dir)
+        assert not temp_state_file.exists()
+
+
+def test_r2_3_db_write_failure_surfaces_503_after_local_fallback(tmp_path):
+    """R2-3: When DB is active and db.save_active_state returns False, local fallback is saved and HTTP returns 503."""
+    temp_state_file = tmp_path / "active_state.json"
+    inc_dir = os.path.join(get_investigations_dir(), "INC-R2-3-TEST")
+    os.makedirs(inc_dir, exist_ok=True)
+    try:
+        with open(os.path.join(inc_dir, "state.md"), "w") as f:
+            f.write(
+                "# Active SRE Incident State: INC-R2-3-TEST\n"
+                "## Metadata\n"
+                "- **Status:** ONGOING\n"
+                "- **Target Project:** `r2-3-proj`\n"
+            )
+        with patch("src.server.get_active_state_file", return_value=str(temp_state_file)), \
+             patch("src.server.ACTIVE_STATE_FILE", str(temp_state_file)), \
+             patch("src.db.is_db_active", return_value=True), \
+             patch("src.db.get_active_state", return_value=None), \
+             patch("src.db.get_incident", return_value=None), \
+             patch("src.db.save_active_state", return_value=False):
+            set_state_manager(None)
+            h = _make_handler("POST", "/api/incidents/INC-R2-3-TEST/select")
+            h.do_POST()
+            h.send_response.assert_called_with(503)
+            body = json.loads(h.wfile.getvalue().decode("utf-8"))
+            assert body.get("persisted_locally") is True
+            assert temp_state_file.exists()
+            saved = json.loads(temp_state_file.read_text())
+            assert saved["incident_id"] == "INC-R2-3-TEST"
+    finally:
+        if os.path.exists(inc_dir):
+            shutil.rmtree(inc_dir)
+
+
+def test_r2_5_and_r2_6_empty_db_fallback_and_strict_env_validation(tmp_path, monkeypatch):
+    """R2-5 & R2-6: Empty DB row falls back to local file; invalid BENJAMIN_ENV raises ValueError in db & storage."""
+    temp_state_file = tmp_path / "active_state.json"
+    temp_state_file.write_text(
+        json.dumps(
+            {
+                "project_id": "preseeded-local-proj",
+                "incident_id": "INC-SEED-1",
+                "incident_status": "ONGOING",
+                "substatus_rca": True,
+                "substatus_mitigated": False,
+                "substatus_fixed": False,
+                "substatus_verified": False,
+            }
+        )
+    )
+    fallback = FileStateManager(state_file_path_resolver=lambda: str(temp_state_file))
+    mgr = DatabaseStateManager(fallback_manager=fallback)
+
+    # R2-5: When db.get_active_state(None) returns None (no row in DB), fallback local file is returned
+    with patch("src.db.is_db_active", return_value=True), \
+         patch("src.db.get_active_state", return_value=None):
+        st = mgr.get_active_state()
+        assert st["project_id"] == "preseeded-local-proj"
+        assert st["incident_id"] == "INC-SEED-1"
+
+    # R2-6: Invalid BENJAMIN_ENV raises ValueError across db and storage
+    monkeypatch.setenv("BENJAMIN_ENV", "staging-invalid")
+    set_state_manager(None)
+    with pytest.raises(ValueError, match="Invalid environment"):
+        db._resolve_active_state_row_id()
+    with pytest.raises(ValueError, match="Invalid environment"):
+        db.init_db()
+    with pytest.raises(ValueError, match="Invalid environment"):
+        get_state_manager()
+
+
+def test_r2_7_set_active_project_preserves_incident_on_db_outage(tmp_path):
+    """R2-7: Transient DB error during set_active_project must not wipe active incident_id to 'None'."""
+    temp_state_file = tmp_path / "active_state.json"
+    temp_state_file.write_text(
+        json.dumps(
+            {
+                "project_id": "proj-1",
+                "incident_id": "INC-DB-TRANSIENT",
+                "incident_status": "ONGOING",
+                "substatus_rca": False,
+                "substatus_mitigated": False,
+                "substatus_fixed": False,
+                "substatus_verified": False,
+            }
+        )
+    )
+    with patch("src.server.get_active_state_file", return_value=str(temp_state_file)), \
+         patch("src.server.ACTIVE_STATE_FILE", str(temp_state_file)), \
+         patch("src.db.is_db_active", return_value=True), \
+         patch("src.db.get_active_state", return_value=None), \
+         patch("src.db.save_active_state", return_value=True), \
+         patch("src.db.get_incident", side_effect=RuntimeError("Cloud SQL timeout")):
+        set_state_manager(None)
+        st = set_active_project("proj-2", source="Test")
+        assert st["project_id"] == "proj-2"
+        assert st["incident_id"] == "INC-DB-TRANSIENT"
+

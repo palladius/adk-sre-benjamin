@@ -105,31 +105,30 @@ class DatabaseStateManager(BaseStateManager):
         try:
             import src.db as db
             if db.is_db_active():
-                try:
-                    res = db.get_active_state(None, raise_on_error=True)
-                except TypeError:
-                    # Compatibility if db.get_active_state was mocked with a 1-arg signature
-                    res = db.get_active_state(default_state)
+                res = db.get_active_state(None, raise_on_error=True)
                 if res is not None:
                     for key, val in default_state.items():
                         if key not in res:
                             res[key] = val
                     return res
-                # Row not yet in DB: check fallback file before returning defaults
+                # Row not yet in DB (first boot): check fallback file before returning defaults
                 return self.fallback_manager.get_active_state()
         except Exception as e:
             print(f"[DatabaseStateManager] Failed to read active state from DB, falling back to file: {e}")
         return self.fallback_manager.get_active_state()
 
     def save_active_state(self, state: Dict[str, Any]) -> None:
-        try:
-            import src.db as db
-            if db.is_db_active():
-                db.save_active_state(state)
-        except Exception as e:
-            print(f"[DatabaseStateManager] Failed to save active state to DB: {e}")
-        # Mirror to local file (pure filesystem, no second DB write)
+        # Mirror to local file first (pure filesystem, no second DB write)
         self.fallback_manager.save_active_state(state)
+        import src.db as db
+        if db.is_db_active():
+            try:
+                ok = db.save_active_state(state)
+            except Exception as e:
+                print(f"[DatabaseStateManager] Failed to save active state to DB: {e}")
+                raise RuntimeError(f"Failed to persist active state to database (persisted locally only): {e}") from e
+            if not ok:
+                raise RuntimeError("Failed to persist active state to database (persisted locally only)")
 
 
 class BaseDiscoveryStorage(ABC):
@@ -214,7 +213,10 @@ _discovery_storage: Optional[BaseDiscoveryStorage] = None
 
 
 def get_state_manager() -> BaseStateManager:
-    """Returns the globally configured StateManager instance."""
+    """Returns the configured StateManager instance.
+    If an explicit manager was pinned via set_state_manager(), returns it; otherwise
+    dynamically resolves DatabaseStateManager vs FileStateManager from current env and DB state.
+    """
     global _state_manager
     if _state_manager is not None:
         return _state_manager
@@ -232,10 +234,7 @@ def get_state_manager() -> BaseStateManager:
     # Default ("auto"): use DatabaseStateManager when DB is active or running in production, otherwise FileStateManager
     import src.db as db
     from src.incident import resolve_benjamin_env
-    try:
-        is_prod = resolve_benjamin_env() == "production"
-    except Exception:
-        is_prod = False
+    is_prod = resolve_benjamin_env() == "production"
 
     if db.is_db_active() or is_prod:
         return DatabaseStateManager()

@@ -96,8 +96,9 @@ def log_to_gcp_async(client, payload, severity):
     threading.Thread(target=_log, daemon=True).start()
 
 def log_audit_event(incident_context, sender_agent: str, receiver_agent: str, message: str, severity: str = "INFO", context: dict = None):
-    # Determine the log path
-    log_path = os.getenv("BENJAMIN_AUDIT_LOG_PATH", "logs/benjamin-audit.jsonl")
+    # Determine the log path (avoid mutating tracked logs/benjamin-audit.jsonl during pytest runs)
+    default_log_path = "/tmp/benjamin-audit-test.jsonl" if "PYTEST_CURRENT_TEST" in os.environ else "logs/benjamin-audit.jsonl"
+    log_path = os.getenv("BENJAMIN_AUDIT_LOG_PATH", default_log_path)
     
     # Ensure directory exists
     log_dir = os.path.dirname(log_path)

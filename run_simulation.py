@@ -247,15 +247,22 @@ def run_simulation(base_dir: str = None, payload: dict = None) -> tuple[str, str
 def resume_simulation(incident_id: str, approved: bool, base_dir: str = None) -> tuple[str, str]:
     """Resumes a paused SRE simulation based on human-in-the-loop manual dashboard approval or rejection."""
     import re
-    from src.incident import get_investigations_dir
+    from src.incident import get_investigations_dir, validate_incident_id
+    incident_id = validate_incident_id(incident_id)
     base_dir = base_dir or get_investigations_dir()
+    real_base = os.path.realpath(base_dir)
+    real_folder = os.path.realpath(os.path.join(real_base, incident_id))
+    if os.path.commonpath([real_base, real_folder]) != real_base or real_folder == real_base:
+        raise ValueError(f"Invalid incident path for '{incident_id}'")
+
     folder_path = os.path.join(base_dir, incident_id)
     state_path = os.path.join(folder_path, "state.md")
     timeline_path = os.path.join(folder_path, "timeline.md")
     raw_audit_path = os.path.join(folder_path, "raw_audit.jsonl")
     artifacts_dir = os.path.join(folder_path, "artifacts")
+    os.makedirs(artifacts_dir, exist_ok=True)
 
-    # 1. Parse existing state.md to extract metadata
+    # 1. Parse existing state.md (or Cloud SQL DB record if stateless instance) to extract metadata
     status = "UNKNOWN"
     project_id = "UNKNOWN"
     trigger_event = "UNKNOWN"
@@ -275,6 +282,17 @@ def resume_simulation(incident_id: str, approved: bool, base_dir: str = None) ->
         if mutation_match: proposed_command = mutation_match.group(1).strip()
         risk_match = re.search(r'\-\s+\*\*Safety Level:\*\*\s*([A-Za-z0-9_]+)', state_content, re.IGNORECASE)
         if risk_match: max_risk = risk_match.group(1).strip()
+    else:
+        try:
+            import src.db as db
+            if db.is_db_active():
+                db_inc = db.get_incident(incident_id)
+                if db_inc:
+                    status = db_inc.get("status", status)
+                    project_id = db_inc.get("project_id", project_id)
+                    trigger_event = db_inc.get("trigger_event", trigger_event)
+        except Exception:
+            pass
 
     # Re-instantiate agents & channels
     comms = CommunicationsLead()

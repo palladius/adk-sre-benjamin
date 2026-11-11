@@ -193,40 +193,52 @@ def parse_incident_folder(folder_path: str) -> dict:
     return details
 
 
-def resolve_incident(incident_id: str) -> dict:
+def _safe_incident_path(incident_id: str) -> tuple[str, str]:
+    """Validates incident_id and returns (validated_id, safe_folder_path) confined inside get_investigations_dir()."""
+    from src.incident import validate_incident_id
+    validated_id = validate_incident_id(incident_id)
+    inv_dir = get_investigations_dir()
+    base_dir = os.path.realpath(inv_dir)
+    folder_path = os.path.realpath(os.path.join(base_dir, validated_id))
+    if os.path.commonpath([base_dir, folder_path]) != base_dir or folder_path == base_dir:
+        raise ValueError(f"Invalid incident path for '{incident_id}'")
+    return validated_id, os.path.join(inv_dir, validated_id)
+
+
+def resolve_incident(incident_id: str, raise_on_db_error: bool = False) -> dict:
     """Resolves an incident by ID across Cloud SQL DB and local investigations directory.
     Returns the incident dict if found, or None if the incident does not exist.
     Raises ValueError if incident_id is invalid (path traversal, reserved filename, etc.).
     """
-    from src.incident import validate_incident_id
-    incident_id = validate_incident_id(incident_id)
-
-    base_dir = os.path.realpath(get_investigations_dir())
-    folder_path = os.path.realpath(os.path.join(base_dir, incident_id))
-    if os.path.commonpath([base_dir, folder_path]) != base_dir or folder_path == base_dir:
-        raise ValueError(f"Invalid incident path for '{incident_id}'")
+    incident_id, folder_path_rel = _safe_incident_path(incident_id)
+    folder_path = os.path.realpath(folder_path_rel)
 
     import src.db as db
     # Support both real directories with state.md and unit-test mocks of os.path.exists
     if os.path.isdir(folder_path):
         has_local_dir = os.path.exists(os.path.join(folder_path, "state.md"))
     else:
-        has_local_dir = os.path.exists(folder_path) and not os.path.isfile(folder_path)
+        has_local_dir = os.path.exists(folder_path_rel) and not os.path.isfile(folder_path_rel)
 
     if db.is_db_active():
         try:
-            db_details = db.get_incident(incident_id)
+            try:
+                db_details = db.get_incident(incident_id, raise_on_error=raise_on_db_error)
+            except TypeError:
+                db_details = db.get_incident(incident_id)
             if db_details:
-                db_details["folder_path"] = folder_path
+                db_details["folder_path"] = folder_path_rel
                 if has_local_dir:
                     # Merge/sync if local files also exist
-                    return parse_incident_folder(folder_path)
+                    return parse_incident_folder(folder_path_rel)
                 return db_details
         except Exception as e:
             print(f"[Resolve Incident] DB lookup error for {incident_id}: {e}")
+            if raise_on_db_error and not has_local_dir:
+                raise
 
     if has_local_dir:
-        return parse_incident_folder(folder_path)
+        return parse_incident_folder(folder_path_rel)
 
     return None
 
@@ -472,28 +484,36 @@ def set_active_incident(
 def set_active_project(project_id: str, source: str = "Web") -> dict:
     """Atomically updates the active GCP project_id and enforces Q2:
     If the currently active incident belongs to a different known project, clears active incident to 'None'.
+    Preserves active incident during transient database blips rather than wiping it.
     """
     cleaned_proj = validate_project_id(project_id)
     with _ACTIVE_STATE_LOCK:
         state = get_active_state()
         curr_inc_id = state.get("incident_id")
         if curr_inc_id and curr_inc_id != "None":
+            lookup_failed_transiently = False
+            details = None
             try:
-                details = resolve_incident(curr_inc_id)
-            except Exception:
+                details = resolve_incident(curr_inc_id, raise_on_db_error=True)
+            except ValueError:
                 details = None
-            if details:
-                inc_proj = details.get("_explicit_project_id", details.get("project_id", "UNKNOWN"))
-                if inc_proj and inc_proj != "UNKNOWN" and inc_proj != cleaned_proj:
+            except Exception as e:
+                print(f"[set_active_project] Transient error resolving incident '{curr_inc_id}', preserving active incident: {e}")
+                lookup_failed_transiently = True
+
+            if not lookup_failed_transiently:
+                if details:
+                    inc_proj = details.get("_explicit_project_id", details.get("project_id", "UNKNOWN"))
+                    if inc_proj and inc_proj != "UNKNOWN" and inc_proj != cleaned_proj:
+                        state["incident_id"] = "None"
+                        state["incident_status"] = "NEW"
+                        state["substatus_rca"] = False
+                        state["substatus_mitigated"] = False
+                        state["substatus_fixed"] = False
+                        state["substatus_verified"] = False
+                else:
                     state["incident_id"] = "None"
                     state["incident_status"] = "NEW"
-                    state["substatus_rca"] = False
-                    state["substatus_mitigated"] = False
-                    state["substatus_fixed"] = False
-                    state["substatus_verified"] = False
-            else:
-                state["incident_id"] = "None"
-                state["incident_status"] = "NEW"
 
         state["project_id"] = cleaned_proj
         save_active_state(state)
@@ -538,7 +558,10 @@ def save_chat_data(incident_id: str, incident_path: str, chat_data: list):
 
 # Mutation Queue Backend Helper Functions
 def add_pending_mutation(incident_id: str, command: str, risk_factor: str, risk_reason: str, justification: str) -> dict:
-    incident_path = os.path.join(get_investigations_dir(), incident_id)
+    incident_id, incident_path = _safe_incident_path(incident_id)
+    if not resolve_incident(incident_id):
+        raise LookupError(f"Incident '{incident_id}' not found")
+    os.makedirs(incident_path, exist_ok=True)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     
     queue = []
@@ -595,7 +618,7 @@ def add_pending_mutation(incident_id: str, command: str, risk_factor: str, risk_
     return new_item
 
 def update_state_markdown_table(incident_id: str, queue: list[dict]):
-    incident_path = os.path.join(get_investigations_dir(), incident_id)
+    incident_id, incident_path = _safe_incident_path(incident_id)
     state_path = os.path.join(incident_path, "state.md")
     if not os.path.exists(state_path):
         return
@@ -635,7 +658,7 @@ def update_state_markdown_table(incident_id: str, queue: list[dict]):
         print(f"[Server] Failed to update state.md with mutation queue: {e}")
 
 def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", sender: str = "Web Dashboard") -> bool:
-    incident_path = os.path.join(get_investigations_dir(), incident_id)
+    incident_id, incident_path = _safe_incident_path(incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     if not os.path.exists(pending_path):
         return False
@@ -711,7 +734,7 @@ def approve_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", s
     return True
 
 def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", sender: str = "Web Dashboard") -> bool:
-    incident_path = os.path.join(get_investigations_dir(), incident_id)
+    incident_id, incident_path = _safe_incident_path(incident_id)
     pending_path = os.path.join(incident_path, "pending_approvals.json")
     if not os.path.exists(pending_path):
         return False
@@ -739,14 +762,7 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", se
     save_mutation_comment(incident_path, target_item.get("command"), "reject", comment)
     
     command = target_item.get("command")
-    chat_path = os.path.join(incident_path, "chat.json")
-    chat_data = []
-    if os.path.exists(chat_path):
-        try:
-            with open(chat_path, "r") as f:
-                chat_data = json.load(f)
-        except Exception:
-            pass
+    chat_data = load_chat_data(incident_id, incident_path)
             
     chat_data.append({
         "sender": f"Operator ({sender})",
@@ -759,8 +775,7 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", se
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     
-    with open(chat_path, "w") as f:
-        json.dump(chat_data, f, indent=2)
+    save_chat_data(incident_id, incident_path, chat_data)
         
     log_timeline_event(incident_path, f"Operator ({sender})", f"Rejected proposed mutation command '{command}'." + (f" Comment: {comment}" if comment else ""))
     log_timeline_event(incident_path, "Communications Lead Madhavi", f"Safety clearance REJECTED by human operator for command: {command}.")
@@ -793,18 +808,28 @@ def reject_pending_mutation(incident_id: str, cmd_id: str, comment: str = "", se
 
 def update_incident_status_in_state_md(incident_path: str, new_status: str):
     state_path = os.path.join(incident_path, "state.md")
-    if not os.path.exists(state_path):
-        return
+    if os.path.exists(state_path):
+        try:
+            with open(state_path, "r") as f:
+                content = f.read()
+            pattern = r'(\-\s+\*\*Status:\*\*\s*)([A-Za-z0-9_-]+)'
+            if re.search(pattern, content, re.IGNORECASE):
+                content = re.sub(pattern, r'\g<1>' + new_status, content, flags=re.IGNORECASE)
+                with open(state_path, "w") as f:
+                    f.write(content)
+        except Exception as e:
+            print(f"Failed to update status in state.md: {e}")
+
     try:
-        with open(state_path, "r") as f:
-            content = f.read()
-        pattern = r'(\-\s+\*\*Status:\*\*\s*)([A-Za-z0-9_-]+)'
-        if re.search(pattern, content, re.IGNORECASE):
-            content = re.sub(pattern, r'\g<1>' + new_status, content, flags=re.IGNORECASE)
-            with open(state_path, "w") as f:
-                f.write(content)
+        import src.db as db
+        if db.is_db_active():
+            incident_id = os.path.basename(incident_path)
+            inc = db.get_incident(incident_id)
+            if inc:
+                inc["status"] = new_status
+                db.save_incident(inc)
     except Exception as e:
-        print(f"Failed to update status in state.md: {e}")
+        print(f"Failed to update status in DB: {e}")
 
 def log_timeline_event(incident_path: str, agent_name: str, message: str):
     timeline_path = os.path.join(incident_path, "timeline.md")
@@ -1536,14 +1561,13 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 }
 
                 if "incident_id" in payload:
-                    has_full_coords = ("project_id" in payload and "incident_status" in payload)
                     state = set_active_incident(
                         payload["incident_id"],
                         source="Web API",
                         explicit_project_id=payload.get("project_id"),
                         explicit_status=payload.get("incident_status"),
                         substatus_overrides=sub_overrides,
-                        require_existing=not has_full_coords,
+                        require_existing=True,
                     )
                 elif "project_id" in payload:
                     state = set_active_project(payload["project_id"], source="Web API")
@@ -1580,6 +1604,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
+            except RuntimeError as re_err:
+                self.send_response(503)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(re_err), "persisted_locally": True}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1664,7 +1693,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 incident_id = urllib.parse.unquote(path.split("/")[3])
                 details = resolve_incident(incident_id)
                 if details:
-                    incident_path = os.path.join(get_investigations_dir(), incident_id)
+                    incident_id, incident_path = _safe_incident_path(incident_id)
                     if set_incident_archived(incident_path, True):
                         with _ACTIVE_STATE_LOCK:
                             state = get_active_state()
@@ -1702,7 +1731,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and path.endswith("/select"):
             try:
                 incident_id = urllib.parse.unquote(path.split("/")[3])
-                state = set_active_incident(incident_id, source="Web Dashboard")
+                state = set_active_incident(incident_id, source="Web Dashboard", require_existing=True)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
@@ -1717,6 +1746,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
+            except RuntimeError as re_err:
+                self.send_response(503)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(re_err), "persisted_locally": True}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1728,9 +1762,15 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and "/pending" in path:
             try:
                 parts = path.split("/")
-                incident_id = parts[3]
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if not os.path.exists(incident_path):
+                if len(parts) not in (5, 7) or parts[4] != "pending":
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Invalid mutation queue endpoint path"}).encode("utf-8"))
+                    return
+                incident_id = urllib.parse.unquote(parts[3])
+                details = resolve_incident(incident_id)
+                if not details:
                     self.send_response(404)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
@@ -1739,7 +1779,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 
                 # Check for: POST /api/incidents/<id>/pending/<cmd_id>/approve
                 if len(parts) == 7 and parts[4] == "pending" and parts[6] == "approve":
-                    cmd_id = parts[5]
+                    cmd_id = urllib.parse.unquote(parts[5])
                     content_length = int(self.headers.get('Content-Length', 0))
                     post_data = self.rfile.read(content_length) if content_length > 0 else b"{}"
                     try:
@@ -1762,7 +1802,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     
                 # Check for: POST /api/incidents/<id>/pending/<cmd_id>/reject
                 elif len(parts) == 7 and parts[4] == "pending" and parts[6] == "reject":
-                    cmd_id = parts[5]
+                    cmd_id = urllib.parse.unquote(parts[5])
                     content_length = int(self.headers.get('Content-Length', 0))
                     post_data = self.rfile.read(content_length) if content_length > 0 else b"{}"
                     try:
@@ -1807,7 +1847,24 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.end_headers()
                     self.wfile.write(json.dumps(new_item).encode("utf-8"))
                     return
-                    
+                else:
+                    self.send_response(400)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(json.dumps({"error": "Invalid mutation queue endpoint action"}).encode("utf-8"))
+                    return
+            except LookupError as le:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(le)}).encode("utf-8"))
+                return
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
+                return
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1818,9 +1875,13 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # API: Force override paused safety gate mutation
         elif path.startswith("/api/incidents/") and path.endswith("/override"):
             try:
-                incident_id = path.split("/")[3]
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if os.path.exists(incident_path):
+                parts = path.split("/")
+                if len(parts) != 5:
+                    raise ValueError("Invalid override endpoint path")
+                incident_id = urllib.parse.unquote(parts[3])
+                existing = resolve_incident(incident_id)
+                if existing:
+                    incident_id, incident_path = _safe_incident_path(incident_id)
                     resume_simulation(incident_id, approved=True)
                     
                     # 1. Sync operator's response in chat.json
@@ -1854,7 +1915,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             )
                             send_telegram_menu(bot_token, chat_id, msg)
                             
-                    details = parse_incident_folder(incident_path)
+                    details = resolve_incident(incident_id) or parse_incident_folder(incident_path)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
@@ -1864,6 +1925,16 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except LookupError as le:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(le)}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1874,9 +1945,13 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # 5. API: Approve paused safety gate mutation
         elif path.startswith("/api/incidents/") and path.endswith("/approve"):
             try:
-                incident_id = path.split("/")[3]
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if os.path.exists(incident_path):
+                parts = path.split("/")
+                if len(parts) != 5:
+                    raise ValueError("Invalid approve endpoint path")
+                incident_id = urllib.parse.unquote(parts[3])
+                existing = resolve_incident(incident_id)
+                if existing:
+                    incident_id, incident_path = _safe_incident_path(incident_id)
                     resume_simulation(incident_id, approved=True)
                     
                     # 1. Sync operator's response in chat.json
@@ -1910,7 +1985,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             )
                             send_telegram_menu(bot_token, chat_id, msg)
                             
-                    details = parse_incident_folder(incident_path)
+                    details = resolve_incident(incident_id) or parse_incident_folder(incident_path)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
@@ -1920,18 +1995,33 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except LookupError as le:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(le)}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
                 
         # 6. API: Reject paused safety gate mutation
         elif path.startswith("/api/incidents/") and path.endswith("/reject"):
             try:
-                incident_id = path.split("/")[3]
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if os.path.exists(incident_path):
+                parts = path.split("/")
+                if len(parts) != 5:
+                    raise ValueError("Invalid reject endpoint path")
+                incident_id = urllib.parse.unquote(parts[3])
+                existing = resolve_incident(incident_id)
+                if existing:
+                    incident_id, incident_path = _safe_incident_path(incident_id)
                     resume_simulation(incident_id, approved=False)
                     
                     # 1. Sync operator's response in chat.json
@@ -1965,7 +2055,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                             )
                             send_telegram_menu(bot_token, chat_id, msg)
                             
-                    details = parse_incident_folder(incident_path)
+                    details = resolve_incident(incident_id) or parse_incident_folder(incident_path)
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
@@ -1975,11 +2065,22 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except LookupError as le:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(le)}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": str(e)}).encode("utf-8"))
+            return
         
         # API: Save Custom Wiki for a Project
         elif path.startswith("/api/projects/") and path.endswith("/wiki"):
@@ -2055,10 +2156,13 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # 6. API: Contextual Chat Message Posting
         elif path.startswith("/api/incidents/") and path.endswith("/chat"):
             try:
-                incident_id = path.split("/")[3]
+                parts = path.split("/")
+                if len(parts) != 5:
+                    raise ValueError("Invalid chat endpoint path")
+                incident_id = urllib.parse.unquote(parts[3])
                 details = resolve_incident(incident_id)
                 if details:
-                    incident_path = os.path.join(get_investigations_dir(), incident_id)
+                    incident_id, incident_path = _safe_incident_path(incident_id)
                     content_length = int(self.headers.get('Content-Length', 0))
                     post_data = self.rfile.read(content_length)
                     payload = json.loads(post_data.decode("utf-8"))
@@ -2168,6 +2272,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -2179,28 +2288,32 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
 def get_incidents_list() -> list[dict]:
-    """Helper to query all active (non-archived) incidents inside DB or investigations/ directory."""
+    """Helper to query all active (non-archived) incidents inside DB and/or investigations/ directory."""
     import src.db as db
+    import os
+    merged: dict[str, dict] = {}
     if db.is_db_active():
         db_list = db.list_incidents() or []
-        return [inc for inc in db_list if not inc.get("archived", False)]
-    import os
-    incidents = []
+        for inc in db_list:
+            inc_id = inc.get("id")
+            if inc_id:
+                merged[inc_id] = inc
     inv_dir = get_investigations_dir()
     if os.path.exists(inv_dir):
         for folder in sorted(os.listdir(inv_dir)):
+            if folder in merged:
+                continue
             folder_path = os.path.join(inv_dir, folder)
             if os.path.isdir(folder_path) and os.path.isfile(os.path.join(folder_path, "state.md")):
                 details = parse_incident_folder(folder_path)
-                if not details.get("archived", False):
-                    incidents.append({
-                        "id": folder,
-                        "status": details.get("status", "UNKNOWN"),
-                        "project_id": details.get("project_id", "UNKNOWN"),
-                        "trigger_event": details.get("trigger_event", "UNKNOWN"),
-                        "archived": False
-                    })
-    return incidents
+                merged[folder] = {
+                    "id": folder,
+                    "status": details.get("status", "UNKNOWN"),
+                    "project_id": details.get("project_id", "UNKNOWN"),
+                    "trigger_event": details.get("trigger_event", "UNKNOWN"),
+                    "archived": bool(details.get("archived", False)),
+                }
+    return [inc for inc in merged.values() if not inc.get("archived", False)]
 
 def transcribe_voice_bytes(audio_bytes: bytes) -> str:
     """Helper to transcribe small voice notes/audio files using the live Gemini API with zero dependencies."""
@@ -2299,33 +2412,38 @@ def get_discovered_projects() -> list[str]:
     return projects
 
 def get_top_5_incidents() -> list[dict]:
-    """Helper to query the 5 most recent active (non-archived) incidents inside investigations/ directory."""
+    """Helper to query the 5 most recent active (non-archived) incidents inside DB and/or investigations/ directory."""
     import src.db as db
+    merged: dict[str, dict] = {}
     if db.is_db_active():
         res = db.get_top_5_incidents()
-        if res is not None:
-            return res
-    incidents = []
+        if res:
+            for inc in res:
+                inc_id = inc.get("id")
+                if inc_id:
+                    merged[inc_id] = inc
     incidents_dir = get_investigations_dir()
     if os.path.exists(incidents_dir):
         folders = [f for f in os.listdir(incidents_dir) if f.startswith("INC-")]
         folders.sort(reverse=True)
         for folder in folders:
-            if len(incidents) >= 5:
-                break
+            if folder in merged:
+                continue
             folder_path = os.path.join(incidents_dir, folder)
             if os.path.isdir(folder_path) and os.path.isfile(os.path.join(folder_path, "state.md")):
                 details = parse_incident_folder(folder_path)
                 if not details.get("archived", False):
-                    incidents.append({
+                    merged[folder] = {
                         "id": folder,
                         "status": details.get("status", "UNKNOWN").upper(),
                         "substatus_rca": details.get("substatus_rca", False),
                         "substatus_mitigated": details.get("substatus_mitigated", False),
                         "substatus_fixed": details.get("substatus_fixed", False),
-                        "substatus_verified": details.get("substatus_verified", False)
-                    })
-    return incidents
+                        "substatus_verified": details.get("substatus_verified", False),
+                    }
+    items = list(merged.values())
+    items.sort(key=lambda x: str(x.get("id", "")), reverse=True)
+    return items[:5]
 
 def send_telegram_inline_keyboard(bot_token: str, chat_id: str, text: str, buttons: list[list[dict]]):
     """Dispatches a Telegram message containing inline keyboard buttons."""
@@ -2617,11 +2735,13 @@ def start_telegram_bot():
                                             pass
                                             
                                     from src.incident import IncidentStatus
-                                    state = get_active_state()
-                                    state["incident_id"] = inc_id
-                                    state["project_id"] = proj_id
-                                    state["incident_status"] = IncidentStatus.ONGOING.value
-                                    save_active_state(state)
+                                    state = set_active_incident(
+                                        inc_id,
+                                        source="Telegram",
+                                        explicit_project_id=proj_id,
+                                        explicit_status=IncidentStatus.ONGOING.value,
+                                        require_existing=False,
+                                    )
                                     
                                     conf_msg = (
                                         f"✅ *SRE Investigation Started: {inc_id}*\n\n"
@@ -2764,11 +2884,13 @@ def start_telegram_bot():
                                         pass
                                         
                                 from src.incident import IncidentStatus
-                                state = get_active_state()
-                                state["incident_id"] = inc_id
-                                state["project_id"] = resolved_proj
-                                state["incident_status"] = IncidentStatus.ONGOING.value
-                                save_active_state(state)
+                                state = set_active_incident(
+                                    inc_id,
+                                    source="Telegram",
+                                    explicit_project_id=resolved_proj,
+                                    explicit_status=IncidentStatus.ONGOING.value,
+                                    require_existing=False,
+                                )
                                 
                                 conf_msg = (
                                     f"✅ *SRE Investigation Started: {inc_id}*\n\n"
@@ -3057,18 +3179,21 @@ def start_telegram_bot():
                             if matched_id:
                                 target_inc = matched_id
                                 
-                            details = resolve_incident(target_inc)
-                            if details:
-                                target_inc_path = os.path.join(get_investigations_dir(), target_inc)
-                                if set_incident_archived(target_inc_path, True):
-                                    send_raw_telegram_message(bot_token, chat_id, f"✅ Incident `{target_inc}` has been successfully archived.")
-                                    if selected_incident_id == target_inc:
-                                        set_active_incident("None", source="Telegram")
-                                        selected_incident_id = "None"
+                            try:
+                                details = resolve_incident(target_inc)
+                                if details:
+                                    target_inc, target_inc_path = _safe_incident_path(target_inc)
+                                    if set_incident_archived(target_inc_path, True):
+                                        send_raw_telegram_message(bot_token, chat_id, f"✅ Incident `{target_inc}` has been successfully archived.")
+                                        if selected_incident_id == target_inc:
+                                            set_active_incident("None", source="Telegram")
+                                            selected_incident_id = "None"
+                                    else:
+                                        send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to archive incident `{target_inc}`.")
                                 else:
-                                    send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to archive incident `{target_inc}`.")
-                            else:
-                                send_raw_telegram_message(bot_token, chat_id, f"❌ Incident `{target_inc}` not found in repository.")
+                                    send_raw_telegram_message(bot_token, chat_id, f"❌ Incident `{target_inc}` not found in repository.")
+                            except ValueError as e:
+                                send_raw_telegram_message(bot_token, chat_id, f"❌ {e}")
                             continue
 
                         elif msg_text.startswith("/incident") or msg_text.startswith("/select"):
@@ -3339,9 +3464,13 @@ def run_auto_archive_loop():
         time.sleep(interval)
 
 def run_server(port=8080):
+    from src.incident import resolve_benjamin_env
+    resolve_benjamin_env()
     try:
         from src.db import init_db
         init_db()
+    except ValueError:
+        raise
     except Exception as e:
         print(f"[Database Startup] Failed to initialize DB pool: {e}")
     try:
