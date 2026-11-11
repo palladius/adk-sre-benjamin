@@ -1,7 +1,21 @@
 import os
 import json
+import tempfile
 from abc import ABC, abstractmethod
 from typing import Dict, List, Any, Optional, Callable
+
+
+def _default_active_state() -> Dict[str, Any]:
+    return {
+        "project_id": os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next",
+        "incident_id": "None",
+        "incident_status": "NEW",
+        "substatus_rca": False,
+        "substatus_mitigated": False,
+        "substatus_fixed": False,
+        "substatus_verified": False,
+    }
+
 
 class BaseStateManager(ABC):
     """Abstract base class for state management."""
@@ -16,80 +30,69 @@ class BaseStateManager(ABC):
         """Saves updated active state coordinates."""
         pass
 
+
 class FileStateManager(BaseStateManager):
-    """Local filesystem backend for state management."""
+    """Pure local filesystem backend for state management with atomic writes."""
 
     def __init__(self, state_file_path_resolver: Optional[Callable[[], str]] = None):
         """Initializes FileStateManager with an optional path resolver."""
         self.state_file_path_resolver = state_file_path_resolver
 
     def get_state_file_path(self) -> str:
-        """Resolves the absolute path to the active state JSON file."""
+        """Resolves the path to the active state JSON file."""
         if self.state_file_path_resolver:
             return self.state_file_path_resolver()
-        
+
         try:
             import src.server
             return src.server.get_active_state_file()
         except (ImportError, AttributeError):
             pass
 
-        # Fallback to dynamic resolution
         from src.incident import get_investigations_dir
         return os.path.join(get_investigations_dir(), "active_state.json")
 
     def get_active_state(self) -> Dict[str, Any]:
-        """Loads active state coordinates from the state file, falling back to defaults."""
-        default_state = {
-            "project_id": os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next",
-            "incident_id": "None",
-            "incident_status": "NEW",
-            "substatus_rca": False,
-            "substatus_mitigated": False,
-            "substatus_fixed": False,
-            "substatus_verified": False
-        }
-        
-        try:
-            import src.db as db
-            if db.is_db_active():
-                return db.get_active_state(default_state)
-        except Exception as e:
-            print(f"[Active State DB] Failed to read active state from DB: {e}")
-
+        """Loads active state coordinates strictly from the local state file, falling back to defaults."""
+        default_state = _default_active_state()
         active_state_file = self.get_state_file_path()
         if os.path.exists(active_state_file):
             try:
                 with open(active_state_file, "r") as f:
                     data = json.load(f)
-                    # Ensure all required keys exist
+                if isinstance(data, dict):
                     for key, val in default_state.items():
                         if key not in data:
                             data[key] = val
                     return data
             except Exception as e:
                 print(f"[Active State] Failed to read active state file: {e}")
-                
+
         return default_state
 
     def save_active_state(self, state: Dict[str, Any]) -> None:
-        """Saves updated active state coordinates to the active state json file."""
-        try:
-            import src.db as db
-            if db.is_db_active():
-                db.save_active_state(state)
-        except Exception as e:
-            print(f"[Active State DB] Failed to save active state to DB: {e}")
-
+        """Atomically writes updated active state coordinates to the active state JSON file."""
         active_state_file = self.get_state_file_path()
-        dir_name = os.path.dirname(active_state_file)
+        dir_name = os.path.dirname(os.path.abspath(active_state_file))
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
         try:
-            with open(active_state_file, "w") as f:
-                json.dump(state, f, indent=2)
+            fd, tmp_path = tempfile.mkstemp(prefix=".active_state_", suffix=".tmp", dir=dir_name or ".")
+            try:
+                with os.fdopen(fd, "w") as f:
+                    json.dump(state, f, indent=2)
+                    f.flush()
+                os.replace(tmp_path, active_state_file)
+            except Exception:
+                if os.path.exists(tmp_path):
+                    try:
+                        os.unlink(tmp_path)
+                    except OSError:
+                        pass
+                raise
         except Exception as e:
             print(f"[Active State] Failed to write active state file: {e}")
+
 
 class DatabaseStateManager(BaseStateManager):
     """Database backend (Cloud SQL PostgreSQL) for state management with local filesystem fallback."""
@@ -98,21 +101,24 @@ class DatabaseStateManager(BaseStateManager):
         self.fallback_manager = fallback_manager or FileStateManager()
 
     def get_active_state(self) -> Dict[str, Any]:
-        default_state = {
-            "project_id": os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next",
-            "incident_id": "None",
-            "incident_status": "NEW",
-            "substatus_rca": False,
-            "substatus_mitigated": False,
-            "substatus_fixed": False,
-            "substatus_verified": False
-        }
+        default_state = _default_active_state()
         try:
             import src.db as db
             if db.is_db_active():
-                return db.get_active_state(default_state)
+                try:
+                    res = db.get_active_state(None, raise_on_error=True)
+                except TypeError:
+                    # Compatibility if db.get_active_state was mocked with a 1-arg signature
+                    res = db.get_active_state(default_state)
+                if res is not None:
+                    for key, val in default_state.items():
+                        if key not in res:
+                            res[key] = val
+                    return res
+                # Row not yet in DB: check fallback file before returning defaults
+                return self.fallback_manager.get_active_state()
         except Exception as e:
-            print(f"[DatabaseStateManager] Failed to read active state from DB: {e}")
+            print(f"[DatabaseStateManager] Failed to read active state from DB, falling back to file: {e}")
         return self.fallback_manager.get_active_state()
 
     def save_active_state(self, state: Dict[str, Any]) -> None:
@@ -122,8 +128,9 @@ class DatabaseStateManager(BaseStateManager):
                 db.save_active_state(state)
         except Exception as e:
             print(f"[DatabaseStateManager] Failed to save active state to DB: {e}")
-        # Always mirror to fallback manager for local resiliency
+        # Mirror to local file (pure filesystem, no second DB write)
         self.fallback_manager.save_active_state(state)
+
 
 class BaseDiscoveryStorage(ABC):
     """Abstract base class for discovery storage."""
@@ -143,6 +150,7 @@ class BaseDiscoveryStorage(ABC):
         """Loads discovery markdown/wiki content for the project."""
         pass
 
+
 class FileDiscoveryStorage(BaseDiscoveryStorage):
     """Local filesystem backend for discovery storage."""
 
@@ -154,7 +162,7 @@ class FileDiscoveryStorage(BaseDiscoveryStorage):
         """Resolves the base discovery directory."""
         if self.discover_dir_resolver:
             return self.discover_dir_resolver()
-        
+
         from src.incident import get_discover_dir
         return get_discover_dir()
 
@@ -166,7 +174,7 @@ class FileDiscoveryStorage(BaseDiscoveryStorage):
         """Saves discovery JSON and Markdown data locally."""
         project_dir = self.get_project_dir(project_id)
         os.makedirs(project_dir, exist_ok=True)
-        
+
         json_path = os.path.join(project_dir, "discover.json")
         with open(json_path, "w") as f:
             json.dump(resources, f, indent=2)
@@ -204,23 +212,41 @@ class FileDiscoveryStorage(BaseDiscoveryStorage):
 _state_manager: Optional[BaseStateManager] = None
 _discovery_storage: Optional[BaseDiscoveryStorage] = None
 
+
 def get_state_manager() -> BaseStateManager:
     """Returns the globally configured StateManager instance."""
     global _state_manager
-    if _state_manager is None:
-        backend = os.getenv("STORAGE_BACKEND_STATE", "local").lower()
+    if _state_manager is not None:
+        return _state_manager
+
+    raw_backend = os.getenv("STORAGE_BACKEND_STATE")
+    if raw_backend is not None:
+        backend = raw_backend.strip().lower()
         if backend in ("local", "file", "filesystem"):
-            _state_manager = FileStateManager()
-        elif backend in ("db", "database", "postgres", "postgresql", "cloud"):
-            _state_manager = DatabaseStateManager()
+            return FileStateManager()
+        elif backend in ("db", "database", "postgres", "postgresql", "cloud", "auto"):
+            return DatabaseStateManager()
         else:
             raise ValueError(f"Unknown state storage backend: {backend}")
-    return _state_manager
 
-def set_state_manager(manager: BaseStateManager) -> None:
+    # Default ("auto"): use DatabaseStateManager when DB is active or running in production, otherwise FileStateManager
+    import src.db as db
+    from src.incident import resolve_benjamin_env
+    try:
+        is_prod = resolve_benjamin_env() == "production"
+    except Exception:
+        is_prod = False
+
+    if db.is_db_active() or is_prod:
+        return DatabaseStateManager()
+    return FileStateManager()
+
+
+def set_state_manager(manager: Optional[BaseStateManager]) -> None:
     """Explicitly sets the global StateManager instance."""
     global _state_manager
     _state_manager = manager
+
 
 def get_discovery_storage() -> BaseDiscoveryStorage:
     """Returns the globally configured DiscoveryStorage instance."""
@@ -233,7 +259,8 @@ def get_discovery_storage() -> BaseDiscoveryStorage:
             raise ValueError(f"Unknown discovery storage backend: {backend}")
     return _discovery_storage
 
-def set_discovery_storage(storage: BaseDiscoveryStorage) -> None:
+
+def set_discovery_storage(storage: Optional[BaseDiscoveryStorage]) -> None:
     """Explicitly sets the global DiscoveryStorage instance."""
     global _discovery_storage
     _discovery_storage = storage

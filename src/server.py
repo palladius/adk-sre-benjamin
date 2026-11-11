@@ -132,6 +132,7 @@ def parse_incident_filesystem(folder_path: str) -> dict:
         except Exception as e:
             print(f"Error loading artifacts_registry.json in {folder_path}: {e}")
             
+    explicit_project_id = project_id if (project_id and project_id != "UNKNOWN") else "UNKNOWN"
     if not project_id or project_id == "UNKNOWN":
         project_id = os.getenv("PROJECT_ID") or os.getenv("GCP_PROJECT_ID") or "sre-next"
 
@@ -147,6 +148,7 @@ def parse_incident_filesystem(folder_path: str) -> dict:
         "substatus_fixed": substatus_fixed,
         "substatus_verified": substatus_verified,
         "project_id": project_id,
+        "_explicit_project_id": explicit_project_id,
         "domain_id": domain_id,
         "trigger_event": trigger_event,
         "incident_uuid": incident_uuid,
@@ -160,60 +162,120 @@ def parse_incident_folder(folder_path: str) -> dict:
     """Parses Scribe files inside an incident folder to return structured JSON, with DB caching/sync."""
     import src.db as db
     incident_id = os.path.basename(folder_path)
-    
-    # 1. Parse filesystem version
+    state_path = os.path.join(folder_path, "state.md")
+    has_local_state = os.path.isdir(folder_path) and os.path.isfile(state_path)
+
+    # 1. If local state.md does not exist on this instance, check DB first without overwriting DB
+    if not has_local_state and db.is_db_active():
+        try:
+            db_details = db.get_incident(incident_id)
+            if db_details:
+                db_details["folder_path"] = folder_path
+                return db_details
+        except Exception as e:
+            print(f"[Incident DB] Failed to fetch incident from DB: {e}")
+
+    # 2. Parse filesystem version
     details = parse_incident_filesystem(folder_path)
-    
-    # 2. If DB is active, sync filesystem version to DB and return DB version (canonical)
-    if db.is_db_active():
+
+    # 3. If DB is active and local state exists, sync filesystem version to DB and return DB version
+    if db.is_db_active() and has_local_state:
         try:
             db.save_incident(details)
             db_details = db.get_incident(incident_id)
             if db_details:
-                # Add folder_path to details as it is not stored in DB but required by server logic
                 db_details["folder_path"] = folder_path
+                db_details["_explicit_project_id"] = details.get("_explicit_project_id", db_details.get("project_id", "UNKNOWN"))
                 return db_details
         except Exception as e:
             print(f"[Incident DB] Failed to sync incident to DB: {e}")
-            
+
     return details
 
+
+def resolve_incident(incident_id: str) -> dict:
+    """Resolves an incident by ID across Cloud SQL DB and local investigations directory.
+    Returns the incident dict if found, or None if the incident does not exist.
+    Raises ValueError if incident_id is invalid (path traversal, reserved filename, etc.).
+    """
+    from src.incident import validate_incident_id
+    incident_id = validate_incident_id(incident_id)
+
+    base_dir = os.path.realpath(get_investigations_dir())
+    folder_path = os.path.realpath(os.path.join(base_dir, incident_id))
+    if os.path.commonpath([base_dir, folder_path]) != base_dir or folder_path == base_dir:
+        raise ValueError(f"Invalid incident path for '{incident_id}'")
+
+    import src.db as db
+    # Support both real directories with state.md and unit-test mocks of os.path.exists
+    if os.path.isdir(folder_path):
+        has_local_dir = os.path.exists(os.path.join(folder_path, "state.md"))
+    else:
+        has_local_dir = os.path.exists(folder_path) and not os.path.isfile(folder_path)
+
+    if db.is_db_active():
+        try:
+            db_details = db.get_incident(incident_id)
+            if db_details:
+                db_details["folder_path"] = folder_path
+                if has_local_dir:
+                    # Merge/sync if local files also exist
+                    return parse_incident_folder(folder_path)
+                return db_details
+        except Exception as e:
+            print(f"[Resolve Incident] DB lookup error for {incident_id}: {e}")
+
+    if has_local_dir:
+        return parse_incident_folder(folder_path)
+
+    return None
+
 def set_incident_archived(folder_path: str, archived: bool = True) -> bool:
-    """Updates the 'Archived' metadata property in the incident's state.md file."""
+    """Updates the 'Archived' metadata property in the incident's state.md file and/or Cloud SQL DB."""
+    import src.db as db
+    incident_id = os.path.basename(folder_path)
     state_path = os.path.join(folder_path, "state.md")
-    if not os.path.exists(state_path):
-        return False
-    try:
-        with open(state_path, "r") as f:
-            content = f.read()
-        
-        # Check if Archived line already exists
-        pattern = r'(\-\s+\*\*Archived:\*\*\s*)([A-Za-z0-9_]+)'
-        if re.search(pattern, content, re.IGNORECASE):
-            # Replace existing value
-            new_val = "true" if archived else "false"
-            content = re.sub(pattern, r'\g<1>' + new_val, content, flags=re.IGNORECASE)
-        else:
-            # Insert after the ## Metadata line
-            metadata_header = "## Metadata"
-            if metadata_header in content:
-                insert_idx = content.find(metadata_header) + len(metadata_header)
-                # Find end of metadata_header line
-                eol = content.find("\n", insert_idx)
-                if eol == -1:
-                    content += f"\n- **Archived:** {'true' if archived else 'false'}"
-                else:
-                    content = content[:eol] + f"\n- **Archived:** {'true' if archived else 'false'}" + content[eol:]
+    updated = False
+    if os.path.exists(state_path):
+        try:
+            with open(state_path, "r") as f:
+                content = f.read()
+            
+            # Check if Archived line already exists
+            pattern = r'(\-\s+\*\*Archived:\*\*\s*)([A-Za-z0-9_]+)'
+            if re.search(pattern, content, re.IGNORECASE):
+                new_val = "true" if archived else "false"
+                content = re.sub(pattern, r'\g<1>' + new_val, content, flags=re.IGNORECASE)
             else:
-                # Fallback to appending
-                content += f"\n- **Archived:** {'true' if archived else 'false'}"
-        
-        with open(state_path, "w") as f:
-            f.write(content)
-        return True
-    except Exception as e:
-        print(f"Error archiving incident {folder_path}: {e}")
-        return False
+                metadata_header = "## Metadata"
+                if metadata_header in content:
+                    insert_idx = content.find(metadata_header) + len(metadata_header)
+                    eol = content.find("\n", insert_idx)
+                    if eol == -1:
+                        content += f"\n- **Archived:** {'true' if archived else 'false'}"
+                    else:
+                        content = content[:eol] + f"\n- **Archived:** {'true' if archived else 'false'}" + content[eol:]
+                else:
+                    content += f"\n- **Archived:** {'true' if archived else 'false'}"
+            
+            with open(state_path, "w") as f:
+                f.write(content)
+            updated = True
+        except Exception as e:
+            print(f"Error archiving incident {folder_path}: {e}")
+            return False
+
+    if db.is_db_active():
+        try:
+            inc = db.get_incident(incident_id)
+            if inc:
+                inc["archived"] = archived
+                if db.save_incident(inc):
+                    updated = True
+        except Exception as e:
+            print(f"Error archiving incident in DB {incident_id}: {e}")
+
+    return updated
 
 def get_incident_date(incident_id: str):
     """Extracts date from incident ID (INC-YYYYMMDD-xxxx)."""
@@ -259,8 +321,21 @@ def get_commander_name() -> str:
     """Gets the Incident Commander name from environment variables, defaulting to 'Benjamin'."""
     return os.getenv("COMMANDER_NAME") or os.getenv("INCIDENT_COMMANDER_NAME") or "Benjamin"
 
+import threading
+
 ACTIVE_STATE_FILE = "investigations/active_state.json"
 session_states = {}
+_ACTIVE_STATE_LOCK = threading.RLock()
+PROJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+
+
+def validate_project_id(project_id: str) -> str:
+    if not isinstance(project_id, str):
+        raise ValueError("Project ID must be a string.")
+    cleaned = project_id.strip()
+    if not cleaned or not PROJECT_ID_PATTERN.match(cleaned):
+        raise ValueError(f"Invalid project_id '{project_id}'.")
+    return cleaned
 
 
 def get_active_state_file() -> str:
@@ -270,14 +345,159 @@ def get_active_state_file() -> str:
     return os.path.join(get_investigations_dir(), "active_state.json")
 
 def get_active_state() -> dict:
-    """Loads active state coordinates from the state file, falling back to defaults."""
+    """Loads active state coordinates from the state manager, falling back to defaults."""
     from src.storage import get_state_manager
-    return get_state_manager().get_active_state()
+    with _ACTIVE_STATE_LOCK:
+        return get_state_manager().get_active_state()
 
 def save_active_state(state: dict):
-    """Saves updated active state coordinates to the active state json file."""
+    """Saves updated active state coordinates via the state manager."""
     from src.storage import get_state_manager
-    get_state_manager().save_active_state(state)
+    with _ACTIVE_STATE_LOCK:
+        get_state_manager().save_active_state(state)
+
+
+def _notify_incident_switch(incident_id: str, project_id: str, status: str, source: str = "Web"):
+    """Dispatches active incident switch notification (non-blocking in server runtime)."""
+    msg = (
+        f"🎯 *Active Incident Switched* ({source})\n"
+        f"• *Incident:* `{incident_id}`\n"
+        f"• *Target Project:* `{project_id}`\n"
+        f"• *Status:* `{status}`"
+    )
+
+    def _send():
+        try:
+            from src.comms_telegram import send_telegram_alert
+            send_telegram_alert(msg, incident_id)
+        except Exception as e:
+            print(f"[Telegram Notification Error] {e}")
+
+    # In pytest or when TESTING_BOT is active, run synchronously so unit assertions see the call immediately;
+    # in live HTTPServer runtime, run on a daemon thread so slow Telegram HTTP never blocks the server.
+    if "PYTEST_CURRENT_TEST" in os.environ or os.environ.get("TESTING_BOT") == "true":
+        _send()
+    else:
+        threading.Thread(target=_send, daemon=True).start()
+
+
+def set_active_incident(
+    incident_id: str,
+    source: str = "Web",
+    explicit_project_id: str = None,
+    explicit_status: str = None,
+    substatus_overrides: dict = None,
+    require_existing: bool = True,
+) -> dict:
+    """Atomically validates and activates an incident as the server-wide active context (Q1, Q3, Q4).
+    - Validates incident_id against path traversal and reserved filenames.
+    - Verifies incident exists in DB or local filesystem and is not archived (unless require_existing=False
+      when full explicit state coordinates are provided).
+    - Enforces Q3: Incident's known project_id uniquely determines active project_id;
+      explicit_project_id is only applied when the incident's project is UNKNOWN.
+    - Broadcasts a Telegram notification when the active incident changes (Q4).
+    """
+    from src.incident import validate_incident_status, validate_incident_id
+
+    with _ACTIVE_STATE_LOCK:
+        state = get_active_state()
+        prev_incident_id = state.get("incident_id")
+
+        if incident_id is None or str(incident_id).strip() in ("", "None"):
+            state["incident_id"] = "None"
+            state["incident_status"] = validate_incident_status(explicit_status) if explicit_status else "NEW"
+            state["substatus_rca"] = False
+            state["substatus_mitigated"] = False
+            state["substatus_fixed"] = False
+            state["substatus_verified"] = False
+            if explicit_project_id:
+                state["project_id"] = validate_project_id(explicit_project_id)
+            save_active_state(state)
+            return state
+
+        # Validate ID and resolve from DB or disk
+        validated_id = validate_incident_id(incident_id)
+        details = resolve_incident(validated_id)
+        if not details:
+            if require_existing:
+                raise LookupError(f"Incident '{validated_id}' not found")
+            details = {
+                "incident_id": validated_id,
+                "project_id": "UNKNOWN",
+                "_explicit_project_id": "UNKNOWN",
+                "status": explicit_status or "NEW",
+                "archived": False,
+            }
+        if details.get("archived", False):
+            raise ValueError(f"Incident '{validated_id}' is archived and cannot be activated")
+
+        canonical_id = details.get("incident_id", validated_id)
+        state["incident_id"] = canonical_id
+
+        # Q3: Incident -> Project 1:1 mapping unless incident's explicit project is UNKNOWN
+        inc_explicit_proj = details.get("_explicit_project_id", details.get("project_id", "UNKNOWN"))
+        if inc_explicit_proj and inc_explicit_proj != "UNKNOWN":
+            state["project_id"] = inc_explicit_proj
+        elif explicit_project_id:
+            state["project_id"] = validate_project_id(explicit_project_id)
+
+        if explicit_status:
+            state["incident_status"] = validate_incident_status(explicit_status)
+        else:
+            try:
+                state["incident_status"] = validate_incident_status(details.get("status", "NEW"))
+            except Exception:
+                state["incident_status"] = "NEW"
+
+        overrides = substatus_overrides or {}
+        for key in ("substatus_rca", "substatus_mitigated", "substatus_fixed", "substatus_verified"):
+            if key in overrides and overrides[key] is not None:
+                state[key] = bool(overrides[key])
+            else:
+                state[key] = bool(details.get(key, False))
+
+        save_active_state(state)
+
+    if canonical_id != prev_incident_id:
+        _notify_incident_switch(
+            canonical_id,
+            state.get("project_id", "sre-next"),
+            state.get("incident_status", "NEW"),
+            source=source,
+        )
+
+    return state
+
+
+def set_active_project(project_id: str, source: str = "Web") -> dict:
+    """Atomically updates the active GCP project_id and enforces Q2:
+    If the currently active incident belongs to a different known project, clears active incident to 'None'.
+    """
+    cleaned_proj = validate_project_id(project_id)
+    with _ACTIVE_STATE_LOCK:
+        state = get_active_state()
+        curr_inc_id = state.get("incident_id")
+        if curr_inc_id and curr_inc_id != "None":
+            try:
+                details = resolve_incident(curr_inc_id)
+            except Exception:
+                details = None
+            if details:
+                inc_proj = details.get("_explicit_project_id", details.get("project_id", "UNKNOWN"))
+                if inc_proj and inc_proj != "UNKNOWN" and inc_proj != cleaned_proj:
+                    state["incident_id"] = "None"
+                    state["incident_status"] = "NEW"
+                    state["substatus_rca"] = False
+                    state["substatus_mitigated"] = False
+                    state["substatus_fixed"] = False
+                    state["substatus_verified"] = False
+            else:
+                state["incident_id"] = "None"
+                state["incident_status"] = "NEW"
+
+        state["project_id"] = cleaned_proj
+        save_active_state(state)
+        return state
 
 def load_chat_data(incident_id: str, incident_path: str) -> list:
     try:
@@ -1064,25 +1284,46 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             
             incidents_dir = get_investigations_dir()
             incidents = []
+            seen_ids = set()
             if os.path.exists(incidents_dir):
                 for item in sorted(os.listdir(incidents_dir), reverse=True):
                     item_path = os.path.join(incidents_dir, item)
-                    if os.path.isdir(item_path) and item.startswith("INC-"):
+                    if os.path.isdir(item_path) and item.startswith("INC-") and os.path.isfile(os.path.join(item_path, "state.md")):
                         inc = parse_incident_folder(item_path)
+                        seen_ids.add(inc.get("incident_id", item))
                         if include_archived or not inc.get("archived", False):
                             incidents.append(inc)
+            import src.db as db
+            if db.is_db_active():
+                try:
+                    for db_inc in db.list_incidents():
+                        inc_id = db_inc.get("id")
+                        if inc_id and inc_id not in seen_ids:
+                            full_inc = db.get_incident(inc_id) or {
+                                "incident_id": inc_id,
+                                "status": db_inc.get("status", "NEW"),
+                                "project_id": db_inc.get("project_id", "UNKNOWN"),
+                                "trigger_event": db_inc.get("trigger_event", "UNKNOWN"),
+                                "archived": db_inc.get("archived", False),
+                                "timeline": [],
+                                "artifacts": [],
+                            }
+                            if include_archived or not full_inc.get("archived", False):
+                                incidents.append(full_inc)
+                except Exception as e:
+                    print(f"[Server] Failed to merge DB incidents: {e}")
             self.wfile.write(json.dumps(incidents).encode("utf-8"))
             return
             
         # 2a. API: Get Contextual Incident Chat
         elif path.startswith("/api/incidents/") and path.endswith("/chat"):
             try:
-                incident_id = path.split("/")[3]
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if os.path.exists(incident_path):
+                incident_id = urllib.parse.unquote(path.split("/")[3])
+                details = resolve_incident(incident_id)
+                if details:
+                    incident_path = details.get("folder_path") or os.path.join(get_investigations_dir(), incident_id)
                     chat_data = load_chat_data(incident_id, incident_path)
                     if not chat_data:
-                        details = parse_incident_folder(incident_path)
                         chat_data = [
                             {
                                 "sender": f"{get_commander_name()} Agent (IC)",
@@ -1100,6 +1341,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1110,15 +1356,15 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # 2b. API: Get Mutation Queue for Incident
         elif path.startswith("/api/incidents/") and path.endswith("/pending"):
             try:
-                incident_id = path.split("/")[3]
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if not os.path.exists(incident_path):
+                incident_id = urllib.parse.unquote(path.split("/")[3])
+                details = resolve_incident(incident_id)
+                if not details:
                     self.send_response(404)
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
                     return
-                    
+                incident_path = details.get("folder_path") or os.path.join(get_investigations_dir(), incident_id)
                 pending_path = os.path.join(incident_path, "pending_approvals.json")
                 queue = []
                 if os.path.exists(pending_path):
@@ -1132,6 +1378,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps(queue).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1141,15 +1392,20 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
 
         # 2. API: Get Single Incident Details
         elif path.startswith("/api/incidents/"):
-            incident_id = path.replace("/api/incidents/", "")
-            incident_path = os.path.join(get_investigations_dir(), incident_id)
-            
-            if os.path.exists(incident_path) and os.path.isdir(incident_path):
+            incident_id = urllib.parse.unquote(path.replace("/api/incidents/", ""))
+            try:
+                details = resolve_incident(incident_id)
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
+                return
+
+            if details:
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
-                
-                details = parse_incident_folder(incident_path)
                 self.wfile.write(json.dumps(details).encode("utf-8"))
             else:
                 self.send_response(404)
@@ -1219,20 +1475,21 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # API: Delete an incident
         if path.startswith("/api/incidents/"):
             try:
-                incident_id = path.replace("/api/incidents/", "")
-                # Prevent directory traversal attacks
-                incident_id = os.path.basename(incident_id)
+                incident_id = urllib.parse.unquote(path.replace("/api/incidents/", ""))
+                from src.incident import validate_incident_id
+                incident_id = validate_incident_id(incident_id)
                 incident_path = os.path.join(get_investigations_dir(), incident_id)
                 if os.path.exists(incident_path) and os.path.isdir(incident_path):
                     import shutil
                     shutil.rmtree(incident_path)
                     
                     # If this was the active incident in coordinates, reset it
-                    state = get_active_state()
-                    if state.get("incident_id") == incident_id:
-                        state["incident_id"] = "None"
-                        state["incident_status"] = "UNKNOWN"
-                        save_active_state(state)
+                    with _ACTIVE_STATE_LOCK:
+                        state = get_active_state()
+                        if state.get("incident_id") == incident_id:
+                            state["incident_id"] = "None"
+                            state["incident_status"] = "NEW"
+                            save_active_state(state)
                         
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
@@ -1243,6 +1500,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1267,69 +1529,57 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                 post_data = self.rfile.read(content_length)
                 payload = json.loads(post_data.decode("utf-8"))
                 
-                state = get_active_state()
-                prev_incident_id = state.get("incident_id")
-                
+                sub_overrides = {
+                    k: payload[k]
+                    for k in ("substatus_rca", "substatus_mitigated", "substatus_fixed", "substatus_verified")
+                    if k in payload
+                }
+
                 if "incident_id" in payload:
-                    inc_id = payload["incident_id"]
-                    state["incident_id"] = inc_id
-                    
-                    # Uniquely determine project_id and status from incident if not explicitly passed
-                    if inc_id and inc_id != "None":
-                        inc_path = os.path.join(get_investigations_dir(), inc_id)
-                        if os.path.exists(inc_path):
-                            details = parse_incident_folder(inc_path)
-                            inc_proj = details.get("project_id")
-                            if inc_proj and inc_proj != "UNKNOWN" and "project_id" not in payload:
-                                state["project_id"] = inc_proj
-                                os.environ["PROJECT_ID"] = inc_proj
-                            if "incident_status" not in payload:
-                                state["incident_status"] = details.get("status", "NEW")
-                            if "substatus_rca" not in payload:
-                                state["substatus_rca"] = details.get("substatus_rca", False)
-                            if "substatus_mitigated" not in payload:
-                                state["substatus_mitigated"] = details.get("substatus_mitigated", False)
-                            if "substatus_fixed" not in payload:
-                                state["substatus_fixed"] = details.get("substatus_fixed", False)
-                            if "substatus_verified" not in payload:
-                                state["substatus_verified"] = details.get("substatus_verified", False)
-                
-                if "project_id" in payload:
-                    state["project_id"] = payload["project_id"]
-                    os.environ["PROJECT_ID"] = payload["project_id"]
-                if "incident_status" in payload:
+                    has_full_coords = ("project_id" in payload and "incident_status" in payload)
+                    state = set_active_incident(
+                        payload["incident_id"],
+                        source="Web API",
+                        explicit_project_id=payload.get("project_id"),
+                        explicit_status=payload.get("incident_status"),
+                        substatus_overrides=sub_overrides,
+                        require_existing=not has_full_coords,
+                    )
+                elif "project_id" in payload:
+                    state = set_active_project(payload["project_id"], source="Web API")
+                    if "incident_status" in payload or sub_overrides:
+                        from src.incident import validate_incident_status
+                        with _ACTIVE_STATE_LOCK:
+                            state = get_active_state()
+                            if "incident_status" in payload:
+                                state["incident_status"] = validate_incident_status(payload["incident_status"])
+                            for k, v in sub_overrides.items():
+                                state[k] = bool(v)
+                            save_active_state(state)
+                else:
                     from src.incident import validate_incident_status
-                    state["incident_status"] = validate_incident_status(payload["incident_status"])
-                if "substatus_rca" in payload:
-                    state["substatus_rca"] = bool(payload["substatus_rca"])
-                if "substatus_mitigated" in payload:
-                    state["substatus_mitigated"] = bool(payload["substatus_mitigated"])
-                if "substatus_fixed" in payload:
-                    state["substatus_fixed"] = bool(payload["substatus_fixed"])
-                if "substatus_verified" in payload:
-                    state["substatus_verified"] = bool(payload["substatus_verified"])
-                
-                save_active_state(state)
-                
-                # Notify Telegram channel if active incident changed
-                curr_incident_id = state.get("incident_id")
-                if curr_incident_id and curr_incident_id != "None" and curr_incident_id != prev_incident_id:
-                    try:
-                        from src.comms_telegram import send_telegram_alert
-                        send_telegram_alert(
-                            f"🎯 *Active Incident Switched*\n"
-                            f"• *Incident:* `{curr_incident_id}`\n"
-                            f"• *Target Project:* `{state.get('project_id')}`\n"
-                            f"• *Status:* `{state.get('incident_status')}`",
-                            curr_incident_id
-                        )
-                    except Exception as e:
-                        print(f"[Telegram Notification Error] {e}")
-                
+                    with _ACTIVE_STATE_LOCK:
+                        state = get_active_state()
+                        if "incident_status" in payload:
+                            state["incident_status"] = validate_incident_status(payload["incident_status"])
+                        for k, v in sub_overrides.items():
+                            state[k] = bool(v)
+                        save_active_state(state)
+
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
                 self.end_headers()
                 self.wfile.write(json.dumps(state).encode("utf-8"))
+            except LookupError as le:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(le)}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1411,11 +1661,17 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # API: Archive an incident
         elif path.startswith("/api/incidents/") and path.endswith("/archive"):
             try:
-                incident_id = path.split("/")[3]
-                incident_id = os.path.basename(incident_id)
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if os.path.exists(incident_path):
+                incident_id = urllib.parse.unquote(path.split("/")[3])
+                details = resolve_incident(incident_id)
+                if details:
+                    incident_path = os.path.join(get_investigations_dir(), incident_id)
                     if set_incident_archived(incident_path, True):
+                        with _ACTIVE_STATE_LOCK:
+                            state = get_active_state()
+                            if state.get("incident_id") == incident_id:
+                                state["incident_id"] = "None"
+                                state["incident_status"] = "NEW"
+                                save_active_state(state)
                         self.send_response(200)
                         self.send_header("Content-Type", "application/json")
                         self.end_headers()
@@ -1430,6 +1686,11 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     self.send_header("Content-Type", "application/json")
                     self.end_headers()
                     self.wfile.write(json.dumps({"error": "Incident not found"}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1440,49 +1701,22 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         # API: Select/activate an incident as server-wide active state
         elif path.startswith("/api/incidents/") and path.endswith("/select"):
             try:
-                incident_id = path.split("/")[3]
-                incident_id = os.path.basename(incident_id)
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if os.path.exists(incident_path):
-                    details = parse_incident_folder(incident_path)
-                    state = get_active_state()
-                    prev_incident_id = state.get("incident_id")
-                    
-                    state["incident_id"] = incident_id
-                    state["incident_status"] = details.get("status", "NEW")
-                    state["substatus_rca"] = details.get("substatus_rca", False)
-                    state["substatus_mitigated"] = details.get("substatus_mitigated", False)
-                    state["substatus_fixed"] = details.get("substatus_fixed", False)
-                    state["substatus_verified"] = details.get("substatus_verified", False)
-                    inc_proj = details.get("project_id")
-                    if inc_proj and inc_proj != "UNKNOWN":
-                        state["project_id"] = inc_proj
-                        os.environ["PROJECT_ID"] = inc_proj
-                        
-                    save_active_state(state)
-                    
-                    if incident_id != prev_incident_id:
-                        try:
-                            from src.comms_telegram import send_telegram_alert
-                            send_telegram_alert(
-                                f"🎯 *Active Incident Switched*\n"
-                                f"• *Incident:* `{incident_id}`\n"
-                                f"• *Target Project:* `{state.get('project_id')}`\n"
-                                f"• *Status:* `{state.get('incident_status')}`",
-                                incident_id
-                            )
-                        except Exception as e:
-                            print(f"[Telegram Notification Error] {e}")
-                            
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps(state).encode("utf-8"))
-                else:
-                    self.send_response(404)
-                    self.send_header("Content-Type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps({"error": f"Incident {incident_id} not found"}).encode("utf-8"))
+                incident_id = urllib.parse.unquote(path.split("/")[3])
+                state = set_active_incident(incident_id, source="Web Dashboard")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(state).encode("utf-8"))
+            except LookupError as le:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(le)}).encode("utf-8"))
+            except ValueError as ve:
+                self.send_response(400)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": str(ve)}).encode("utf-8"))
             except Exception as e:
                 self.send_response(500)
                 self.send_header("Content-Type", "application/json")
@@ -1822,8 +2056,9 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
         elif path.startswith("/api/incidents/") and path.endswith("/chat"):
             try:
                 incident_id = path.split("/")[3]
-                incident_path = os.path.join(get_investigations_dir(), incident_id)
-                if os.path.exists(incident_path):
+                details = resolve_incident(incident_id)
+                if details:
+                    incident_path = os.path.join(get_investigations_dir(), incident_id)
                     content_length = int(self.headers.get('Content-Length', 0))
                     post_data = self.rfile.read(content_length)
                     payload = json.loads(post_data.decode("utf-8"))
@@ -1838,8 +2073,6 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                     
                     chat_data = load_chat_data(incident_id, incident_path)
                     if not chat_data:
-                        details = parse_incident_folder(incident_path)
-                        
                         # Detect if Telegram variables are configured
                         has_telegram = bool(os.getenv("TELEGRAM_BOT_TOKEN") and os.getenv("TELEGRAM_CHAT_ID"))
                         telegram_proposal = ""
@@ -1883,7 +2116,6 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                                 print(f"[Server] Failed to push operator msg to Telegram: {tg_err}")
                     
                     # Generate authentic contextual reply via SRE ADK Incident Commander
-                    details = parse_incident_folder(incident_path)
                     status = details.get("status", "UNKNOWN").upper()
                     project_id = details.get("project_id", "sre-next")
                     trigger_event = details.get("trigger_event", "frontend_latency_slo_violated")
@@ -1896,7 +2128,7 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
                         commander = IncidentCommander(incident_context=ctx)
                         
                         # Supply full screen operational context dynamically to the model
-                        comments_context = get_mutation_comments_context(incident_path)
+                        comments_context = get_mutation_comments_context(incident_path) if os.path.isdir(incident_path) else ""
                         chat_context = (
                             f"[Operational Context]\n"
                             f"Selected Incident ID: {incident_id}\n"
@@ -1947,16 +2179,18 @@ class SREHttpRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
 
 def get_incidents_list() -> list[dict]:
-    """Helper to query all active and historical incidents inside investigations/ directory."""
+    """Helper to query all active (non-archived) incidents inside DB or investigations/ directory."""
     import src.db as db
     if db.is_db_active():
-        return db.list_incidents()
+        db_list = db.list_incidents() or []
+        return [inc for inc in db_list if not inc.get("archived", False)]
     import os
     incidents = []
-    if os.path.exists(get_investigations_dir()):
-        for folder in sorted(os.listdir(get_investigations_dir())):
-            folder_path = os.path.join(get_investigations_dir(), folder)
-            if os.path.isdir(folder_path):
+    inv_dir = get_investigations_dir()
+    if os.path.exists(inv_dir):
+        for folder in sorted(os.listdir(inv_dir)):
+            folder_path = os.path.join(inv_dir, folder)
+            if os.path.isdir(folder_path) and os.path.isfile(os.path.join(folder_path, "state.md")):
                 details = parse_incident_folder(folder_path)
                 if not details.get("archived", False):
                     incidents.append({
@@ -2080,7 +2314,7 @@ def get_top_5_incidents() -> list[dict]:
             if len(incidents) >= 5:
                 break
             folder_path = os.path.join(incidents_dir, folder)
-            if os.path.isdir(folder_path):
+            if os.path.isdir(folder_path) and os.path.isfile(os.path.join(folder_path, "state.md")):
                 details = parse_incident_folder(folder_path)
                 if not details.get("archived", False):
                     incidents.append({
@@ -2166,9 +2400,8 @@ def send_telegram_menu(bot_token: str, chat_id: str, message: str):
             state = get_active_state()
             selected_incident_id = state.get("incident_id")
             if selected_incident_id and selected_incident_id != "None":
-                incident_path = os.path.join(get_investigations_dir(), selected_incident_id)
-                if os.path.exists(incident_path):
-                    details = parse_incident_folder(incident_path)
+                details = resolve_incident(selected_incident_id)
+                if details:
                     status = details.get("status", "").upper()
                     if status not in ["CLOSED", "RESOLVED", "ABORTED", "ARCHIVED"]:
                         is_active = True
@@ -2307,41 +2540,27 @@ def start_telegram_bot():
                             if cb_chat_id == chat_id:
                                 if cb_data.startswith("select_incident:"):
                                     inc_id = cb_data.replace("select_incident:", "").strip()
-                                    state = get_active_state()
-                                    state["incident_id"] = inc_id
-                                    
-                                    # Fetch status and map project_id
-                                    incident_path = os.path.join(get_investigations_dir(), inc_id)
-                                    if os.path.exists(incident_path):
-                                        details = parse_incident_folder(incident_path)
-                                        state["incident_status"] = details.get("status", "UNKNOWN")
-                                        inc_proj = details.get("project_id")
-                                        if inc_proj and inc_proj != "UNKNOWN":
-                                            state["project_id"] = inc_proj
-                                            os.environ["PROJECT_ID"] = inc_proj
-                                    else:
-                                        state["incident_status"] = "UNKNOWN"
-                                    
-                                    save_active_state(state)
-                                    answer_telegram_callback_query(bot_token, callback_id, f"Incident set to {inc_id}")
-                                    edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to incident:* `{inc_id}`\n☁️ *Target Project:* `{state.get('project_id')}`\n📊 *Status:* `{state.get('incident_status')}`")
+                                    try:
+                                        state = set_active_incident(inc_id, source="Telegram")
+                                        answer_telegram_callback_query(bot_token, callback_id, f"Incident set to {inc_id}")
+                                        edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to incident:* `{inc_id}`\n☁️ *Target Project:* `{state.get('project_id')}`\n📊 *Status:* `{state.get('incident_status')}`")
+                                    except (ValueError, LookupError) as e:
+                                        answer_telegram_callback_query(bot_token, callback_id, f"Error: {e}")
+                                        send_raw_telegram_message(bot_token, chat_id, f"❌ {e}")
                                     
                                 elif cb_data.startswith("select_project:"):
                                     proj_id = cb_data.replace("select_project:", "").strip()
-                                    state = get_active_state()
-                                    state["project_id"] = proj_id
-                                    os.environ["PROJECT_ID"] = proj_id
-                                    save_active_state(state)
+                                    state = set_active_project(proj_id, source="Telegram")
                                     
-                                    # Update .env
+                                    # Update .env if present (anchor regex to start of line to avoid matching GCP_PROJECT_ID=)
                                     env_path = ".env"
                                     if os.path.exists(env_path):
                                         try:
                                             with open(env_path, "r") as f:
                                                 content = f.read()
                                             import re
-                                            if "PROJECT_ID=" in content:
-                                                content = re.sub(r"PROJECT_ID=.*", f"PROJECT_ID='{proj_id}'", content)
+                                            if re.search(r"^PROJECT_ID=", content, flags=re.MULTILINE):
+                                                content = re.sub(r"^PROJECT_ID=.*", f"PROJECT_ID='{proj_id}'", content, flags=re.MULTILINE)
                                             else:
                                                 content += f"\nPROJECT_ID='{proj_id}'\n"
                                             with open(env_path, "w") as f:
@@ -2350,7 +2569,7 @@ def start_telegram_bot():
                                             pass
                                             
                                     answer_telegram_callback_query(bot_token, callback_id, f"Project set to {proj_id}")
-                                    edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to project:* `{proj_id}`")
+                                    edit_telegram_message_text(bot_token, chat_id, cb_message_id, f"✅ *Active context updated to project:* `{proj_id}`\n🎯 *Active Incident:* `{state.get('incident_id')}`")
                                 elif cb_data.startswith("approve_mutation:"):
                                     cmd_id = cb_data.replace("approve_mutation:", "").strip()
                                     session_states[chat_id] = {
@@ -2397,10 +2616,11 @@ def start_telegram_bot():
                                         except Exception:
                                             pass
                                             
+                                    from src.incident import IncidentStatus
                                     state = get_active_state()
                                     state["incident_id"] = inc_id
                                     state["project_id"] = proj_id
-                                    state["incident_status"] = "ACTIVE"
+                                    state["incident_status"] = IncidentStatus.ONGOING.value
                                     save_active_state(state)
                                     
                                     conf_msg = (
@@ -2543,10 +2763,11 @@ def start_telegram_bot():
                                     except Exception:
                                         pass
                                         
+                                from src.incident import IncidentStatus
                                 state = get_active_state()
                                 state["incident_id"] = inc_id
                                 state["project_id"] = resolved_proj
-                                state["incident_status"] = "ACTIVE"
+                                state["incident_status"] = IncidentStatus.ONGOING.value
                                 save_active_state(state)
                                 
                                 conf_msg = (
@@ -2596,10 +2817,12 @@ def start_telegram_bot():
 
                         lower_text = msg_text.lower()
                         if lower_text.startswith("/start") or lower_text == "/help" or lower_text == "help":
+                            active_state = get_active_state()
+                            current_proj = active_state.get("project_id") or os.getenv("PROJECT_ID", "sre-next")
                             welcome_msg = (
                                 "🏰 *Project Benjamin SRE Command Hub*\n\n"
                                 f"• *Active Incident Context:* `{selected_incident_id}`\n"
-                                f"• *Target GCP Project ID:* `{os.getenv('PROJECT_ID', 'sre-next')}`\n\n"
+                                f"• *Target GCP Project ID:* `{current_proj}`\n\n"
                                 "*Available Commands:*\n"
                                 "• `/incidents` (or `📋 List Incidents`): List 5 latest incidents with status indicators.\n"
                                 "• `/projects` (or `☁️ List Projects`): List discovered GCP projects.\n"
@@ -2615,19 +2838,34 @@ def start_telegram_bot():
                             active_state = get_active_state()
                             selected_incident_id = active_state.get("incident_id")
                             current_project_id = active_state.get("project_id") or os.getenv("PROJECT_ID", "sre-next")
-                            from src.incident import resolve_benjamin_env
+                            from src.incident import resolve_benjamin_env, IncidentStatus
                             active_env = resolve_benjamin_env()
                             
-                            all_incidents = get_incidents_list()
-                            on_fire_incidents = [
-                                inc for inc in all_incidents 
-                                if not inc.get("archived", False) and str(inc.get("status", "")).upper() in ("NEW", "ONGOING", "INVESTIGATING", "ACTIVE", "AWAITING_APPROVAL")
-                            ]
-                            if on_fire_incidents:
-                                fire_ids = ", ".join([f"`{i.get('id')}`" for i in on_fire_incidents[:3]])
-                                fire_summary = f"🔥 *{len(on_fire_incidents)} incident(s) on fire* ({fire_ids})"
-                            else:
-                                fire_summary = "✅ *All clear — No active incidents on fire*"
+                            try:
+                                all_incidents = get_incidents_list()
+                                closed_statuses = {IncidentStatus.CLOSED.value, "RESOLVED", "ABORTED", "ARCHIVED"}
+                                on_fire_incidents = [
+                                    inc for inc in all_incidents
+                                    if not inc.get("archived", False)
+                                    and str(inc.get("status", "")).upper() not in closed_statuses | {"UNKNOWN", ""}
+                                ]
+                                unknown_incidents = [
+                                    inc for inc in all_incidents
+                                    if not inc.get("archived", False)
+                                    and str(inc.get("status", "")).upper() in ("UNKNOWN", "")
+                                ]
+                                if on_fire_incidents:
+                                    fire_ids = ", ".join([f"`{i.get('id')}`" for i in on_fire_incidents[:3]])
+                                    fire_summary = f"🔥 *{len(on_fire_incidents)} incident(s) on fire* ({fire_ids})"
+                                    if unknown_incidents:
+                                        fire_summary += f" (⚠️ {len(unknown_incidents)} with UNKNOWN status)"
+                                elif unknown_incidents:
+                                    unk_ids = ", ".join([f"`{i.get('id')}`" for i in unknown_incidents[:3]])
+                                    fire_summary = f"⚠️ *{len(unknown_incidents)} incident(s) have UNKNOWN status* ({unk_ids})"
+                                else:
+                                    fire_summary = "✅ *All clear — No active incidents on fire*"
+                            except Exception as list_err:
+                                fire_summary = f"⚠️ *Unable to verify incident fire status:* `{list_err}`"
 
                             if not selected_incident_id or selected_incident_id == "None":
                                 idle_msg = (
@@ -2641,8 +2879,8 @@ def start_telegram_bot():
                                 send_raw_telegram_message(bot_token, chat_id, idle_msg)
                                 continue
                                 
+                            details = resolve_incident(selected_incident_id) or {}
                             incident_path = os.path.join(get_investigations_dir(), selected_incident_id)
-                            details = parse_incident_folder(incident_path) if os.path.exists(incident_path) else {}
                             status_val = details.get('status', active_state.get('incident_status', 'UNKNOWN'))
                             substatus_rca = details.get('substatus_rca', False)
                             substatus_mitigated = details.get('substatus_mitigated', False)
@@ -2804,33 +3042,28 @@ def start_telegram_bot():
                                 send_raw_telegram_message(bot_token, chat_id, "❌ No active incident selected to archive.")
                                 continue
                                 
-                            all_folders = []
-                            if os.path.exists(get_investigations_dir()):
-                                all_folders = [f for f in sorted(os.listdir(get_investigations_dir())) if os.path.isdir(os.path.join(get_investigations_dir(), f)) and f.startswith("INC-")]
-                            
+                            all_incidents = get_incidents_list()
                             matched_id = None
                             if target_inc.isdigit():
                                 idx = int(target_inc) - 1
-                                if 0 <= idx < len(all_folders):
-                                    matched_id = all_folders[idx]
+                                if 0 <= idx < len(all_incidents):
+                                    matched_id = all_incidents[idx]["id"]
                             else:
-                                for folder in all_folders:
-                                    if folder.lower() == target_inc.lower():
-                                        matched_id = folder
+                                for inc in all_incidents:
+                                    if inc["id"].lower() == target_inc.lower():
+                                        matched_id = inc["id"]
                                         break
                             
                             if matched_id:
                                 target_inc = matched_id
                                 
-                            target_inc_path = os.path.join(get_investigations_dir(), target_inc)
-                            if os.path.exists(target_inc_path):
+                            details = resolve_incident(target_inc)
+                            if details:
+                                target_inc_path = os.path.join(get_investigations_dir(), target_inc)
                                 if set_incident_archived(target_inc_path, True):
                                     send_raw_telegram_message(bot_token, chat_id, f"✅ Incident `{target_inc}` has been successfully archived.")
                                     if selected_incident_id == target_inc:
-                                        state = get_active_state()
-                                        state["incident_id"] = "None"
-                                        state["incident_status"] = "UNKNOWN"
-                                        save_active_state(state)
+                                        set_active_incident("None", source="Telegram")
                                         selected_incident_id = "None"
                                 else:
                                     send_raw_telegram_message(bot_token, chat_id, f"❌ Failed to archive incident `{target_inc}`.")
@@ -2861,20 +3094,11 @@ def start_telegram_bot():
                             if matched_id:
                                 target_inc = matched_id
                                 
-                            target_inc_path = os.path.join(get_investigations_dir(), target_inc)
-                            if os.path.exists(target_inc_path):
+                            try:
+                                state = set_active_incident(target_inc, source="Telegram")
                                 selected_incident_id = target_inc
-                                details = parse_incident_folder(target_inc_path)
-                                status_val = details.get('status', 'UNKNOWN')
-                                
-                                state = get_active_state()
-                                state["incident_id"] = target_inc
-                                state["incident_status"] = status_val
-                                inc_proj = details.get("project_id")
-                                if inc_proj and inc_proj != "UNKNOWN":
-                                    state["project_id"] = inc_proj
-                                    os.environ["PROJECT_ID"] = inc_proj
-                                save_active_state(state)
+                                status_val = state.get("incident_status", "UNKNOWN")
+                                target_inc_path = os.path.join(get_investigations_dir(), target_inc)
                                 
                                 if status_val == "AWAITING_APPROVAL":
                                     # Extract proposed mutation & safety level dynamically
@@ -2906,8 +3130,10 @@ def start_telegram_bot():
                                     send_telegram_safety_gate_menu(bot_token, chat_id, msg)
                                 else:
                                     send_telegram_menu(bot_token, chat_id, f"✅ Active incident switched to: `{target_inc}`")
-                            else:
+                            except LookupError:
                                 send_raw_telegram_message(bot_token, chat_id, f"❌ Incident `{target_inc}` not found in repository.")
+                            except ValueError as e:
+                                send_raw_telegram_message(bot_token, chat_id, f"❌ {e}")
                             continue
                             
                         elif msg_text.startswith("/project") or msg_text.startswith("/setproject"):
@@ -2918,10 +3144,9 @@ def start_telegram_bot():
                                 continue
                             target_proj = parts[1].strip()
                             
-                            state = get_active_state()
-                            state["project_id"] = target_proj
-                            os.environ["PROJECT_ID"] = target_proj
-                            save_active_state(state)
+                            state = set_active_project(target_proj, source="Telegram")
+                            if state.get("incident_id") == "None":
+                                selected_incident_id = "None"
                             
                             env_path = ".env"
                             if os.path.exists(env_path):
@@ -2929,8 +3154,8 @@ def start_telegram_bot():
                                     with open(env_path, "r") as f:
                                         content = f.read()
                                     import re
-                                    if "PROJECT_ID=" in content:
-                                        content = re.sub(r"PROJECT_ID=.*", f"PROJECT_ID='{target_proj}'", content)
+                                    if re.search(r"^PROJECT_ID=", content, flags=re.MULTILINE):
+                                        content = re.sub(r"^PROJECT_ID=.*", f"PROJECT_ID='{target_proj}'", content, flags=re.MULTILINE)
                                     else:
                                         content += f"\nPROJECT_ID='{target_proj}'\n"
                                     with open(env_path, "w") as f:
@@ -3047,8 +3272,11 @@ def start_telegram_bot():
                             send_raw_telegram_message(bot_token, chat_id, "⚠️ No incident selected. Tapp '📋 List Incidents' to select one first.")
                             continue
                             
+                        details = resolve_incident(selected_incident_id)
+                        if not details:
+                            send_raw_telegram_message(bot_token, chat_id, f"⚠️ Active incident `{selected_incident_id}` could not be resolved.")
+                            continue
                         incident_path = os.path.join(get_investigations_dir(), selected_incident_id)
-                        details = parse_incident_folder(incident_path)
                         status = details.get("status", "UNKNOWN").upper()
                         project_id = details.get("project_id", "sre-next")
                         trigger_event = details.get("trigger_event", "frontend_latency_slo_violated")
@@ -3060,7 +3288,7 @@ def start_telegram_bot():
                             ctx = IncidentContext(incident_uuid=incident_uuid) if incident_uuid and incident_uuid != "UNKNOWN" else None
                             commander = IncidentCommander(incident_context=ctx)
                             
-                            comments_context = get_mutation_comments_context(incident_path)
+                            comments_context = get_mutation_comments_context(incident_path) if os.path.isdir(incident_path) else ""
                             chat_context = (
                                 f"[Telegram Interface]\n"
                                 f"Active Incident ID: {selected_incident_id}\n"

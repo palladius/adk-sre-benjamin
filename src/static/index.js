@@ -86,10 +86,42 @@ document.addEventListener("DOMContentLoaded", () => {
     const btnChatSend = document.getElementById("btn-chat-send");
     
     let activeIncidentId = null;
+    let viewedIncidentId = null;
+    let viewedIncidentArchived = false;
     let currentProjectResources = []; // Dynamic cache of loaded resources for modal display
     
     let lastActiveProject = null;
     let lastActiveIncident = null;
+
+    function syncActivateButtons() {
+        document.querySelectorAll(".btn-activate-inc").forEach(btn => {
+            const btnIncId = btn.getAttribute("data-id");
+            const isArchived = btn.getAttribute("data-archived") === "true";
+            if (isArchived || (lastActiveIncident && btnIncId === lastActiveIncident)) {
+                btn.style.display = "none";
+            } else {
+                btn.style.display = "inline-block";
+            }
+        });
+
+        const btnSetActive = document.getElementById("btn-set-active-incident");
+        const badgeActiveServer = document.getElementById("badge-active-server-context");
+        if (btnSetActive && badgeActiveServer) {
+            if (!viewedIncidentId || viewedIncidentId === "None") {
+                btnSetActive.style.display = "none";
+                badgeActiveServer.style.display = "none";
+            } else if (viewedIncidentId === lastActiveIncident) {
+                btnSetActive.style.display = "none";
+                badgeActiveServer.style.display = "inline-flex";
+            } else if (viewedIncidentArchived) {
+                btnSetActive.style.display = "none";
+                badgeActiveServer.style.display = "none";
+            } else {
+                btnSetActive.style.display = "inline-flex";
+                badgeActiveServer.style.display = "none";
+            }
+        }
+    }
 
     async function pollActiveState() {
         try {
@@ -113,69 +145,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
             
-            // Align viewports on change
-            let projectChanged = false;
-            let incidentChanged = false;
+            let projectChanged = (lastActiveProject !== null && lastActiveProject !== state.project_id);
+            let incidentChanged = (lastActiveIncident !== null && lastActiveIncident !== state.incident_id);
             
-            if (lastActiveProject !== null && lastActiveProject !== state.project_id) {
-                projectChanged = true;
-            }
-            if (lastActiveIncident !== null && lastActiveIncident !== state.incident_id) {
-                incidentChanged = true;
-            }
-            
-            // Save current state for next comparison
             const isInitial = (lastActiveProject === null && lastActiveIncident === null);
             lastActiveProject = state.project_id;
             lastActiveIncident = state.incident_id;
             
-            if (!isInitial) {
-                // Apply changes on detect
-                if (projectChanged) {
-                    if (projectIdInput) {
-                        projectIdInput.value = state.project_id;
-                    }
-                    if (window.location.pathname.startsWith("/projects/")) {
-                        navigateTo(`/projects/${encodeURIComponent(state.project_id)}`);
-                    }
+            if (!isInitial && projectChanged) {
+                if (projectIdInput) {
+                    projectIdInput.value = state.project_id;
                 }
-                
-                if (incidentChanged && state.incident_id !== "None") {
-                    activeIncidentId = state.incident_id;
-                    
-                    document.querySelectorAll(".incident-item").forEach(item => {
-                        if (item.dataset.id === state.incident_id) {
-                            item.classList.add("active");
-                        } else {
-                            item.classList.remove("active");
-                        }
-                    });
-                    
-                    fetchIncidentDetails(state.incident_id);
+                if (window.location.pathname.startsWith("/projects/")) {
+                    navigateTo(`/projects/${encodeURIComponent(state.project_id)}`);
                 }
             }
             
-            // Fetch/render pending mutations on each poll tick
-            activeIncidentId = state.incident_id;
-            if (activeIncidentId && activeIncidentId !== "None") {
-                fetchAndRenderMutationQueue(activeIncidentId);
+            // Q1: Client-side viewing is independent from server-side active state.
+            // Only auto-select the server's active incident if the user has not yet viewed any incident.
+            if (!viewedIncidentId && state.incident_id && state.incident_id !== "None") {
+                fetchIncidentDetails(state.incident_id);
+            } else if (incidentChanged && viewedIncidentId === state.incident_id) {
+                fetchIncidentDetails(state.incident_id);
+            }
+            
+            const queueTargetId = viewedIncidentId || state.incident_id;
+            if (queueTargetId && queueTargetId !== "None") {
+                fetchAndRenderMutationQueue(queueTargetId);
             } else {
                 fetchAndRenderMutationQueue(null);
             }
 
-            // Synchronize active context button/badge visibility
-            const btnSetActive = document.getElementById("btn-set-active-incident");
-            const badgeActiveServer = document.getElementById("badge-active-server-context");
-            if (btnSetActive && badgeActiveServer) {
-                const currentViewedId = activeIncidentTitle ? activeIncidentTitle.textContent : null;
-                if (currentViewedId && currentViewedId === state.incident_id) {
-                    btnSetActive.style.display = "none";
-                    badgeActiveServer.style.display = "inline-flex";
-                } else if (currentViewedId && currentViewedId.startsWith("INC-")) {
-                    btnSetActive.style.display = "inline-flex";
-                    badgeActiveServer.style.display = "none";
-                }
-            }
+            syncActivateButtons();
         } catch (err) {
             console.error("[Poll Active State] Error:", err);
         }
@@ -570,6 +571,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     substatusHtml += `<span class="substatus-badge-item" style="background-color: var(--neon-yellow); color: #000; font-size: 0.65rem; padding: 1px 4px; border-radius: 3px; font-weight: bold;">VER</span>`;
                 }
                     
+                const isArchived = Boolean(inc.archived);
+                const hideActivate = isArchived || (lastActiveIncident && inc.incident_id === lastActiveIncident);
                 li.innerHTML = `
                     <div class="incident-item-header">
                         <span class="incident-item-id">${inc.incident_id}</span>
@@ -578,7 +581,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="incident-item-desc">${inc.trigger_event || 'SRE incident trigger'}</div>
                     ${substatusHtml ? `<div class="incident-item-substatuses" style="margin-top: 4px; display: flex; gap: 4px;">${substatusHtml}</div>` : ''}
                     <div class="incident-item-actions">
-                        <button class="btn-activate-inc" data-id="${inc.incident_id}" style="color: #00d4ff; border-color: rgba(0,212,255,0.4);">Activate</button>
+                        <button class="btn-activate-inc" data-id="${inc.incident_id}" data-archived="${isArchived}" style="color: #00d4ff; border-color: rgba(0,212,255,0.4); display: ${hideActivate ? 'none' : 'inline-block'};">Activate</button>
                         <button class="btn-archive-inc" data-id="${inc.incident_id}">Archive</button>
                         <button class="btn-delete-inc" data-id="${inc.incident_id}">Delete</button>
                     </div>
@@ -592,11 +595,18 @@ document.addEventListener("DOMContentLoaded", () => {
                         try {
                             const res = await fetch(`/api/incidents/${encodeURIComponent(inc.incident_id)}/select`, { method: "POST" });
                             if (res.ok) {
-                                pollActiveState();
-                                fetchIncidentDetails(inc.incident_id);
+                                lastActiveIncident = inc.incident_id;
+                                document.querySelectorAll(".incident-item").forEach(item => item.classList.remove("active"));
+                                li.classList.add("active");
+                                await fetchIncidentDetails(inc.incident_id);
+                                await pollActiveState();
+                            } else {
+                                const errData = await res.json().catch(() => ({}));
+                                alert(errData.error || `Failed to activate incident ${inc.incident_id}`);
                             }
                         } catch (err) {
                             console.error("Failed to activate incident:", err);
+                            alert(`Error activating incident ${inc.incident_id}`);
                         }
                     });
                 }
@@ -798,6 +808,7 @@ document.addEventListener("DOMContentLoaded", () => {
         activeIncidentId = id;
         try {
             const res = await fetch(`/api/incidents/${id}`);
+            if (!res.ok) return;
             const data = await res.json();
             renderIncident(data);
             fetchAndRenderMutationQueue(id);
@@ -808,6 +819,8 @@ document.addEventListener("DOMContentLoaded", () => {
     
     // 3. Render Incident Info on Dashboard
     function renderIncident(inc) {
+        viewedIncidentId = inc.incident_id;
+        viewedIncidentArchived = Boolean(inc.archived);
         // Update Title & Metadata
         activeIncidentTitle.textContent = inc.incident_id;
         activeIncidentMeta.innerHTML = `Target Project: <strong>${inc.project_id}</strong> | Trigger Event: <strong>${inc.trigger_event}</strong>`;
@@ -837,31 +850,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // Active Server Context Controls
         const btnSetActive = document.getElementById("btn-set-active-incident");
-        const badgeActiveServer = document.getElementById("badge-active-server-context");
-        if (btnSetActive && badgeActiveServer) {
-            if (lastActiveIncident === inc.incident_id) {
-                btnSetActive.style.display = "none";
-                badgeActiveServer.style.display = "inline-flex";
-            } else {
-                btnSetActive.style.display = "inline-flex";
-                badgeActiveServer.style.display = "none";
-                btnSetActive.onclick = async () => {
-                    try {
-                        const res = await fetch(`/api/incidents/${encodeURIComponent(inc.incident_id)}/select`, {
-                            method: "POST"
-                        });
-                        if (res.ok) {
-                            lastActiveIncident = inc.incident_id;
-                            btnSetActive.style.display = "none";
-                            badgeActiveServer.style.display = "inline-flex";
-                            pollActiveState();
-                        }
-                    } catch (e) {
-                        console.error("Failed to set active incident:", e);
+        if (btnSetActive) {
+            btnSetActive.onclick = async () => {
+                try {
+                    const res = await fetch(`/api/incidents/${encodeURIComponent(inc.incident_id)}/select`, {
+                        method: "POST"
+                    });
+                    if (res.ok) {
+                        lastActiveIncident = inc.incident_id;
+                        syncActivateButtons();
+                        await pollActiveState();
+                    } else {
+                        const errData = await res.json().catch(() => ({}));
+                        alert(errData.error || `Failed to set ${inc.incident_id} as active incident`);
                     }
-                };
-            }
+                } catch (e) {
+                    console.error("Failed to set active incident:", e);
+                    alert(`Error setting ${inc.incident_id} as active incident`);
+                }
+            };
         }
+        syncActivateButtons();
         
         // Handle Active Leads Badge highlights
         updateLeadsHighlight(inc.timeline);

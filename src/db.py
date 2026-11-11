@@ -19,6 +19,22 @@ def is_db_configured() -> bool:
 def is_db_active() -> bool:
     return _pool is not None
 
+def _resolve_active_state_row_id() -> int:
+    """Maps BENJAMIN_ENV to a distinct active_state row ID (production=1, development=2, test=3) so environments never clobber each other."""
+    try:
+        from src.incident import resolve_benjamin_env
+        env = resolve_benjamin_env()
+    except Exception:
+        env = "development"
+    if env == "production":
+        return 1
+    elif env == "development":
+        return 2
+    elif env == "test":
+        return 3
+    return 1
+
+
 def init_db():
     global _pool
     if not is_db_configured():
@@ -27,6 +43,12 @@ def init_db():
     db_user = os.getenv("DB_USER")
     db_pass = os.getenv("DB_PASS") or os.getenv("DB_PASSWORD")
     db_name = os.getenv("DB_NAME")
+    if not db_name:
+        try:
+            from src.incident import resolve_benjamin_env
+            db_name = f"sredb_{resolve_benjamin_env()}"
+        except Exception:
+            db_name = "sredb"
     db_host = os.getenv("DB_HOST")
     db_port = os.getenv("DB_PORT", "5432")
     try:
@@ -133,13 +155,14 @@ def create_schema():
 def save_active_state(state: dict) -> bool:
     if not is_db_active():
         return False
+    row_id = _resolve_active_state_row_id()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     INSERT INTO active_state (id, project_id, incident_id, incident_status, substatus_rca, substatus_mitigated, substatus_fixed, substatus_verified)
-                    VALUES (1, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES ({row_id}, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         project_id = EXCLUDED.project_id,
                         incident_id = EXCLUDED.incident_id,
@@ -164,16 +187,21 @@ def save_active_state(state: dict) -> bool:
         logger.error(f"Failed to save active state to DB: {e}")
         return False
 
-def get_active_state(default_state: dict) -> dict:
+def get_active_state(default_state: dict = None, raise_on_error: bool = False) -> dict:
+    if default_state is None:
+        default_state = {}
     if not is_db_active():
+        if raise_on_error:
+            raise RuntimeError("Database is not active")
         return default_state
+    row_id = _resolve_active_state_row_id()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT project_id, incident_id, incident_status, substatus_rca, substatus_mitigated, substatus_fixed, substatus_verified
-                    FROM active_state WHERE id = 1;
+                    FROM active_state WHERE id = {row_id};
                     """,
                 )
                 row = cur.fetchone()
@@ -189,6 +217,8 @@ def get_active_state(default_state: dict) -> dict:
                     }
     except Exception as e:
         logger.error(f"Failed to retrieve active state from DB: {e}")
+        if raise_on_error:
+            raise
     return default_state
 
 def save_incident(details: dict) -> bool:

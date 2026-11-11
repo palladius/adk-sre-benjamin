@@ -1,26 +1,75 @@
 import os
+import re
 import uuid
+import logging
 from enum import Enum
 from typing import Any, Dict
 
+logger = logging.getLogger(__name__)
+
+VALID_ENV_ALIASES = {
+    "prod": "production",
+    "production": "production",
+    "test": "test",
+    "testing": "test",
+    "dev": "development",
+    "development": "development",
+    "local": "development",
+}
+
+INCIDENT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
+FORBIDDEN_INCIDENT_FILENAMES = {
+    "active_state.json",
+    "state.md",
+    "timeline.md",
+    "chat.json",
+    "artifacts_registry.json",
+    "pending_approvals.json",
+    "mutation_comments.json",
+    "raw_audit.jsonl",
+}
+
+
 def resolve_benjamin_env() -> str:
-    """Resolves active environment with priority: BENJAMIN_ENV -> SRE_ENV -> RAILS_ENV -> development."""
+    """Resolves active environment with priority: BENJAMIN_ENV -> SRE_ENV -> PYTEST_CURRENT_TEST -> RAILS_ENV -> development."""
     env = os.getenv("BENJAMIN_ENV") or os.getenv("SRE_ENV")
     if not env and "PYTEST_CURRENT_TEST" in os.environ:
-        env = "test"
+        return "test"
     if not env:
         env = os.getenv("RAILS_ENV") or "development"
-    env = env.lower().strip()
-    if env in ("prod", "production"):
-        return "production"
-    elif env in ("test", "testing"):
-        return "test"
-    else:
-        return "development"
+    env_clean = env.lower().strip()
+    if env_clean not in VALID_ENV_ALIASES:
+        raise ValueError(
+            f"Invalid environment '{env}'. Expected one of: {sorted(VALID_ENV_ALIASES.keys())}"
+        )
+    return VALID_ENV_ALIASES[env_clean]
+
+
+def validate_incident_id(incident_id: Any) -> str:
+    """Validates an incident_id against path traversal and reserved filename collisions."""
+    if not isinstance(incident_id, str):
+        raise ValueError("Incident ID must be a string.")
+    cleaned = incident_id.strip()
+    if not cleaned or cleaned == "None":
+        raise ValueError("Incident ID cannot be empty or 'None'.")
+    if ".." in cleaned or "/" in cleaned or "\\" in cleaned:
+        raise ValueError(f"Invalid incident ID '{incident_id}': path traversal characters are forbidden.")
+    if cleaned.lower() in FORBIDDEN_INCIDENT_FILENAMES or cleaned.lower().endswith((".json", ".md", ".jsonl", ".yaml", ".yml")):
+        raise ValueError(f"Invalid incident ID '{incident_id}': reserved filename or extension.")
+    if not INCIDENT_ID_PATTERN.match(cleaned):
+        raise ValueError(f"Invalid incident ID '{incident_id}': must match {INCIDENT_ID_PATTERN.pattern}.")
+    return cleaned
+
 
 def get_investigations_dir() -> str:
     env = resolve_benjamin_env()
-    print(f"DEBUG get_investigations_dir: BENJAMIN_ENV={os.getenv('BENJAMIN_ENV')}, SRE_ENV={os.getenv('SRE_ENV')}, RAILS_ENV={os.getenv('RAILS_ENV')}, resolved={env}")
+    logger.debug(
+        "get_investigations_dir: BENJAMIN_ENV=%s, SRE_ENV=%s, RAILS_ENV=%s, resolved=%s",
+        os.getenv("BENJAMIN_ENV"),
+        os.getenv("SRE_ENV"),
+        os.getenv("RAILS_ENV"),
+        env,
+    )
     if env == "production":
         return "investigations/prod"
     elif env == "test":

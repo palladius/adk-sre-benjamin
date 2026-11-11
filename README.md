@@ -79,13 +79,25 @@ Provides a high-fidelity visual workspace for auditing discovered GCP project as
 ### 8. 📊 OpenTelemetry (OTEL) Observability
 - **Trace Instrumentations**: Dynamic agent execution wrapping in `src/observability.py` logs full audit traces of inter-agent messages and tool execution paths to Cloud Trace or OTLP backends.
 
+### 9. ☁️ Cloud State Graduation & `BENJAMIN_ENV` Semantics
+Graduates active state, incident records, and tactical chats from local files to Cloud SQL PostgreSQL with automatic local filesystem fallback:
+- **Rails-Style `BENJAMIN_ENV` Resolution**: Resolves the active environment (`development`, `test`, `production`) via `BENJAMIN_ENV` → `SRE_ENV` → `PYTEST_CURRENT_TEST` (`test`) → `RAILS_ENV` → `development`, isolating local files into `investigations/{dev,test,prod}/` and `discovery/{dev,test,prod}/` and scoping database active state per environment.
+- **Pluggable State Managers (`src/storage.py`)**: Controlled via `STORAGE_BACKEND_STATE` (`auto`, `local`, `db`):
+  - `DatabaseStateManager`: Reads and writes server-wide `active_state` in Cloud SQL PostgreSQL with atomic `FileStateManager` fallback on database outage.
+  - `FileStateManager`: Purely local atomic file persistence (`investigations/<env>/active_state.json`) for offline/local development.
+- **Client-Side View vs. Server-Side Active Context**:
+  - **Q1 (View vs. Activate)**: Clicking an incident in the Web UI inspects it locally in the browser without hijacking the global server context. Clicking **Activate** (`POST /api/incidents/<id>/select` or `🎯 Set as Active Incident`) promotes it to the global server-wide active incident.
+  - **Q2 (Project Selection)**: Switching `project_id` updates the active project and automatically clears `incident_id` to `"None"` if the previously active incident belonged to a different project.
+  - **Q3 (Incident → Project 1:1 Mapping)**: Activating an incident with a known `project_id` automatically sets `project_id` to match that incident; explicit `project_id` overrides are only permitted when the incident's project is `"UNKNOWN"`.
+  - **Q4 (Telegram Multi-Incident Routing & Status)**: Any active incident switch broadcasts a notification to Telegram, and the `🚨 Status Check` (`/status`, `/state`) command reports the active `BENJAMIN_ENV`, target project, active incident, and live fire status across all non-archived incidents.
+
 ---
 
 ## 🧪 TDD Validation (Behavior-Driven Development)
 
-All features are implemented following a strict **Test-Driven Development (TDD)** and **Behavior-Driven Development (BDD)** workflow. Full specifications can be reviewed in [doc/bdd.md](file:///home/riccardo/git/adk-sre-benjamin/doc/bdd.md).
+All features are implemented following a strict **Test-Driven Development (TDD)** and **Behavior-Driven Development (BDD)** workflow. Full specifications can be reviewed in [doc/bdd.md](doc/bdd.md).
 
-The automated test deck consists of **93 high-fidelity unit and integration tests** verifying 100% of the dynamic loading, renaming, prompt loading, telemetry servers, and safety risk gate behaviors.
+The automated test deck consists of **150+ high-fidelity unit and integration tests** verifying 100% of the dynamic loading, renaming, prompt loading, telemetry servers, Cloud SQL state graduation, and safety risk gate behaviors.
 
 ### Run tests with `uv`:
 ```bash
