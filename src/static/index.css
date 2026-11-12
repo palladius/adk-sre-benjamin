@@ -2372,6 +2372,69 @@ body {
 }
 .wiki-panel:not(.edit-mode) .wiki-editor-layout {
     grid-template-columns: 1fr;
+    min-height: 480px;
+    height: auto;
+}
+
+.wiki-panel.edit-mode .wiki-editor-layout {
+    min-height: 620px;
+    height: calc(100vh - 280px);
+}
+
+.wiki-edit-badge {
+    display: none;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: var(--neon-cyan);
+    background: rgba(0, 255, 255, 0.1);
+    border: 1px solid rgba(0, 255, 255, 0.3);
+    border-radius: 6px;
+    padding: 4px 8px;
+    animation: pulse-slow 3s infinite ease-in-out;
+}
+
+.wiki-panel.edit-mode .wiki-edit-badge {
+    display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wiki-edit-badge {
+        animation: none;
+    }
+}
+
+.panel-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#btn-cancel-wiki {
+    margin-left: 8px;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid var(--panel-border);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.btn-outline:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.25);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.btn-outline:disabled,
+#btn-edit-wiki:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 /* Graph Edit Mode Toggles */
