@@ -127,7 +127,7 @@ def check_env():
         print("  ⚠️ Could not query active gcloud profile. (Is gcloud CLI installed?)")
         warnings += 1
 
-    # 5. Check Terraform CLI and Configuration
+    # 5. Check Terraform CLI and Configuration (read-only: never runs `terraform init`)
     print("\n[5] Checking Terraform CLI & Configuration...")
     import shutil
     terraform_bin = shutil.which("terraform")
@@ -136,39 +136,63 @@ def check_env():
         warnings += 1
     else:
         print(f"  ✅ terraform binary found at: '{terraform_bin}'")
-        if os.path.isdir("terraform"):
+        if not os.path.isdir("terraform"):
+            print("  ⚠️ terraform/ directory not found in repository.")
+            warnings += 1
+        else:
             try:
-                # Ensure provider plugins exist if not already initialized
-                if not os.path.isdir("terraform/.terraform"):
-                    subprocess.run(
-                        ["terraform", "init", "-backend=false"],
-                        cwd="terraform",
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        check=False
-                    )
-                # Run terraform validate
-                res = subprocess.run(
-                    ["terraform", "validate"],
-                    cwd="terraform",
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True
+                fmt = subprocess.run(
+                    ["terraform", "fmt", "-check", "-diff"],
+                    cwd="terraform", capture_output=True, text=True
                 )
-                if res.returncode == 0:
-                    print("  ✅ Terraform configuration syntax is valid.")
+                if fmt.returncode == 0:
+                    print("  ✅ Terraform formatting is clean.")
                 else:
-                    print(f"  ❌ Terraform validate failed:\n{res.stderr.strip()}")
-                    errors += 1
+                    print("  ⚠️ Terraform files are not formatted. Run: 'just tf-fmt'")
+                    warnings += 1
+
+                if not os.path.isdir("terraform/.terraform"):
+                    print("  ⚠️ Terraform providers not initialized; skipping 'terraform validate'. Run: 'just tf-validate' (or 'just tf-init').")
+                    warnings += 1
+                else:
+                    res = subprocess.run(
+                        ["terraform", "validate"],
+                        cwd="terraform", capture_output=True, text=True
+                    )
+                    if res.returncode == 0:
+                        print("  ✅ Terraform configuration is valid.")
+                    else:
+                        print(f"  ❌ Terraform validate failed:\n{(res.stderr or res.stdout).strip()}")
+                        errors += 1
             except Exception as e:
                 print(f"  ⚠️ Could not validate Terraform configuration: {e}")
                 warnings += 1
-        else:
-            print("  ⚠️ terraform/ directory not found in repository.")
+
+    # 6. Check Cloud Build configuration (offline, structural check only)
+    print("\n[6] Checking Cloud Build configuration...")
+    if not os.path.exists("cloudbuild.yaml"):
+        print("  ⚠️ cloudbuild.yaml not found in repository root.")
+        warnings += 1
+    else:
+        try:
+            import yaml
+            with open("cloudbuild.yaml", "r") as f:
+                cb = yaml.safe_load(f)
+            steps = cb.get("steps") if isinstance(cb, dict) else None
+            if not steps or not all(isinstance(s, dict) and s.get("name") for s in steps):
+                print("  ❌ cloudbuild.yaml must define a non-empty 'steps' list where every step has a 'name'.")
+                errors += 1
+            else:
+                print(f"  ✅ cloudbuild.yaml is valid YAML with {len(steps)} step(s).")
+        except ImportError:
+            print("  ⚠️ pyyaml not installed; skipping cloudbuild.yaml check.")
             warnings += 1
+        except Exception as e:
+            print(f"  ❌ cloudbuild.yaml could not be parsed: {e}")
+            errors += 1
 
     # 7. Check local Web server (FE & BE) activity
-    print("\n[6] Checking local Web server (FE & BE) activity...")
+    print("\n[7] Checking local Web server (FE & BE) activity...")
     import socket
     import urllib.request
     import urllib.error
