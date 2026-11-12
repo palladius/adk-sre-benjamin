@@ -35,3 +35,8 @@ tmp
 etc/gcs.yaml
 
 out/
+
+# Terraform artifacts (the .terraform.lock.hcl lock file is intentionally tracked)
+terraform/.terraform/
+*.tfstate
+*.tfstate.*

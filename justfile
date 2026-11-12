@@ -71,6 +71,19 @@ docker-push:
 tf-init:
     cd terraform && terraform init
 
+# Validate Terraform formatting and configuration syntax
+tf-validate:
+    @echo "🔍 Checking Terraform formatting..."
+    @cd terraform && terraform fmt -check
+    @echo "🔍 Initializing providers (read-only) if needed..."
+    @cd terraform && ([ -d .terraform ] || terraform init -backend=false >/dev/null 2>&1)
+    @echo "🔍 Validating Terraform configuration..."
+    @cd terraform && terraform validate
+
+# Format Terraform configuration files
+tf-fmt:
+    cd terraform && terraform fmt
+
 # Plan Terraform infrastructure deployment
 tf-plan:
     cd terraform && terraform plan -var="project_id=$(gcloud config get-value project)" -var="image=us-central1-docker.pkg.dev/$(gcloud config get-value project)/cloud-run-source-deploy/sre-agent-service:latest" -var="gcloud_identity=${GCLOUD_IDENTITY}"
