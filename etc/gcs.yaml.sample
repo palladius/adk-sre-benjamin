@@ -1,5 +1,5 @@
-# SRE/Rails GCS Sync Configuration Sample
-# Scoped by SRE_ENV / RAILS_ENV environment name.
+# SRE/Benjamin GCS Sync Configuration Sample
+# Scoped by BENJAMIN_ENV / SRE_ENV / RAILS_ENV environment name.
 
 test:
   gcs_enabled: false

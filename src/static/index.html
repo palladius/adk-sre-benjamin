@@ -465,8 +465,12 @@
                         <div class="pulse-ring"></div>
                         <span id="active-substatus-badges" style="display: inline-flex; gap: 4px;"></span>
                     </div>
-                    <h2 id="active-incident-title">INC-20260601-244e</h2>
-                    <p id="active-incident-meta">Target: <strong>prod-db-999</strong> | Trigger: <strong>frontend_latency_slo_violated</strong></p>
+                    <h2 id="active-incident-title">No Incident Selected</h2>
+                    <p id="active-incident-meta">Select an incident from the repository or trigger a simulation.</p>
+                    <div style="display: flex; align-items: center; gap: 8px; margin-top: 6px;">
+                        <button id="btn-set-active-incident" class="btn btn-sm" style="display: none; padding: 3px 10px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; background: rgba(0,212,255,0.15); border: 1px solid #00d4ff; color: #00d4ff; font-weight: 600;">🎯 Set as Active Incident</button>
+                        <span id="badge-active-server-context" class="status-badge" style="display: none; background-color: rgba(0, 255, 128, 0.2); color: #00ff80; border: 1px solid #00ff80; font-size: 0.72rem; padding: 2px 7px; border-radius: 4px; font-weight: bold;">⭐ ACTIVE SERVER CONTEXT</span>
+                    </div>
                 </div>
                 <div class="active-leads-grid">
                     <div class="lead-card" id="lead-commander">

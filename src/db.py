@@ -19,14 +19,32 @@ def is_db_configured() -> bool:
 def is_db_active() -> bool:
     return _pool is not None
 
+def _resolve_db_env() -> str:
+    """Resolves and validates the canonical environment ('production', 'development', or 'test') for DB scoping."""
+    from src.incident import resolve_benjamin_env
+    env = resolve_benjamin_env()
+    if env not in ("production", "development", "test"):
+        raise ValueError(f"Unexpected canonical environment: {env}")
+    return env
+
+
+def _resolve_active_state_row_id() -> int:
+    """Maps BENJAMIN_ENV to a distinct active_state row ID (production=1, development=2, test=3) so environments never clobber each other."""
+    env = _resolve_db_env()
+    return {"production": 1, "development": 2, "test": 3}[env]
+
+
 def init_db():
     global _pool
+    env = _resolve_db_env()
     if not is_db_configured():
         logger.info("PostgreSQL credentials not configured. Using local filesystem storage fallback.")
         return
     db_user = os.getenv("DB_USER")
     db_pass = os.getenv("DB_PASS") or os.getenv("DB_PASSWORD")
     db_name = os.getenv("DB_NAME")
+    if not db_name:
+        db_name = f"sredb_{env}"
     db_host = os.getenv("DB_HOST")
     db_port = os.getenv("DB_PORT", "5432")
     try:
@@ -102,6 +120,7 @@ def create_schema():
     
     CREATE TABLE IF NOT EXISTS incidents (
         incident_id VARCHAR(255) PRIMARY KEY,
+        env VARCHAR(32) NOT NULL DEFAULT 'production',
         status VARCHAR(50) NOT NULL DEFAULT 'NEW',
         substatus_rca BOOLEAN DEFAULT FALSE,
         substatus_mitigated BOOLEAN DEFAULT FALSE,
@@ -116,14 +135,17 @@ def create_schema():
         archived BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    ALTER TABLE incidents ADD COLUMN IF NOT EXISTS env VARCHAR(32) NOT NULL DEFAULT 'production';
 
     CREATE TABLE IF NOT EXISTS chats (
         id SERIAL PRIMARY KEY,
+        env VARCHAR(32) NOT NULL DEFAULT 'production',
         incident_id VARCHAR(255) NOT NULL,
         sender VARCHAR(255) NOT NULL,
         message TEXT NOT NULL,
         timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
+    ALTER TABLE chats ADD COLUMN IF NOT EXISTS env VARCHAR(32) NOT NULL DEFAULT 'production';
     """
     with get_db_connection() as conn:
         with conn.cursor() as cur:
@@ -133,13 +155,14 @@ def create_schema():
 def save_active_state(state: dict) -> bool:
     if not is_db_active():
         return False
+    row_id = _resolve_active_state_row_id()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     INSERT INTO active_state (id, project_id, incident_id, incident_status, substatus_rca, substatus_mitigated, substatus_fixed, substatus_verified)
-                    VALUES (1, %s, %s, %s, %s, %s, %s, %s)
+                    VALUES ({row_id}, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (id) DO UPDATE SET
                         project_id = EXCLUDED.project_id,
                         incident_id = EXCLUDED.incident_id,
@@ -164,16 +187,19 @@ def save_active_state(state: dict) -> bool:
         logger.error(f"Failed to save active state to DB: {e}")
         return False
 
-def get_active_state(default_state: dict) -> dict:
+def get_active_state(default_state: dict = None, raise_on_error: bool = False) -> dict:
     if not is_db_active():
+        if raise_on_error:
+            raise RuntimeError("Database is not active")
         return default_state
+    row_id = _resolve_active_state_row_id()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT project_id, incident_id, incident_status, substatus_rca, substatus_mitigated, substatus_fixed, substatus_verified
-                    FROM active_state WHERE id = 1;
+                    FROM active_state WHERE id = {row_id};
                     """,
                 )
                 row = cur.fetchone()
@@ -189,19 +215,23 @@ def get_active_state(default_state: dict) -> dict:
                     }
     except Exception as e:
         logger.error(f"Failed to retrieve active state from DB: {e}")
+        if raise_on_error:
+            raise
     return default_state
 
 def save_incident(details: dict) -> bool:
     if not is_db_active():
         return False
+    env = _resolve_db_env()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
-                    INSERT INTO incidents (incident_id, status, substatus_rca, substatus_mitigated, substatus_fixed, substatus_verified, project_id, domain_id, trigger_event, incident_uuid, timeline, artifacts, archived)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    f"""
+                    INSERT INTO incidents (incident_id, env, status, substatus_rca, substatus_mitigated, substatus_fixed, substatus_verified, project_id, domain_id, trigger_event, incident_uuid, timeline, artifacts, archived)
+                    VALUES (%s, '{env}', %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (incident_id) DO UPDATE SET
+                        env = EXCLUDED.env,
                         status = EXCLUDED.status,
                         substatus_rca = EXCLUDED.substatus_rca,
                         substatus_mitigated = EXCLUDED.substatus_mitigated,
@@ -236,16 +266,17 @@ def save_incident(details: dict) -> bool:
         logger.error(f"Failed to save incident {details.get('incident_id')} to DB: {e}")
         return False
 
-def get_incident(incident_id: str) -> dict:
+def get_incident(incident_id: str, raise_on_error: bool = False) -> dict:
     if not is_db_active():
         return None
+    env = _resolve_db_env()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT status, substatus_rca, substatus_mitigated, substatus_fixed, substatus_verified, project_id, domain_id, trigger_event, incident_uuid, timeline, artifacts, archived
-                    FROM incidents WHERE incident_id = %s;
+                    FROM incidents WHERE incident_id = %s AND env = '{env}';
                     """,
                     (incident_id,)
                 )
@@ -270,18 +301,22 @@ def get_incident(incident_id: str) -> dict:
                     }
     except Exception as e:
         logger.error(f"Failed to get incident {incident_id} from DB: {e}")
+        if raise_on_error:
+            raise
     return None
 
 def list_incidents() -> list[dict]:
     if not is_db_active():
         return []
+    env = _resolve_db_env()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT incident_id, status, project_id, trigger_event, archived
                     FROM incidents
+                    WHERE env = '{env}'
                     ORDER BY incident_id DESC;
                     """
                 )
@@ -303,20 +338,31 @@ def list_incidents() -> list[dict]:
 def get_top_5_incidents() -> list[dict]:
     if not is_db_active():
         return None
+    env = _resolve_db_env()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
-                    SELECT incident_id, status
+                    f"""
+                    SELECT incident_id, status, substatus_rca, substatus_mitigated, substatus_fixed, substatus_verified
                     FROM incidents
-                    WHERE NOT archived
+                    WHERE NOT archived AND env = '{env}'
                     ORDER BY incident_id DESC
                     LIMIT 5;
                     """,
                 )
                 rows = cur.fetchall()
-                return [{"id": r[0], "status": r[1].upper()} for r in rows]
+                return [
+                    {
+                        "id": r[0],
+                        "status": r[1].upper(),
+                        "substatus_rca": bool(r[2]) if len(r) > 2 else False,
+                        "substatus_mitigated": bool(r[3]) if len(r) > 3 else False,
+                        "substatus_fixed": bool(r[4]) if len(r) > 4 else False,
+                        "substatus_verified": bool(r[5]) if len(r) > 5 else False,
+                    }
+                    for r in rows
+                ]
     except Exception as e:
         logger.error(f"Failed to get top 5 incidents from DB: {e}")
     return None
@@ -324,22 +370,23 @@ def get_top_5_incidents() -> list[dict]:
 def add_chat_message(incident_id: str, sender: str, message: str, timestamp: str = None) -> bool:
     if not is_db_active():
         return False
+    env = _resolve_db_env()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 if timestamp:
                     cur.execute(
-                        """
-                        INSERT INTO chats (incident_id, sender, message, timestamp)
-                        VALUES (%s, %s, %s, %s);
+                        f"""
+                        INSERT INTO chats (env, incident_id, sender, message, timestamp)
+                        VALUES ('{env}', %s, %s, %s, %s);
                         """,
                         (incident_id, sender, message, timestamp)
                     )
                 else:
                     cur.execute(
-                        """
-                        INSERT INTO chats (incident_id, sender, message)
-                        VALUES (%s, %s, %s);
+                        f"""
+                        INSERT INTO chats (env, incident_id, sender, message)
+                        VALUES ('{env}', %s, %s, %s);
                         """,
                         (incident_id, sender, message)
                     )
@@ -351,16 +398,18 @@ def add_chat_message(incident_id: str, sender: str, message: str, timestamp: str
 def get_chat_messages(incident_id: str) -> list[dict]:
     if not is_db_active():
         return None
+    env = _resolve_db_env()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """
+                    f"""
                     SELECT sender, message, timestamp
                     FROM chats
-                    WHERE incident_id = %s
+                    WHERE incident_id = %s AND env = '{env}'
                     ORDER BY id ASC;
-                    """
+                    """,
+                    (incident_id,)
                 )
                 rows = cur.fetchall()
                 messages = []
@@ -383,25 +432,26 @@ def get_chat_messages(incident_id: str) -> list[dict]:
 def save_chat_messages(incident_id: str, chat_data: list) -> bool:
     if not is_db_active():
         return False
+    env = _resolve_db_env()
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cur:
-                cur.execute("DELETE FROM chats WHERE incident_id = %s;", (incident_id,))
+                cur.execute(f"DELETE FROM chats WHERE incident_id = %s AND env = '{env}';", (incident_id,))
                 for msg in chat_data:
                     ts = msg.get("timestamp")
                     if ts:
                         cur.execute(
-                            """
-                            INSERT INTO chats (incident_id, sender, message, timestamp)
-                            VALUES (%s, %s, %s, %s);
+                            f"""
+                            INSERT INTO chats (env, incident_id, sender, message, timestamp)
+                            VALUES ('{env}', %s, %s, %s, %s);
                             """,
                             (incident_id, msg.get("sender"), msg.get("message"), ts)
                         )
                     else:
                         cur.execute(
-                            """
-                            INSERT INTO chats (incident_id, sender, message)
-                            VALUES (%s, %s, %s);
+                            f"""
+                            INSERT INTO chats (env, incident_id, sender, message)
+                            VALUES ('{env}', %s, %s, %s);
                             """,
                             (incident_id, msg.get("sender"), msg.get("message"))
                         )

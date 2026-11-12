@@ -1,5 +1,6 @@
 import os
 import json
+import shutil
 import pytest
 import threading
 import urllib.request
@@ -7,13 +8,25 @@ import urllib.error
 from http.server import HTTPServer
 from unittest.mock import patch
 from src.server import SREHttpRequestHandler
+from src.incident import get_investigations_dir
 
 def test_active_state_api(tmp_path):
     # Setup temporary file path for the active state json
     temp_active_state_file = tmp_path / "active_state.json"
     
     with patch("src.server.ACTIVE_STATE_FILE", str(temp_active_state_file)), \
+         patch("src.server.get_active_state_file", return_value=str(temp_active_state_file)), \
          patch.dict(os.environ, {"PROJECT_ID": "sre-next"}, clear=True):
+        inc_dir = os.path.join(get_investigations_dir(), "INC-20260603-abcd")
+        os.makedirs(inc_dir, exist_ok=True)
+        with open(os.path.join(inc_dir, "state.md"), "w") as f:
+            f.write(
+                "# Active SRE Incident State: INC-20260603-abcd\n"
+                "## Metadata\n"
+                "- **Status:** ONGOING\n"
+                "- **Target Project:** `UNKNOWN`\n"
+                "- **Trigger Event:** `test_alert`\n"
+            )
         # Start the server on a free port
         server = HTTPServer(('localhost', 0), SREHttpRequestHandler)
         port = server.server_port
@@ -75,3 +88,6 @@ def test_active_state_api(tmp_path):
             server.shutdown()
             server.server_close()
             server_thread.join()
+            if os.path.exists(inc_dir):
+                shutil.rmtree(inc_dir)
+

@@ -2,26 +2,15 @@ import os
 import subprocess
 import threading
 import time
-from src.incident import get_discover_dir
+from src.incident import get_discover_dir, resolve_benjamin_env
 
 # Global sync state
 _sync_status = "OFFLINE"
 _sync_lock = threading.Lock()
 
 def _resolve_rails_env() -> str:
-    """Resolves friendly environment names to standard Rails environments."""
-    env = os.getenv("SRE_ENV")
-    if not env and "PYTEST_CURRENT_TEST" in os.environ:
-        env = "test"
-    if not env:
-        env = os.getenv("RAILS_ENV") or "development"
-    env = env.lower().strip()
-    if env in ("prod", "production"):
-        return "production"
-    elif env in ("test", "testing"):
-        return "test"
-    else:
-        return "development"
+    """Resolves friendly environment names to standard environments (BENJAMIN_ENV / SRE_ENV / RAILS_ENV)."""
+    return resolve_benjamin_env()
 
 def _load_gcs_config() -> dict:
     """Loads GCS config from etc/gcs.yaml if present."""

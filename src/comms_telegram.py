@@ -6,6 +6,13 @@ from datetime import datetime, timezone
 
 def send_telegram_alert(message: str, incident_id: str, feed_file_path: str = None) -> bool:
     """Dispatches a formatted incident notification to Telegram bot or mock feed file."""
+    from src.incident import validate_incident_id, get_investigations_dir
+    try:
+        incident_id = validate_incident_id(incident_id)
+    except ValueError as e:
+        print(f"[Telegram Comms Error] Invalid incident_id '{incident_id}': {e}")
+        return False
+
     bot_token = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = os.getenv("TELEGRAM_CHAT_ID")
     
@@ -33,9 +40,15 @@ def send_telegram_alert(message: str, incident_id: str, feed_file_path: str = No
             
     # 2. Fallback Mock Mode (writes to local JSON file for testing and Web UI consumption)
     if not feed_file_path:
-        # Save to incident folder if running inside dynamic simulation
-        from src.incident import get_investigations_dir
-        feed_file_path = os.path.join(get_investigations_dir(), incident_id, "artifacts", "telegram_feed.json")
+        base_dir = os.path.realpath(get_investigations_dir())
+        inc_dir = os.path.realpath(os.path.join(base_dir, incident_id))
+        if os.path.commonpath([base_dir, inc_dir]) != base_dir or inc_dir == base_dir:
+            print(f"[Telegram Comms Error] Path traversal blocked for incident_id '{incident_id}'")
+            return False
+        # Do not create phantom incident directories if the incident folder does not exist locally
+        if not os.path.isdir(inc_dir):
+            return False
+        feed_file_path = os.path.join(inc_dir, "artifacts", "telegram_feed.json")
         
     try:
         os.makedirs(os.path.dirname(feed_file_path), exist_ok=True)
