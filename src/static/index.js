@@ -1345,6 +1345,8 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("Please provide a valid GCP Project ID.");
             return;
         }
+        // e.g. "Recrawl" while editing: discovery resets the tabs and edit modes.
+        if (!confirmDiscardWikiChanges()) return;
         
         // Capture currently active tab to preserve it across projects
         const activeTabBtn = document.querySelector(".project-tab-btn.active");
@@ -1716,13 +1718,110 @@ document.addEventListener("DOMContentLoaded", () => {
         }, 10);
     }
 
+    // --- Edit/View Mode State & Helpers ---
+    // Declared BEFORE the SPA router so switchView()/resetEditModes() never depend on
+    // init ordering (no temporal-dead-zone access to these consts).
+    const btnEditWiki = document.getElementById("btn-edit-wiki");
+    const btnCancelWiki = document.getElementById("btn-cancel-wiki");
+    const wikiPanel = document.querySelector(".wiki-panel");
+    const btnEditGraph = document.getElementById("btn-edit-graph");
+    const graphPanel = document.querySelector(".graph-panel");
+    const WIKI_AUTO_EXIT_DELAY_MS = 800;
+    // Last wiki content known to be persisted on the server: the baseline Cancel restores.
+    let wikiOriginalContent = "";
+    let wikiAutoExitTimer = null;
+    let wikiSaveInFlight = false;
+    // Route currently rendered, used to undo a back/forward the user declined.
+    let currentRoutePath = window.location.pathname + window.location.search;
+
+    function isWikiEditing() {
+        return !!(wikiPanel && wikiPanel.classList.contains("edit-mode"));
+    }
+
+    function isWikiDirty() {
+        const editor = document.getElementById("wiki-editor");
+        return isWikiEditing() && !!editor && editor.value !== wikiOriginalContent;
+    }
+
+    // True when it is safe to leave wiki edit mode: nothing unsaved, or the user agreed to discard.
+    function confirmDiscardWikiChanges() {
+        return !isWikiDirty() || window.confirm("You have unsaved wiki changes. Discard them?");
+    }
+
+    function clearWikiAutoExitTimer() {
+        if (wikiAutoExitTimer !== null) {
+            clearTimeout(wikiAutoExitTimer);
+            wikiAutoExitTimer = null;
+        }
+    }
+
+    function setWikiSaveInFlight(inFlight) {
+        wikiSaveInFlight = inFlight;
+        // While a save is pending, block every way of leaving edit mode from the panel,
+        // otherwise a late response could overwrite a reverted editor.
+        const btnSave = document.getElementById("btn-save-wiki");
+        if (btnSave) btnSave.disabled = inFlight;
+        if (btnCancelWiki) btnCancelWiki.disabled = inFlight;
+        if (btnEditWiki) btnEditWiki.disabled = inFlight;
+    }
+
+    function revertWikiEditor() {
+        const editor = document.getElementById("wiki-editor");
+        const preview = document.getElementById("wiki-preview");
+        if (editor && editor.value !== wikiOriginalContent) {
+            editor.value = wikiOriginalContent;
+            if (preview) preview.innerHTML = renderMarkdown(wikiOriginalContent);
+        }
+        const autoBox = document.getElementById("wiki-autocomplete-box");
+        if (autoBox) autoBox.style.display = "none";
+    }
+
+    function enterWikiEditMode() {
+        if (!wikiPanel) return;
+        clearWikiAutoExitTimer();
+        const editor = document.getElementById("wiki-editor");
+        if (editor) wikiOriginalContent = editor.value;
+        wikiPanel.classList.add("edit-mode");
+        if (btnEditWiki) btnEditWiki.textContent = "👁️ View Wiki";
+        const appContainer = document.querySelector(".app-container");
+        if (appContainer) appContainer.classList.add("wiki-edit-active");
+        if (editor) editor.focus();
+    }
+
+    function exitWikiEditMode() {
+        clearWikiAutoExitTimer();
+        if (!wikiPanel) return;
+        // Never leave unsaved text on screen outside edit mode: it would look persisted.
+        if (isWikiEditing()) revertWikiEditor();
+        wikiPanel.classList.remove("edit-mode");
+        if (btnEditWiki) btnEditWiki.textContent = "✍️ Edit Wiki";
+        const appContainer = document.querySelector(".app-container");
+        if (appContainer) appContainer.classList.remove("wiki-edit-active");
+    }
+
+    function cancelWikiEdit() {
+        if (wikiSaveInFlight) return;
+        if (!confirmDiscardWikiChanges()) return;
+        const statusSpan = document.getElementById("wiki-save-status");
+        if (statusSpan) statusSpan.classList.remove("visible");
+        exitWikiEditMode();
+    }
+
+    function resetEditModes() {
+        exitWikiEditMode();
+        if (graphPanel) {
+            graphPanel.classList.remove("edit-mode");
+            if (btnEditGraph) btnEditGraph.textContent = "✍️ Edit Graph";
+        }
+    }
+
     // --- Dynamic Spa Router, Markdown Parser & Graphviz Render System ---
     const cloudsDirectoryView = document.getElementById("clouds-directory-view");
     
     function switchView(viewName) {
-        if (typeof resetEditModes === "function") {
-            resetEditModes();
-        }
+        // Callers that can still be aborted (navigateTo, popstate, tabs) ask for confirmation
+        // first; by the time we get here leaving edit mode is the intended outcome.
+        resetEditModes();
         if (viewName === "clouds") {
             if (cloudsDirectoryView) cloudsDirectoryView.style.display = "flex";
             if (projectDiscoveryView) projectDiscoveryView.style.display = "none";
@@ -1758,11 +1857,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function navigateTo(url) {
+        if (!confirmDiscardWikiChanges()) return;
         history.pushState(null, "", url);
         handleRouting();
     }
 
     function handleRouting() {
+        currentRoutePath = window.location.pathname + window.location.search;
         const path = window.location.pathname;
         if (path === "/clouds" || path === "/clouds/") {
             switchView("clouds");
@@ -1785,7 +1886,14 @@ document.addEventListener("DOMContentLoaded", () => {
         loadIncidentRepository(activeIncidentId);
     }
 
-    window.addEventListener("popstate", handleRouting);
+    window.addEventListener("popstate", () => {
+        if (!confirmDiscardWikiChanges()) {
+            // Browser history already moved: put the URL back where the editor still is.
+            history.pushState(null, "", currentRoutePath);
+            return;
+        }
+        handleRouting();
+    });
 
     // Project Navigation Tabs Event Handling
     const tabButtons = document.querySelectorAll(".project-tab-btn");
@@ -1793,6 +1901,7 @@ document.addEventListener("DOMContentLoaded", () => {
     
     tabButtons.forEach(btn => {
         btn.addEventListener("click", () => {
+            if (!confirmDiscardWikiChanges()) return;
             const tabName = btn.dataset.tab;
             
             tabButtons.forEach(b => b.classList.remove("active"));
@@ -1817,61 +1926,38 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    // Edit/View Toggles Reset Function
-    const btnEditWiki = document.getElementById("btn-edit-wiki");
-    const btnCancelWiki = document.getElementById("btn-cancel-wiki");
-    const wikiPanel = document.querySelector(".wiki-panel");
-    const btnEditGraph = document.getElementById("btn-edit-graph");
-    const graphPanel = document.querySelector(".graph-panel");
-    let wikiOriginalContent = "";
-
-    function resetEditModes() {
-        if (wikiPanel) {
-            wikiPanel.classList.remove("edit-mode");
-            if (btnEditWiki) btnEditWiki.textContent = "✍️ Edit Wiki";
-        }
-        if (graphPanel) {
-            graphPanel.classList.remove("edit-mode");
-            if (btnEditGraph) btnEditGraph.textContent = "✍️ Edit Graph";
-        }
-        const appContainer = document.querySelector(".app-container");
-        if (appContainer) {
-            appContainer.classList.remove("wiki-edit-active");
-        }
-    }
-
+    // Edit/View Toggle listeners (state + helpers are declared above the SPA router)
     if (btnEditWiki && wikiPanel) {
         btnEditWiki.addEventListener("click", () => {
-            const isEditing = wikiPanel.classList.toggle("edit-mode");
-            btnEditWiki.textContent = isEditing ? "👁️ View Wiki" : "✍️ Edit Wiki";
-            const appContainer = document.querySelector(".app-container");
-            if (appContainer) {
-                if (isEditing) {
-                    appContainer.classList.add("wiki-edit-active");
-                    const editor = document.getElementById("wiki-editor");
-                    if (editor) {
-                        wikiOriginalContent = editor.value;
-                    }
-                } else {
-                    appContainer.classList.remove("wiki-edit-active");
-                }
+            if (wikiSaveInFlight) return;
+            if (isWikiEditing()) {
+                // "👁️ View Wiki" behaves like Cancel: unsaved text must never look persisted.
+                cancelWikiEdit();
+            } else {
+                enterWikiEditMode();
             }
         });
     }
 
     if (btnCancelWiki && wikiPanel) {
-        btnCancelWiki.addEventListener("click", () => {
-            const editor = document.getElementById("wiki-editor");
-            const preview = document.getElementById("wiki-preview");
-            if (editor) {
-                editor.value = wikiOriginalContent;
-                if (preview && typeof renderMarkdown === "function") {
-                    preview.innerHTML = renderMarkdown(wikiOriginalContent);
-                }
-            }
-            resetEditModes();
-        });
+        btnCancelWiki.addEventListener("click", cancelWikiEdit);
     }
+
+    // Esc leaves wiki edit mode (the editor's own Esc handler for autocomplete runs first
+    // and calls preventDefault, so closing the suggestion box never discards the edit).
+    document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape" || e.defaultPrevented || !isWikiEditing()) return;
+        e.preventDefault();
+        cancelWikiEdit();
+    });
+
+    // Last-resort guard for reloads / tab closes with unsaved wiki edits.
+    window.addEventListener("beforeunload", (e) => {
+        if (isWikiDirty()) {
+            e.preventDefault();
+            e.returnValue = "";
+        }
+    });
 
     if (btnEditGraph && graphPanel) {
         btnEditGraph.addEventListener("click", () => {
@@ -2156,14 +2242,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const btnSaveWiki = document.getElementById("btn-save-wiki");
+    let wikiStatusHideTimer = null;
     if (btnSaveWiki) {
         btnSaveWiki.addEventListener("click", async () => {
             const projectId = projectIdInput ? projectIdInput.value.trim() : "";
             const editor = document.getElementById("wiki-editor");
-            if (!projectId || !editor) return;
-            
-            btnSaveWiki.disabled = true;
+            if (!projectId || !editor || wikiSaveInFlight) return;
+
+            // Snapshot BEFORE the network round-trip: anything typed while the request is
+            // in flight was never sent, so it must not become the "saved" baseline.
+            const content = editor.value;
+
+            clearWikiAutoExitTimer();
+            setWikiSaveInFlight(true);
             const statusSpan = document.getElementById("wiki-save-status");
+            if (wikiStatusHideTimer !== null) {
+                clearTimeout(wikiStatusHideTimer);
+                wikiStatusHideTimer = null;
+            }
             if (statusSpan) {
                 statusSpan.textContent = "Saving...";
                 statusSpan.classList.add("visible");
@@ -2173,16 +2269,40 @@ document.addEventListener("DOMContentLoaded", () => {
                 const res = await fetch(`/api/projects/${encodeURIComponent(projectId)}/wiki`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ content: editor.value })
+                    body: JSON.stringify({ content })
                 });
-                const data = await res.json();
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.error || `HTTP ${res.status}`);
+                }
+
+                // Only touch the editor if the user is still looking at the project we saved.
+                const currentProjectId = projectIdInput ? projectIdInput.value.trim() : "";
+                if (currentProjectId === projectId) {
+                    wikiOriginalContent = content;
+                    if (!isWikiEditing()) {
+                        // Edit mode was left mid-save (e.g. navigation reverted the editor):
+                        // show what the server actually holds now.
+                        editor.value = content;
+                    }
+                    const preview = document.getElementById("wiki-preview");
+                    if (preview) {
+                        preview.innerHTML = renderMarkdown(editor.value);
+                    }
+
+                    // Smoothly exit edit mode after saving, unless the user kept typing.
+                    if (isWikiEditing()) {
+                        wikiAutoExitTimer = setTimeout(() => {
+                            wikiAutoExitTimer = null;
+                            if (!isWikiDirty()) {
+                                exitWikiEditMode();
+                            }
+                        }, WIKI_AUTO_EXIT_DELAY_MS);
+                    }
+                }
+
                 if (statusSpan) {
                     statusSpan.textContent = "💾 Wiki Saved Successfully!";
-                }
-                wikiOriginalContent = editor.value;
-                const preview = document.getElementById("wiki-preview");
-                if (preview) {
-                    preview.innerHTML = renderMarkdown(editor.value);
                 }
                 
                 // Trigger GCS sync status checks
@@ -2190,17 +2310,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     setTimeout(pollGcsSyncStatus, 500);
                     setTimeout(pollGcsSyncStatus, 2000);
                 }
-
-                // Smoothly exit edit mode after saving
-                setTimeout(() => {
-                    resetEditModes();
-                }, 800);
             } catch (err) {
+                // Stay in edit mode and keep the unsaved text so the user can retry.
                 console.error("Failed to save wiki:", err);
-                if (statusSpan) statusSpan.textContent = "❌ Save failed";
+                if (statusSpan) statusSpan.textContent = `❌ Save failed: ${err.message}`;
             } finally {
-                btnSaveWiki.disabled = false;
-                setTimeout(() => {
+                setWikiSaveInFlight(false);
+                wikiStatusHideTimer = setTimeout(() => {
+                    wikiStatusHideTimer = null;
                     if (statusSpan) statusSpan.classList.remove("visible");
                 }, 3000);
             }
